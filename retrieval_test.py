@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from retrieval import RetrievalModel, ExactMatch
+from retrieval import RetrievalModel, TermMatch
 if __name__ == '__main__':
     tfidf = RetrievalModel()
     corpus = [
@@ -13,33 +13,12 @@ if __name__ == '__main__':
     print("Testing partial fit...")
     tfidf.partial_fit([newdoc])
     print(tfidf)
-    QUERYTERMS = ["fox", "information retrieval"]
-    for queryterm in QUERYTERMS:
-        print("Querying for '{}'".format(queryterm))
-        indices = tfidf.query([queryterm], 3)
-        for index in indices[0]:
-            print(corpus[index])
-
-    print("Testing ExactMatch function")
-    import numpy as np
-    Xq = np.array([0, 1, 0])
-    X = np.array([[1, 0, 3], [2, 3, 4]])
-    indices = ExactMatch(Xq, X)
-    print(indices)
-    print(X[indices])
+    QUERYTERMS = ["fox quick", "information retrieval"]
+    for results in tfidf.query(QUERYTERMS):
+        print(*[corpus[result] for result in results], sep='\n')
 
     print("Testing RetrievalModel with document ids...")
     X, y = zip(*[(doc, docid) for docid, doc in enumerate(corpus)])
-    X = list(X)
-    y = list(y)
     tfidf.fit(X, y)
-    for queryterm in QUERYTERMS:
-        print("Querying for '{}'".format(queryterm))
-        print(tfidf.query([queryterm]))
-
-    print("Testing querying for a list at once")
-    print(tfidf.query(QUERYTERMS))
-
-    # pipeline = TfIdfRetrieval()
-    # pipeline.fit(corpus)
-    # print(pipeline.kneighbors(["fox"], n_neighbors=3)[0])
+    for results in tfidf.query(QUERYTERMS):
+        print(*results, sep='\n')

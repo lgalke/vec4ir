@@ -5,19 +5,14 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import make_pipeline, Pipeline
 from scipy.sparse import vstack
+import scipy.sparse as sp
 import numpy as np
 
 
-def ExactMatch(Xq, X):
-    # FIXME the following line only works for same shapes
-    # TODO think about doing this for any query term individually O_o
-    Xq_nz, other1 = np.nonzero(Xq)
-    X_nz, other2 = np.nonzero(X)
-    print(Xq_nz)
-    print(other2)
-    matching_elements = np.logical_and(Xq, X)
-    row_mask = matching_elements.any(axis=1)
-    return row_mask
+def TermMatch(q, X):
+    indices = np.unique(X.transpose()[q.nonzero()[1], :].nonzero()[1])
+    print(indices)
+    return indices
 
 
 class RetrievalModel(NeighborsBase, KNeighborsMixin, TransformerMixin):
@@ -25,12 +20,12 @@ class RetrievalModel(NeighborsBase, KNeighborsMixin, TransformerMixin):
     # delegate NearestNeighbor thingy
 
     def __init__(self, vectorizer=TfidfVectorizer(), metric='cosine',
-                 algorithm='brute', match_fn=ExactMatch, **kwargs):
+                 algorithm='brute', match_fn=TermMatch, **kwargs):
         """ initializes vectorizer and passes remaining params down to
         NeighborsBase
         """
         self.vectorizer = vectorizer
-        self.match_fn = ExactMatch
+        self.match_fn = match_fn
         self._init_params(metric=metric,
                           algorithm=algorithm,
                           **kwargs)  # NeighborsBase
@@ -40,9 +35,7 @@ class RetrievalModel(NeighborsBase, KNeighborsMixin, TransformerMixin):
         if y is given, copy it and return its corresponding values
         on later queries. Consider y as the documents' ids """
         if y is not None and len(X) != len(y):
-            raise ValueError("If you provide y make sure its length equals\
-                              X.shape[0]")
-        print(y)
+            raise ValueError("If you provide y make sure its length equals X")
         self._X = self.vectorizer.fit_transform(X)
         self._y = np.array(y) if y is not None else None
         return self
@@ -52,9 +45,9 @@ class RetrievalModel(NeighborsBase, KNeighborsMixin, TransformerMixin):
         if self._y is not None:
             if y is not None and len(X) != len(y):
                 raise ValueError("Shapes...")
-            self._y = vstack([self._y, y])
+            self._y = sp.vstack([self._y, y])
         Xt = self.vectorizer.transform(X)
-        self._X = vstack([self._X, Xt])
+        self._X = sp.vstack([self._X, Xt])
 
         return self
 
@@ -71,25 +64,37 @@ class RetrievalModel(NeighborsBase, KNeighborsMixin, TransformerMixin):
             self.partial_fit(X, y)
 
     def query(self, X, k=1, **kwargs):
+        print("Query started:", X)
+        print("self._X.shape:", self._X.shape)
+        if self._y is not None:
+            print("self._y.shape:", self._y.shape)
         Xquery = self.transform(X)
+        print("Xquery.shape:", Xquery.shape)
         # 'matching' operation TODO make this variable
         # match_fn :: Xquery -> _X -> indices for X (and y)
-        if self.match_fn is not None:
-            row_mask = self.match_fn(Xquery, self._X)
-            Xm, ym = self._X[row_mask], self._y[row_mask]
-        else:
-            Xm, ym = self._X, self._y
+        for x in Xquery:
+            print("x.shape:", x.shape)
+            if self.match_fn is not None:
+                row_mask = self.match_fn(x, self._X)
+                if self._y is not None:
+                    Xm, ym = self._X[row_mask], self._y[row_mask]
+                else:
+                    Xm = self._X[row_mask]
+            else:
+                Xm, ym = self._X, self._y
 
-        self._fit(Xm)  # NeighborsBase
-        n_ret = max(Xm.shape[0], k)  # dont retrieve more than available
-        ind = self.kneighbors(Xquery, n_neighbors=n_ret, return_distance=False)
-        if self._y is not None:
-            labels = np.empty_like(ind)
-            for row, i in enumerate(ind):
-                labels[row, :] = ym[i]
-            return labels
-        else:
-            return ind
+            print("Xm.shape:", Xm.shape)
+            if self._y is not None:
+                print("ym.shape:", ym.shape)
+
+            self._fit(Xm)  # NeighborsBase
+            n_ret = min(Xm.shape[0], k)  # dont retrieve more than available
+            ind = self.kneighbors(x, n_neighbors=n_ret, return_distance=False)
+            if self._y is not None:
+                labels = np.choose(ind, ym)
+                yield labels
+            else:
+                yield ind
 
 
 def TfIdfRetrieval():
