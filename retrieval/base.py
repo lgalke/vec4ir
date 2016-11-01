@@ -82,123 +82,6 @@ def average_ndcg_at_k(rs, k, method=0):
     return np.mean([rm.ndcg_at_k(r, k, method) for r in rs])
 
 
-class RetrievalModel(BaseEstimator, TransformerMixin):
-    """
-    >>> docs = ["The quick", "Fox jumps", "over the lazy dog"]
-    >>> model = RetrievalModel().fit(docs)
-    >>> model.query(["quick"])
-    array([[0]])
-    >>> model.query(["fox"])
-    array([[1]])
-    >>> model.query(["dog"])
-    array([[2]])
-    >>> model.query(["the quick fox jumps over the lazy dog"], k=3)
-    array([[2, 0, 1]])
-    """
-    def __init__(self, vectorizer=TfidfVectorizer(), metric='cosine',
-                 algorithm='brute', matching='terms', verbose=0, **kwargs):
-        """ initializes vectorizer and passes remaining params down to
-        NeighborsBase
-        """
-        self._cv = CountVectorizer()
-        self.vectorizer = vectorizer
-        self.matching = TermMatch if matching == 'terms' else matching
-        self.verbose = verbose
-
-    def fit(self, X, y=None):
-        """ Fit the vectorizer and transform X to setup the index,
-        if y is given, copy it and return its corresponding values
-        on later queries. Consider y as the documents' ids
-        """
-        _checkXy(X, y)
-        self._X = self.vectorizer.fit_transform(X)
-        self._inv_X = self._cv.fit_transform(X)
-        if y is None:
-            n_docs = self._X.shape[0]
-            self._y = np.arange(n_docs)
-        else:
-            self._y = np.asarray(y)
-        return self
-
-    def partial_fit(self, X, y=None):
-        """ Add some objects into the index """
-        _checkXy(X, y)
-
-        Xnew = self.vectorizer.transform(X)
-        self._X = sp.vstack([self._X, Xnew])
-
-        self._inv_X = sp.vstack([self._inv_X, self._cv.transform(X)])
-
-        if y is None:
-            # Try to find at least reasonable ids
-            next_id = np.amax(self._y) + 1
-            new_ids = np.arange(next_id, next_id + Xnew.shape[0])
-            self._y = np.hstack([self._y, new_ids])
-        else:
-            self._y = np.hstack([self._y, np.asarray(y)])
-
-        return self
-
-    def transform(self, X):
-        return self.vectorizer.transform(X)
-
-    def inverse_transform(self, X):
-        return self.vectorizer.inverse_transform(X)
-
-    def index(self, X, y=None):
-        if self._X is None:
-            self.fit(X, y)
-        else:
-            self.partial_fit(X, y)
-
-    def query(self, X, k=1, **kwargs):
-        Xquery = self.transform(X)
-        results = []
-        for q in Xquery:
-            # Matching
-            if self.matching is not None:
-                indices = self.matching(self._X, q)
-                Xm, ym = self._X[indices], self._y[indices]
-            else:
-                Xm, ym = self._X, self._y
-
-            # Similarity
-            n_ret = min(Xm.shape[0], k)  # dont retrieve more than available
-            ind = cosine_similarity(Xm, q, n_ret)
-            labels = np.choose(ind, ym)
-            results.append(labels)
-        return np.asarray(results)
-
-    def score(self, X, Y, k=20, metrics=VALID_METRICS):
-        """
-        X: Query strings
-        Y: relevancy values of shape (n_queries, n_samples) or [dict]
-        k: number of documents to retrieve and consider in metrics
-        """
-        if hasattr(Y, 'shape'):
-            assert Y.shape == (len(X), self._X.shape[0])
-        else:
-            assert len(Y) == len(X)
-        rs = []
-        for qid, result in enumerate(self.query(X, k)):
-            try:
-                r = Y[qid, result]
-            except TypeError:
-                r = np.array([Y[qid][docid] for docid in result])
-            rs.append(r)
-
-        rs = np.asarray(rs)
-        values = {}
-        if "average_ndcg_at_k" in metrics:
-            values["average_ndcg_at_k"] = average_ndcg_at_k(rs, k)
-        if "mean_reciprocal_rank" in metrics:
-            values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
-        if "mean_average_precision" in metrics:
-            values["mean_average_precision"] = rm.mean_average_precision(rs)
-
-        return values
-
-
 class RetrievalBase(BaseEstimator):
     """
     Provides:
@@ -246,43 +129,54 @@ class RetrievalBase(BaseEstimator):
         """
         learn vocab and construct (pseudo-inverted) index
         """
+        _checkXy(X, y)
         cv = self._cv
         self._inv_X = cv.fit_transform(X)
         self._fit_X = np.asarray(X)
         n_docs = len(X)
         self._y = np.arange(n_docs) if y is None else np.asarray(y)
         self.n_docs = n_docs
-        assert len(self._fit_X) == len(self._y)
+        assert len(self._fit_X) == len(self._y) == self.n_docs
+        assert len(self._y) == len(np.unique(self._y))
         return self
 
-    def _partial_fix(self, X, y=None):
+    def _partial_fit(self, X, y=None):
+        _checkXy(X, y)
+        # update index
         self._inv_X = sp.vstack([self._inv_X, self._cv.transform(X)])
+        # update source
         self._fit_X = np.hstack([self._fit_X, np.asarray(X)])
-        n_new_docs = len(X)
+        # try to infer viable doc ids
+        next_id = np.amax(self._y) + 1
         if y is None:
-            y = np.arange(self.n_docs, self.n_docs + n_new_docs)
+            y = np.arange(next_id, next_id + len(X))
         else:
             y = np.asarray(y)
         self._y = np.hstack([self._y, y])
 
-        self.n_docs += n_new_docs
+        self.n_docs += len(X)
+        assert len(self._fit_X) == len(self._y) == self.n_docs
+        assert len(self._y) == len(np.unique(self._y))
         return self
 
-    def _matching(self, query):
+    def _matching(self, query, return_indices=False):
         match_fn = self._match_fn
-        # _X = self._inv_X if self._inv_X is not None else self._fit_X
         _X = self._inv_X
         q = self._cv.transform(np.asarray([query]))
         if match_fn is not None:
             ind = match_fn(_X, q)
-            return self._fit_X[ind], self._y[ind]
+            return ind if return_indices else self._fit_X[ind], self._y[ind]
         else:
             return self._fit_X, self._y
 
 
 class RetriEvalMixin():
     @abstractmethod
-    def init(self, **kwargs):
+    def __init__(self, **kwargs):
+        pass
+
+    @abstractmethod
+    def query(X, k=1):
         pass
 
     def score(self, X, Y, k=20, metrics=VALID_METRICS):
@@ -324,12 +218,18 @@ class TfidfRetrieval(RetrievalBase, RetriEvalMixin):
     >>> _ = tfidf.fit(docs)
     >>> tfidf._fit_X.shape
     (4,)
+    >>> tfidf._y.shape
+    (4,)
     >>> values = tfidf.score(["fox","dog"], [[0,1,0,0],[0,0,0,1]], k=20)
     >>> import pprint
     >>> pprint.pprint(values)
     {'average_ndcg_at_k': 1.0,
      'mean_average_precision': 1.0,
      'mean_reciprocal_rank': 1.0}
+    >>> _ = tfidf.partial_fit(["new fox doc"])
+    >>> tfidf.query(["new fox doc"])
+    >>> values = tfidf.score(["new fox doc"], [[0,1,0,0,2]])
+    >>> pprint.pprint(values)
     """
 
     def __init__(self, **kwargs):
