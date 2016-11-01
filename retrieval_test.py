@@ -14,20 +14,24 @@ if __name__ == '__main__':
     corpus.append(newdoc)
     print("Testing partial fit...")
     tfidf.partial_fit([newdoc])
-    print(tfidf)
     QUERYTERMS = ["fox quick", "information retrieval"]
     print("Testing RetrievalModel with document ids...")
+    # generate doc ids
     X, y = zip(*[(doc, docid) for docid, doc in enumerate(corpus)])
+    import numpy as np
     tfidf.fit(X, y)
-    for query, result in zip(QUERYTERMS,tfidf.query(QUERYTERMS, 3)):
-        print("QUERY:",query)
+    for query, result in zip(QUERYTERMS, tfidf.query(QUERYTERMS, 3)):
+        print("QUERY:", query)
         print(result)
         for docid in result:
-            print(docid,corpus[int(docid)])
+            print(docid, corpus[int(docid)])
     print("TESTING SCORING!!!")
-    import numpy as np
-    rels = np.array([[0,1,0,1],[1,0,0,0]])
-    print(rels.shape)
+    print("... with nparray rels")
+    rels = np.array([[0, 1, 0, 1], [1, 0, 0, 0]])
     scores = tfidf.score(QUERYTERMS, rels, k=20)
     pprint.pprint(scores)
+
+    print("... with list of dict rels")
+    reldict = [{0: 0, 1: 1, 2: 0, 3: 1}, {0: 1, 1: 0, 2: 0, 3: 0}]
+    pprint.pprint(tfidf.score(QUERYTERMS, reldict, k=20))
 
