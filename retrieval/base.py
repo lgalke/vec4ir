@@ -78,8 +78,11 @@ def _checkXy(X, y):
         raise ValueError("Shapes of X and y do not match.")
 
 
-def average_ndcg_at_k(rs, k, method=0):
-    return np.mean([rm.ndcg_at_k(r, k, method) for r in rs])
+def average_ndcg_at_k(rs, k, method=1):
+    """ method 0 behaves strange as it rates [1,2] as perfect """
+    ndcgs = [rm.ndcg_at_k(r, k, method) for r in rs]
+    print("ndcgs:", ndcgs, file=sys.stderr)
+    return np.mean(ndcgs)
 
 
 class RetrievalBase(BaseEstimator):
@@ -187,18 +190,19 @@ class RetriEvalMixin():
         k: number of documents to retrieve and consider in metrics
         """
         if hasattr(Y, 'shape'):
-            assert Y.shape == (len(X), self._X.shape[0])
+            assert Y.shape == (len(X), self._fit_X.shape[0])
         else:
             assert len(Y) == len(X)
         rs = []
         for qid, result in enumerate(self.query(X, k)):
+            # FIXME?
             try:
-                r = Y[qid, result]
+                r = [Y[qid, docid] for docid in result]
             except TypeError:
-                r = np.array([Y[qid][docid] for docid in result])
+                r = [Y[qid][docid] for docid in result]
             rs.append(r)
 
-        rs = np.asarray(rs)
+        print("rs:", rs, file=sys.stderr)
         values = {}
         if "average_ndcg_at_k" in metrics:
             values["average_ndcg_at_k"] = average_ndcg_at_k(rs, k)
@@ -227,9 +231,15 @@ class TfidfRetrieval(RetrievalBase, RetriEvalMixin):
      'mean_average_precision': 1.0,
      'mean_reciprocal_rank': 1.0}
     >>> _ = tfidf.partial_fit(["new fox doc"])
-    >>> tfidf.query(["new fox doc"])
-    >>> values = tfidf.score(["new fox doc"], [[0,1,0,0,2]])
+    >>> tfidf._fit_X[-1]
+    'new fox doc'
+    >>> list(tfidf.query(np.asarray(["new fox doc"]),k=2))
+    [array([4, 1])]
+    >>> values = tfidf.score(["new fox doc"], np.asarray([[0,2,0,0,0]]), k=3)
     >>> pprint.pprint(values)
+    {'average_ndcg_at_k': 0.63092975357145753,
+     'mean_average_precision': 0.5,
+     'mean_reciprocal_rank': 0.5}
     """
 
     def __init__(self, **kwargs):
@@ -255,15 +265,15 @@ class TfidfRetrieval(RetrievalBase, RetriEvalMixin):
                 yield []
             # model dependent transformation
             Xm = self.vectorizer.transform(matched_docs)
-            q = self.vectorizer.transform(query)
+            q = self.vectorizer.transform([query])
             # model dependent nearest neighbor search or scoring or whatever
             nn = NearestNeighbors(metric='cosine', algorithm='brute').fit(Xm)
             # abuse kneighbors in this case
+            # AS q only contains one element, we only need its results.
             ind = nn.kneighbors(q,
                                 n_neighbors=n_ret,
-                                return_distance=False).ravel()
+                                return_distance=False)[0]
             # dont forget to convert the indices to document ids of matching
-            # labels = np.choose(ind, matched_doc_ids)
             labels = matched_doc_ids[ind]
             yield labels
 
