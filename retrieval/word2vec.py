@@ -1,5 +1,6 @@
 from gensim.models import Word2Vec
 from base import RetrievalBase, RetriEvalMixin
+from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 import sys
 import logging
@@ -48,37 +49,31 @@ class StringSentence(object):
                 yield words[i:(i + self.max_sentence_length)]
                 i += self.max_sentence_length
 
+default_analyzer = CountVectorizer().build_analyzer()
+
 
 class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
     """ Kwargs are passed down to RetrievalBase's countvectorizer,
     whose analyzer is then used to decompose the documents into tokens
     >>> docs = ["the quick", "brown fox", "jumps over", "the lazy dog", "This is a document about coookies and cream and fox and dog", "why did you chose to do a masters thesis on the information retrieval task"]
-    >>> word2vec = Word2VecRetrieval(min_count=1)
+    >>> sentences = StringSentence(default_analyzer, docs)
+    >>> model = Word2Vec(sentences, min_count=1)
+    >>> word2vec = Word2VecRetrieval(model)
     >>> _ = word2vec.fit(docs)
-    >>> word2vec.score(["fox", "dog"], [[0,1,0,0,1,0],[0,0,0,1,1,0]])
+    >>> values = word2vec.score(["fox", "dog"], [[0,1,0,0,1,0],[0,0,0,1,1,0]])
+    >>> import pprint
+    >>> pprint.pprint(values)
+    {'average_ndcg_at_k': 1.0,
+     'mean_average_precision': 1.0,
+     'mean_reciprocal_rank': 1.0}
     """
-    def __init__(self,
-                 input='content',
-                 fname=None,
-                 use_phrases=False,
-                 **word2vec_params):
-        self.fname = fname
-        self.model = None
-
-        # gensim Word2Vec hyperparameters
-        self.word2vec_params = word2vec_params
-
+    def __init__(self, model, analyzer=None):
+        self.model = model
         self._init_params()  # also inits _cv
-        self.analyzer = self._cv.build_analyzer()
+        self.analyzer = self._cv.build_analyzer() if analyzer is None else analyzer
 
     def fit(self, X, y=None):
         self._fit(X, y)
-        w2v_params = self.word2vec_params
-        max_sentence_length = w2v_params.get('max_sentence_length', 10000)
-        sentences = StringSentence(self.analyzer, X, max_sentence_length)
-        # model = Word2Vec.load(fname)
-        model = Word2Vec(sentences, **w2v_params)
-        self.model = model
         return self
 
     def query(self, X, k=1):

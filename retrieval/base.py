@@ -197,8 +197,10 @@ class RetriEvalMixin():
         for qid, result in enumerate(self.query(X, k)):
             # FIXME?
             try:
+                # (n_queries x n_documents)
                 r = [Y[qid, docid] for docid in result]
             except TypeError:
+                # [dict()]
                 r = [Y[qid][docid] for docid in result]
             rs.append(r)
 

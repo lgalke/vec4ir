@@ -4,6 +4,7 @@ from timeit import default_timer as timer
 from timeit import timedelta
 from tfidf_retriever import TfidfRetriever
 from word2vec_retriever import Word2vecRetriever
+from datasets import NTCIR
 
 
 def ir_eval(irmodel, X, Xtest, Ytest, metrics=None):
@@ -29,13 +30,13 @@ def ir_eval(irmodel, X, Xtest, Ytest, metrics=None):
 def main():
     """TODO: Docstring for main.
     :returns: TODO
-
     """
-    tfidf = TfidfRetriever()
-    word2vec = Word2vecRetriever()
-    data = None
-    ir_eval(tfidf, data)
-    ir_eval(word2vec, data)
+    # tfidf = TfidfRetriever()
+    # word2vec = Word2vecRetriever()
+
+
+    # ir_eval(tfidf, data)
+    # ir_eval(word2vec, data)
 
 
 if __name__ == "__main__":
