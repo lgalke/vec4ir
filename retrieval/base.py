@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 
-from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.base import BaseEstimator
 from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from abc import abstractmethod
 import scipy.sparse as sp
 import numpy as np
-import gist.rank_metrics as rm
+
+try:
+    from . import rank_metrics as rm
+except SystemError:
+    import rank_metrics as rm
 import sys
 
-VALID_METRICS = ["mean_reciprocal_rank", "mean_average_precision",
-                 "average_ndcg_at_k"]
+VALID_METRICS = ["mean_reciprocal_rank", "mean_average_precision", "average_ndcg_at_k"]
 
 
 def TermMatch(X, q):
@@ -81,7 +84,6 @@ def _checkXy(X, y):
 def average_ndcg_at_k(rs, k, method=1):
     """ method 0 behaves strange as it rates [1,2] as perfect """
     ndcgs = [rm.ndcg_at_k(r, k, method) for r in rs]
-    print("ndcgs:", ndcgs, file=sys.stderr)
     return np.mean(ndcgs)
 
 
@@ -182,6 +184,35 @@ class RetriEvalMixin():
     def query(X, k=1):
         pass
 
+    def evaluate(self, X, Y, k=20, verbose=False, metrics=VALID_METRICS):
+        """
+        X : [(qid, str)] query id, query pairs
+        Y : pandas dataseries with qid,docid index
+        """
+        rs = []
+        for qid, query in X:
+            # execute query
+            if verbose:
+                print(qid, ":", query)
+            result = self.query(query, k=k)
+            # replacement with relevancy values
+            # if verbose:
+            #     for docid in result:
+            #         print(docid)
+            # r = [Y.loc(axis=0)[qid, docid] for docid in result]
+            r = [Y.get((qid, docid), 0) for docid in result]
+            if verbose:
+                print(r)
+            rs.append(r)
+        values = {}
+        if "average_ndcg_at_k" in metrics:
+            values["average_ndcg_at_k"] = average_ndcg_at_k(rs, k)
+        if "mean_reciprocal_rank" in metrics:
+            values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
+        if "mean_average_precision" in metrics:
+            values["mean_average_precision"] = rm.mean_average_precision(rs)
+        return values
+
     def score(self, X, Y, k=20, metrics=VALID_METRICS):
         """
         assumes a query(X,q) -> sorted_doc_ids method
@@ -189,13 +220,12 @@ class RetriEvalMixin():
         Y: relevancy values of shape (n_queries, n_samples) or [dict]
         k: number of documents to retrieve and consider in metrics
         """
-        if hasattr(Y, 'shape'):
-            assert Y.shape == (len(X), self._fit_X.shape[0])
-        else:
-            assert len(Y) == len(X)
+        # if hasattr(Y, 'shape'):
+        #     assert Y.shape == (len(X), self._fit_X.shape[0])
+        # else:
+        #     assert len(Y) == len(X)
         rs = []
         for qid, result in enumerate(self.query(X, k)):
-            # FIXME?
             try:
                 # (n_queries x n_documents)
                 r = [Y[qid, docid] for docid in result]
@@ -204,7 +234,7 @@ class RetriEvalMixin():
                 r = [Y[qid][docid] for docid in result]
             rs.append(r)
 
-        print("rs:", rs, file=sys.stderr)
+        # print("rs:", rs, file=sys.stderr)
         values = {}
         if "average_ndcg_at_k" in metrics:
             values["average_ndcg_at_k"] = average_ndcg_at_k(rs, k)
@@ -257,27 +287,28 @@ class TfidfRetrieval(RetrievalBase, RetriEvalMixin):
         self._partial_fit(X, y)
         return self
 
-    def query(self, queries, k=1):
-        for query in queries:
-            # matching step
-            matched_docs, matched_doc_ids = self._matching(query)
-            # calculate elements to retrieve
-            n_ret = min(len(matched_docs), k)
-            if n_ret < 0:
-                yield []
-            # model dependent transformation
-            Xm = self.vectorizer.transform(matched_docs)
-            q = self.vectorizer.transform([query])
-            # model dependent nearest neighbor search or scoring or whatever
-            nn = NearestNeighbors(metric='cosine', algorithm='brute').fit(Xm)
-            # abuse kneighbors in this case
-            # AS q only contains one element, we only need its results.
-            ind = nn.kneighbors(q,
-                                n_neighbors=n_ret,
-                                return_distance=False)[0]
-            # dont forget to convert the indices to document ids of matching
-            labels = matched_doc_ids[ind]
-            yield labels
+    def query(self, query, k=1):
+        # matching step
+        matched_docs, matched_doc_ids = self._matching(query)
+        # calculate elements to retrieve
+        n_match = len(matched_docs)
+        print("found {} matches:".format(n_match))
+        n_ret = min(n_match, k)
+        if not n_ret:
+            return []
+        # model dependent transformation
+        Xm = self.vectorizer.transform(matched_docs)
+        q = self.vectorizer.transform([query])
+        # model dependent nearest neighbor search or scoring or whatever
+        nn = NearestNeighbors(metric='cosine', algorithm='brute').fit(Xm)
+        # abuse kneighbors in this case
+        # AS q only contains one element, we only need its results.
+        ind = nn.kneighbors(q,
+                            n_neighbors=n_ret,
+                            return_distance=False)[0]
+        # dont forget to convert the indices to document ids of matching
+        labels = matched_doc_ids[ind]
+        return labels
 
 
 if __name__ == '__main__':
