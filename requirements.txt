@@ -1,4 +1,7 @@
 numpy
 scipy
-sklearn
+pandas
+scikit-learn
 gensim
+pyemd
+
