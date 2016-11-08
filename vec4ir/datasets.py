@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
-import doctest
-import sys
 import pandas as pd
-import os.path
-import numpy as np
+import os
 from html.parser import HTMLParser
 
 # NTCIR_ROOT_PATH = # think about this
@@ -108,15 +105,36 @@ class NTCIR(object):
         df.set_index("qid", inplace=True, verify_integrity=verify_integrity)
         return df
 
-    def __init__(self, root_path):
+    def __init__(self, root_path, cache_dir=None):
         self.root_path = root_path
+        try:
+            os.mkdir(cache_dir)
+        except FileExistsError:
+            pass
+        self.cache_dir = cache_dir
 
     def docs(self, kaken=True, gakkai=True, verify_integrity=False):
         if not kaken and not gakkai:
             raise ValueError
 
-        docs = []
+        if self.cache_dir:
+            identifier = {
+                (False, True): "kaken.pkl",
+                (True, False): "gakkai.pkl",
+                (True, True): "gakkeikaken.pkl"
+            }[(gakkai, kaken)]
+            cache = os.path.join(self.cache_dir, identifier)
+        else:
+            cache = None
 
+        if cache:
+            try:
+                df = pd.read_pickle(cache)
+                return df
+            except FileNotFoundError:
+                pass
+
+        docs = []
         if kaken:
             kaken_docs = self.kaken(verify_integrity=verify_integrity)
             docs.append(kaken_docs)
@@ -126,6 +144,8 @@ class NTCIR(object):
             docs.append(gakkai_docs)
 
         df = pd.concat(docs, verify_integrity=verify_integrity)
+        if cache:
+            df.to_pickle(cache)
         return df
 
     def kaken(self, verify_integrity=False):

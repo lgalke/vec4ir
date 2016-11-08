@@ -1,0 +1,48 @@
+% Results
+% Lukas Galke
+% \today
+
+# NTCIR 2
+
+## Rel 1
+
+### Title
+
+| Model                 | MAP   | MRR   | NDCG  |
+|-----------------------+-------+-------+-------|
+| Tfidf                 | .3884 | .4450 | .4791 |
+| word2vec+n_similarity | .0718 | .0938 | .1157 |
+| word2vec+wmdistance   | .0695 | .0826 | .0949 |
+
+### Abstract
+
+| Model | MAP   | MRR   | NDCG  |
+|-------+-------+-------+-------|
+| Tfidf | .2973 | .3438 | .3917 |
+
+### Title + Abstract
+
+| Model | Map   | MRR    | NDCG  |
+|-------+-------+--------+-------|
+| Tfidf | .3188 | 0.3983 | .4242 |
+
+
+## Rel 2
+
+### Title
+
+| Model | MAP   | MRR   | NDCG  |
+|-------+-------+-------+-------|
+| Tfidf | .4662 | .5526 | .5551 |
+
+### Abstract
+
+| Model | Map   | MRR   | NDCG  |
+|-------+-------+-------+-------|
+| Tfidf | .3585 | .4214 | .4587 |
+
+### Title + Abstract
+
+| Model | MAP   | MRR   | NDCG  |
+|-------+-------+-------+-------|
+| Tfidf | .3869 | .4787 | .4863 |
