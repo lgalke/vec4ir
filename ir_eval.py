@@ -67,9 +67,8 @@ def main():
     print("Loading NTCIR2 documents...")
     docs_df = ntcir2.docs(kaken=True, gakkai=True)
     print("Loaded {:d} documents.".format(len(docs_df)))
-    if args.field == 'both':
-        docs_df['both'] = \
-            docs_df[['title', 'content']].apply(lambda x: ' '.join(x), axis=1)
+    docs_df['both'] = docs_df[['title', 'content']]\
+        .apply(lambda x: ' '.join(x), axis=1)
     documents = docs_df[args.field].values
     labels = docs_df.index.values
     # print("Fit...")
@@ -92,8 +91,9 @@ def main():
     results[tfidf.name] = evaluation(tfidf)
     del tfidf
     stop = CountVectorizer(stop_words='english').build_analyzer()
-    print("Training word2vec model...")
-    model = Word2Vec(StringSentence(documents, stop), min_count=1)
+    print("Training word2vec model on all available data...")
+    # use documents if only task specific data
+    model = Word2Vec(StringSentence(docs_df['both'].values, stop), min_count=1)
     model.init_sims(replace=True)  # model becomes read-only but saves memory
     print("Done.")
     n_similarity = Word2VecRetrieval(model, analyzer=stop,
