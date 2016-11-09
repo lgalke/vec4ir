@@ -1,9 +1,12 @@
 from gensim.models import Word2Vec
-from .base import RetrievalBase, RetriEvalMixin
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 import sys
 import logging
+try:
+    from .base import RetrievalBase, RetriEvalMixin
+except SystemError:
+    from base import RetrievalBase, RetriEvalMixin
 
 default_analyzer = CountVectorizer().build_analyzer()
 
@@ -20,13 +23,13 @@ class StringSentence(object):
     >>> analyze_fn = CountVectorizer().build_analyzer()
     >>> analyze_fn(documents[0]) == documents[0].lower().split()
     True
-    >>> sentences = StringSentence(analyze_fn, documents, 3)
+    >>> sentences = StringSentence(documents, analyze_fn, 3)
     >>> x = list(sentences)
     >>> len(x)
     3
     >>> x[2]
     ['the', 'lazy', 'dog']
-    >>> sentences = StringSentence(analyze_fn, documents, 5)
+    >>> sentences = StringSentence(documents, analyze_fn, 5)
     >>> x = list(sentences)
     >>> len(x)
     2
@@ -53,6 +56,23 @@ class StringSentence(object):
                 i += self.max_sentence_length
 
 
+def argtopk(A, k, axis=-1):
+    """
+    >>> A = np.asarray([5,4,3,6,7,8,9,0])
+    >>> argtopk(A, 3)
+    array([6, 5, 4])
+    >>> argtopk(A, 1)
+    array([6])
+    >>> argtopk(A, 0)
+    """
+    if k <= 0:
+        raise UserWarning("k <= 0 in argtopk, result may be undesired")
+    ind = np.argpartition(A, -k, axis=axis)[-k:]
+    ind = ind[np.argsort(A[ind])][::-1]
+    return ind
+
+
+
 class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
     """ Kwargs are passed down to RetrievalBase's countvectorizer,
     whose analyzer is then used to decompose the documents into tokens
@@ -61,7 +81,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
     >>> model = Word2Vec(sentences, min_count=1)
     >>> word2vec = Word2VecRetrieval(model)
     >>> _ = word2vec.fit(docs)
-    >>> values = word2vec.evaluate(["fox", "dog"], [[0,1,0,0,1,0],[0,0,0,1,1,0]])
+    >>> values = word2vec.evaluate([(0,"fox"), (1,"dog")], [[0,1,0,0,1,0],[0,0,0,1,1,0]])
     >>> import pprint
     >>> pprint.pprint(values)
     {'average_ndcg_at_k': 1.0,
@@ -77,14 +97,12 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
         if analyzer is not None:
             self.analyzer = analyzer
         else:
-            self.analyzer = None
+            self.analyzer = default_analyzer
 
     def fit(self, docs, y=None):
         self._fit(docs, y)
-        print("docs.shape:", docs.shape, file=sys.stderr)
         # self._X = np.apply_along_axis(lambda d: self.analyzer(str(d)), 0, X)
         self._X = np.asarray([self.analyzer(doc) for doc in docs])
-        print("self._X.shape:", self._X.shape, file=sys.stderr)
         return self
 
     def partial_fit(self, docs, y=None):
@@ -100,22 +118,28 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
             print(len(docs), "documents matched.")
         n_ret = min(len(docs), k)
         if n_ret == 0:
+            if verbose > 0:
+                print("WARNING: NO MATCH")
             return []
         q = self.analyzer(query)
         if verbose > 0:
-            print(q)
+            print("analyzed:", q)
+        q = [w for w in q if w in self.model]
+        if verbose > 0:
+            print("oov removed:", q)
+            if len(q) == 0:
+                print("WARNING: EMPTY QUERY")
+                return []
+        cosine_similarities = np.asarray([model.n_similarity(q, doc) for doc in docs])
+        topk = argtopk(cosine_similarities, n_ret)
+        ### It is important to also clip the labels
+        docs, labels = docs[topk], labels[topk]
         if self.method == 'n_similarity':
-            scores = np.asarray([model.n_similarity(q, doc) for doc in docs])
+            return labels
         elif self.method == 'wmdistance':
             scores = np.asarray([model.wmdistance(q, doc) for doc in docs])
-        # scores = np.apply_along_axis(
-        #     lambda doc:
-        #     model.wmdistance(query, doc), 1, docs)
-        if verbose > 0:
-            print(scores)
-        ind = np.argsort(scores)[-n_ret:]
-        selected = labels[ind]
-        return selected
+            ind = np.argsort(scores)  # ascending
+            return labels[ind]
 
 if __name__ == '__main__':
     import doctest
