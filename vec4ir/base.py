@@ -211,6 +211,8 @@ class RetriEvalMixin():
                 r = [Y.get((qid, docid), 0) for docid in result]
             except AttributeError:
                 r = [Y[qid][docid] for docid in result]
+            # does not change scores
+            # r += [0] * (k - len(r))  # python magic for padding
             if verbose > 0:
                 print(r)
             rs.append(r)
@@ -221,34 +223,6 @@ class RetriEvalMixin():
             values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
         if "mean_average_precision" in metrics:
             values["mean_average_precision"] = rm.mean_average_precision(rs)
-        return values
-
-    def score(self, X, Y, k=20, metrics=VALID_METRICS):
-        """
-        assumes a query(X,q) -> sorted_doc_ids method
-        X: Query strings
-        Y: relevancy values of shape (n_queries, n_samples) or [dict]
-        k: number of documents to retrieve and consider in metrics
-        """
-        rs = []
-        for qid, result in enumerate(self.query(X, k)):
-            try:
-                # (n_queries x n_documents)
-                r = [Y[qid, docid] for docid in result]
-            except TypeError:
-                # [dict()]
-                r = [Y[qid][docid] for docid in result]
-            rs.append(r)
-
-        # print("rs:", rs, file=sys.stderr)
-        values = {}
-        if "average_ndcg_at_k" in metrics:
-            values["average_ndcg_at_k"] = average_ndcg_at_k(rs, k)
-        if "mean_reciprocal_rank" in metrics:
-            values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
-        if "mean_average_precision" in metrics:
-            values["mean_average_precision"] = rm.mean_average_precision(rs)
-
         return values
 
 
