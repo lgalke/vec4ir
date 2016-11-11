@@ -112,6 +112,14 @@ def average_precision(r):
     0.7833333333333333
     >>> average_precision(r)
     0.78333333333333333
+    >>> r = [1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+    >>> average_precision(r)
+    0.78333333333333333
+    >>> average_precision([1,1,0,0]) == average_precision([1,1])
+    True
+    >>> average_precision([0])
+    0.0
+
 
     Args:
         r: Relevance scores (list or numpy) in rank order

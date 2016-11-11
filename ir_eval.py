@@ -14,7 +14,7 @@ import pprint
 #                     level=logging.INFO)
 
 
-def ir_eval(irmodel, documents, labels, queries, rels, metrics=None,
+def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
             verbose=3):
     """
     irmodel
@@ -32,7 +32,7 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None,
         print("Evaluating", irmodel.name, "...")
     if verbose > 1:
         print("-" * 79)
-    values = irmodel.evaluate(queries, rels, verbose=verbose-1)
+    values = irmodel.evaluate(queries, rels, verbose=verbose-1, k=k)
     if verbose > 1:
         print("-" * 79)
     if verbose > 0:
@@ -59,6 +59,8 @@ def main():
                         help="relevancies to use (defaults to 1)")
     parser.add_argument("-o", "--outfile", default=sys.stdout,
                         type=FileType('a'))
+    parser.add_argument("-k", dest='k', default=20, type=int,
+                        help="number of documentss to retrieve")
     parser.add_argument("-v", "--verbose", default=2, type=int,
                         help="verbosity level")
     args = parser.parse_args()
@@ -85,7 +87,7 @@ def main():
 
     def evaluation(m):
         return ir_eval(m, documents, labels, queries, rels,
-                       verbose=args.verbose)
+                       verbose=args.verbose, k=args.k)
 
     results = {}
     results[tfidf.name] = evaluation(tfidf)
