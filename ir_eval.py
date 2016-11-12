@@ -6,6 +6,7 @@ from vec4ir.datasets import NTCIR
 from vec4ir.base import TfidfRetrieval
 from vec4ir.word2vec import StringSentence, Word2VecRetrieval
 from gensim.models import Word2Vec
+from gensim.models import Phrases
 from sklearn.feature_extraction.text import CountVectorizer
 import sys
 import pprint
@@ -41,6 +42,8 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
         pprint.pprint(values)
         print("=" * 79)
 
+    values['params'] = irmodel.get_params(deep=True)
+
     return values
 
 
@@ -55,12 +58,17 @@ def main():
                         choices=['title', 'content', 'both'],
                         default='title',
                         help="field to use (defaults to 'title')")
+    parser.add_argument("-t", "--topics", type=str, default='title',
+                        choices=['title'],
+                        help="topics' field to use (defaults to 'title')")
     parser.add_argument("-r", "--rels", type=int, default=1, choices=[1, 2],
                         help="relevancies to use (defaults to 1)")
     parser.add_argument("-o", "--outfile", default=sys.stdout,
                         type=FileType('a'))
     parser.add_argument("-k", dest='k', default=20, type=int,
                         help="number of documentss to retrieve")
+    parser.add_argument("-m", "--model", default=True, type=bool,
+                        help="use precomputed word2vec model")
     parser.add_argument("-v", "--verbose", default=2, type=int,
                         help="verbosity level")
     args = parser.parse_args()
@@ -76,7 +84,7 @@ def main():
     # print("Fit...")
     # tfidf.fit(documents, docs_df.index.values)
     print("Loading queries and relevancies")
-    topics = ntcir2.topics()['title']
+    topics = ntcir2.topics()[args.topics]  # could be variable
     n_queries = len(topics)
     print("Using {:d} queries".format(n_queries))
     rels = ntcir2.rels(args.rels)['relevance']
@@ -92,17 +100,29 @@ def main():
     results = {}
     results[tfidf.name] = evaluation(tfidf)
     del tfidf
-    stop = CountVectorizer(stop_words='english').build_analyzer()
-    print("Training word2vec model on all available data...")
-    # use documents if only task specific data
-    model = Word2Vec(StringSentence(docs_df['both'].values, stop), min_count=1)
-    model.init_sims(replace=True)  # model becomes read-only but saves memory
+
+    analyzer = CountVectorizer(stop_words='english',
+                               lowercase=False).build_analyzer()
+
+    if args.model:
+        print("Loading word2vec model: {}".format(args.model))
+        model = Word2Vec.load_word2vec_format(args.model, binary=True)
+
+    else:
+        print("Training word2vec model on all available data...")
+        model = Word2Vec(StringSentence(docs_df['both'].values, analyzer),
+                         min_count=1, analyzer=analyzer)
+        model.init_sims(replace=True)  # model becomes read-only
+
     print("Done.")
-    n_similarity = Word2VecRetrieval(model, analyzer=stop,
+
+    n_similarity = Word2VecRetrieval(model, analyzer=analyzer,
                                      method='n_similarity')
     results[n_similarity.name] = evaluation(n_similarity)
     del n_similarity
-    wmdistance = Word2VecRetrieval(model, analyzer=stop, method='wmdistance')
+
+    wmdistance = Word2VecRetrieval(model, analyzer=analyzer,
+                                   method='wmdistance')
     results[wmdistance.name] = evaluation(wmdistance)
     del wmdistance
 

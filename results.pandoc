@@ -4,6 +4,11 @@
 
 # NTCIR 2
 
+Word2vec model is trained only on the currently prevalent data,
+with default parameters except for min_count=1,
+The wmdistance method is used to rerank the top 20 results with respect to cosine similarity 
+(equivalent to chosing the 20 nearest with respect to centroid distance).
+
 ## Rel 1
 
 ### Title

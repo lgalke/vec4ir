@@ -13,8 +13,7 @@ default_analyzer = CountVectorizer().build_analyzer()
 
 class StringSentence(object):
     """
-    Classic approach to decompose documents into smaller word lists using a
-    window_size argument
+    Uses analyze_fn to decompose strings into words
     analyze_fn : callable to for analysis :: string -> [string]
     documents : iterable of documents
     c : the window size
@@ -56,7 +55,7 @@ class StringSentence(object):
                 i += self.max_sentence_length
 
 
-def argtopk(A, k, axis=-1):
+def argtopk(A, k, axis=-1, sort=True):
     """
     >>> A = np.asarray([5,4,3,6,7,8,9,0])
     >>> argtopk(A, 3)
@@ -68,9 +67,11 @@ def argtopk(A, k, axis=-1):
     if k <= 0:
         raise UserWarning("k <= 0 in argtopk, result may be undesired")
     ind = np.argpartition(A, -k, axis=axis)[-k:]
-    ind = ind[np.argsort(A[ind])][::-1]
-    return ind
 
+    if sort:
+        ind = ind[np.argsort(A[ind])][::-1]
+
+    return ind
 
 
 class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
@@ -88,16 +89,15 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
      'mean_average_precision': 1.0,
      'mean_reciprocal_rank': 1.0}
     """
-    def __init__(self, model, method="n_similarity", analyzer=None):
-        if method not in ["n_similarity", "wmdistance"]:
+    def __init__(self, model, method="wcd", **kwargs):
+        if method not in ["wcd", "wmd"]:
             raise ValueError
         self.model = model
         self.method = method
-        self._init_params(name='+'.join(["word2vec", method]))
-        if analyzer is not None:
-            self.analyzer = analyzer
-        else:
-            self.analyzer = default_analyzer
+        # inits self._cv
+        self._init_params(name='+'.join(["word2vec", method]), **kwargs)
+        # uses cv's analyzer which can be specified by kwargs
+        self.analyzer = self._cv.build_analyzer()
 
     def fit(self, docs, y=None):
         self._fit(docs, y)
@@ -111,6 +111,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
         self._X = np.hstack[self._X, Xprep]
 
     def query(self, query, k=1, verbose=0):
+        wcd = self.method == 'wcd'
         model = self.model
         indices = self._matching(query, return_indices=True)
         docs, labels = self._X[indices], self._y[indices]
@@ -130,13 +131,14 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
             if len(q) == 0:
                 print("WARNING: EMPTY QUERY")
                 return []
-        cosine_similarities = np.asarray([model.n_similarity(q, doc) for doc in docs])
-        topk = argtopk(cosine_similarities, n_ret)
-        ### It is important to also clip the labels
+        cosine_similarities = np.asarray(
+            [model.n_similarity(q, doc) for doc in docs])
+        topk = argtopk(cosine_similarities, n_ret, sort=wcd)  # sort when wcd
+        # It is important to also clip the labels #
         docs, labels = docs[topk], labels[topk]
-        if self.method == 'n_similarity':
+        if wcd:
             return labels
-        elif self.method == 'wmdistance':
+        else:  # compute word movers distance
             scores = np.asarray([model.wmdistance(q, doc) for doc in docs])
             ind = np.argsort(scores)  # ascending
             return labels[ind]

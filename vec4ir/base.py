@@ -2,15 +2,15 @@
 
 from sklearn.base import BaseEstimator
 from sklearn.neighbors import NearestNeighbors
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from abc import abstractmethod
 import scipy.sparse as sp
 import numpy as np
 
 try:
-    from . import rank_metrics as rm
-except SystemError:
     import rank_metrics as rm
+except SystemError, ValueError:
+    from . import rank_metrics as rm
 import sys
 
 VALID_METRICS = ["mean_reciprocal_rank", "mean_average_precision", "average_ndcg_at_k"]
@@ -250,19 +250,28 @@ class TfidfRetrieval(RetrievalBase, RetriEvalMixin):
      'mean_reciprocal_rank': 0.5}
     """
 
-    def __init__(self, **kwargs):
-        self.vectorizer = TfidfVectorizer(**kwargs)
-        self._init_params(name="TFIDF")
+    def __init__(self, norm='l2', use_idf=True, smooth_idf=True,
+                 sublinear_tf=False, **kwargs):
+        self.tfidf = TfidfTransformer(norm=norm, use_idf=use_idf,
+                                      smooth_idf=smooth_idf,
+                                      sublinear_tf=sublinear_tf)
+
+        # override defaults since we need the counts here
+        binary = kwargs.pop('binary', False)
+        dtype = kwargs.pop('dtype', np.int64)
+
+        # pass remaining args to countvectorizer
+        self._init_params(name="TFIDF", binary=binary, dtype=dtype, **kwargs)
 
     def fit(self, X, y=None):
-        self._fit(X, y)
-        self.vectorizer.fit(X, y)
-        self._X = self.vectorizer.transform(X)
+        self._fit(X, y)  # set _inv_X for matching
+        self.tfidf.fit(self._inv_X)  # fit idf on _inv_X (counts are stored)
+        self._X = self.tfidf.transform(self._inv_X)  # transform X
         return self
 
     def partial_fit(self, X, y=None):
         self._partial_fit(X, y)
-        Xt = self.vectorizer.transform(X)
+        Xt = self.tfidf.transform(self._cv.transform(X))
         self._X = sp.vstack([self._X, Xt])
         return self
 
@@ -280,14 +289,15 @@ class TfidfRetrieval(RetrievalBase, RetriEvalMixin):
         if not n_ret:
             return []
         # model dependent transformation
-        q = self.vectorizer.transform([query])
+        xq = self._cv.transform([query])
+        q = self.tfidf.transform(xq)
         # Xm = self.vectorizer.transform(matching_docs)
         # model dependent nearest neighbor search or scoring or whatever
         nn = NearestNeighbors(metric='cosine', algorithm='brute').fit(Xm)
         # abuse kneighbors in this case
         # AS q only contains one element, we only need its results.
-        ind = nn.kneighbors(q,  # q is a single element
-                            n_neighbors=n_ret,
+        ind = nn.kneighbors(q,  # q contains a single element
+                            n_neighbors=n_ret,  # limit to k neighbors
                             return_distance=False)[0]  # so we only need 1 res
         # dont forget to convert the indices to document ids of matching
         labels = matched_doc_ids[ind]

@@ -113,9 +113,10 @@ class NTCIR(object):
             pass
         self.cache_dir = cache_dir
 
-    def docs(self, kaken=True, gakkai=True, verify_integrity=False):
+    def docs(self, kaken=True, gakkai=True, verify_integrity=False, verbose=0):
+        """ Method to access NTCIR documents with caching """
         if not kaken and not gakkai:
-            raise ValueError
+            raise ValueError("So... you call me and want no documents?")
 
         if self.cache_dir:
             identifier = {
@@ -129,32 +130,44 @@ class NTCIR(object):
 
         if cache:
             try:
+                if verbose > 0:
+                    print("Cache hit:", cache)
                 df = pd.read_pickle(cache)
                 return df
             except FileNotFoundError:
+                if verbose > 0:
+                    print("Cache miss.")
                 pass
 
         docs = []
         if kaken:
-            kaken_docs = self.kaken(verify_integrity=verify_integrity)
+            kaken_docs = self.kaken(verify_integrity=verify_integrity,
+                                    verbose=verbose)
             docs.append(kaken_docs)
 
         if gakkai:
-            gakkai_docs = self.gakkai(verify_integrity=verify_integrity)
+            gakkai_docs = self.gakkai(verify_integrity=verify_integrity,
+                                      verbose=verbose)
             docs.append(gakkai_docs)
 
         df = pd.concat(docs, verify_integrity=verify_integrity)
         if cache:
+            if verbose > 0:
+                print("Writing cache: ", self.cache)
             df.to_pickle(cache)
         return df
 
-    def kaken(self, verify_integrity=False):
+    def kaken(self, verify_integrity=False, verbose=0):
         path = os.path.join(self.root_path, "e-docs", "ntc2-e1k")
+        if verbose > 0:
+            print("Loading: ", path)
         df = NTCIR._read_docs(path, "pjne", verify_integrity=verify_integrity)
         return df
 
-    def gakkai(self, verify_integrity=False):
+    def gakkai(self, verify_integrity=False, verbose=0):
         path = os.path.join(self.root_path, "e-docs", "ntc2-e1g")
+        if verbose > 0:
+            print("Loading: ", path)
         df = NTCIR._read_docs(path, "tite", verify_integrity=verify_integrity)
         return df
 
