@@ -8,9 +8,9 @@ import scipy.sparse as sp
 import numpy as np
 
 try:
-    import rank_metrics as rm
-except SystemError, ValueError:
     from . import rank_metrics as rm
+except SystemError:
+    import rank_metrics as rm
 import sys
 
 VALID_METRICS = ["mean_reciprocal_rank", "mean_average_precision", "average_ndcg_at_k"]
@@ -191,7 +191,7 @@ class RetriEvalMixin():
     def query(X, k=1):
         pass
 
-    def evaluate(self, X, Y, k=20, verbose=0, metrics=VALID_METRICS):
+    def evaluate(self, X, Y, k=20, verbose=0):
         """
         X : [(qid, str)] query id, query pairs
         Y : pandas dataseries with qid,docid index
@@ -217,12 +217,14 @@ class RetriEvalMixin():
                 print(r)
             rs.append(r)
         values = {}
-        if "average_ndcg_at_k" in metrics:
-            values["average_ndcg_at_k"] = average_ndcg_at_k(rs, k)
-        if "mean_reciprocal_rank" in metrics:
-            values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
-        if "mean_average_precision" in metrics:
-            values["mean_average_precision"] = rm.mean_average_precision(rs)
+        # values["average_ndcg_at_k"] = average_ndcg_at_k(rs, k)
+        values["ndcg_at_k"] = np.asarray([rm.ndcg_at_k(r, k) for r in rs])
+        # values["precision@5"] = np.asarray([rm.precision_at_k(r, 5)
+        #                                     for r in rs])
+        # values["precision@10"] = np.asarray([rm.precision_at_k(r, 10)
+        #                                      for r in rs])
+        values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
+        values["mean_average_precision"] = rm.mean_average_precision(rs)
         return values
 
 

@@ -42,6 +42,9 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
         pprint.pprint(values)
         print("=" * 79)
 
+    ndcgs = values['ndcg_at_k']
+    values['ndcg_at_k'] = (ndcgs.mean(), ndcgs.std())
+
     values['params'] = irmodel.get_params(deep=True)
 
     return values
@@ -67,12 +70,11 @@ def main():
                         type=FileType('a'))
     parser.add_argument("-k", dest='k', default=20, type=int,
                         help="number of documentss to retrieve")
-    parser.add_argument("-m", "--model", default=True, type=bool,
+    parser.add_argument("-m", "--model", default=None, type=str,
                         help="use precomputed word2vec model")
     parser.add_argument("-v", "--verbose", default=2, type=int,
                         help="verbosity level")
     args = parser.parse_args()
-    tfidf = TfidfRetrieval()
     ntcir2 = NTCIR("../data/NTCIR2/", ".cache")
     print("Loading NTCIR2 documents...")
     docs_df = ntcir2.docs(kaken=True, gakkai=True)
@@ -92,17 +94,18 @@ def main():
     print("With {:.1f} relevant documents per query".format(n_rels/n_queries))
     queries = list(zip(topics.index, topics))
     # scores = tfidf.evaluate(queries, rels, verbose=1)
+    analyzer = CountVectorizer(stop_words='english',
+                               lowercase=False).build_analyzer()
 
     def evaluation(m):
         return ir_eval(m, documents, labels, queries, rels,
                        verbose=args.verbose, k=args.k)
 
     results = {}
-    results[tfidf.name] = evaluation(tfidf)
-    del tfidf
 
-    analyzer = CountVectorizer(stop_words='english',
-                               lowercase=False).build_analyzer()
+    # tfidf = TfidfRetrieval(analyzer=analyzer)
+    # results[tfidf.name] = evaluation(tfidf)
+    # del tfidf
 
     if args.model:
         print("Loading word2vec model: {}".format(args.model))
@@ -111,20 +114,27 @@ def main():
     else:
         print("Training word2vec model on all available data...")
         model = Word2Vec(StringSentence(docs_df['both'].values, analyzer),
-                         min_count=1, analyzer=analyzer)
+                         min_count=1, iter=10)
         model.init_sims(replace=True)  # model becomes read-only
 
     print("Done.")
 
-    n_similarity = Word2VecRetrieval(model, analyzer=analyzer,
-                                     method='n_similarity')
-    results[n_similarity.name] = evaluation(n_similarity)
-    del n_similarity
+    # n_similarity = Word2VecRetrieval(model, analyzer=analyzer,
+    #                                  method='wcd')
+    # results[n_similarity.name] = evaluation(n_similarity)
+    # del n_similarity
 
-    wmdistance = Word2VecRetrieval(model, analyzer=analyzer,
-                                   method='wmdistance')
-    results[wmdistance.name] = evaluation(wmdistance)
-    del wmdistance
+    # wmdistance = Word2VecRetrieval(model, analyzer=analyzer,
+    #                                method='wmd')
+    # results[wmdistance.name] = evaluation(wmdistance)
+    # del wmdistance
+
+    expander = Word2VecRetrieval(model, analyzer=analyzer,
+                                 method='wcd', name='w2v+wcd+expand5',
+                                 n_expansions=5)
+    results[expander.name] = evaluation(expander)
+
+    results['args'] = args
 
     pprint.pprint(results, stream=args.outfile)
 
