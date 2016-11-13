@@ -134,6 +134,10 @@ def main():
                                  n_expansions=5)
     results[expander.name] = evaluation(expander)
 
+    nomatcher = Word2VecRetrieval(model, analyzer=analyzer,
+                                  method='wcd', name='w2v+wcd+nomatching')
+    results[nomatcher.name] = evaluation(expander)
+
     results['args'] = args
 
     pprint.pprint(results, stream=args.outfile)
