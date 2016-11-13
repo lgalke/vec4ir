@@ -142,7 +142,8 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
 
 
     def fit(self, docs, y=None):
-        self._fit(docs, y)
+        if self.matching:
+            self._fit(docs, y)
         # self._X = np.apply_along_axis(lambda d: self.analyzer(str(d)), 0, X)
         self._X = np.asarray(
             [self._filter_vocab(doc, analyze=True) for doc in docs]
@@ -150,7 +151,8 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
         return self
 
     def partial_fit(self, docs, y=None):
-        self._partial_fit(docs, y)
+        if self.matching:
+            self._partial_fit(docs, y)
         Xprep = np.asarray(
             [self._filter_vocab(doc, analyze=True) for doc in docs]
         )
@@ -166,7 +168,10 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
             q = self._medoid_expansion(q, n_expansions=self.n_expansions)
 
         indices = self._matching(' '.join(q), return_indices=True)
-        docs, labels = self._X[indices], self._y[indices]
+        if self.matching:
+            docs, labels = self._X[indices], self._y[indices]
+        else:
+            docs, labels = self._X, self._y
         n_ret = min(len(docs), k)
         if verbose > 0:
             print(len(docs), "documents matched.")
