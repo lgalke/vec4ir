@@ -83,8 +83,6 @@ def main():
         .apply(lambda x: ' '.join(x), axis=1)
     documents = docs_df[args.field].values
     labels = docs_df.index.values
-    # print("Fit...")
-    # tfidf.fit(documents, docs_df.index.values)
     print("Loading queries and relevancies")
     topics = ntcir2.topics()[args.topics]  # could be variable
     n_queries = len(topics)
@@ -102,10 +100,11 @@ def main():
                        verbose=args.verbose, k=args.k)
 
     results = {}
+    results['args'] = args
 
-    # tfidf = TfidfRetrieval(analyzer=analyzer)
-    # results[tfidf.name] = evaluation(tfidf)
-    # del tfidf
+    tfidf = TfidfRetrieval(analyzer=analyzer)
+    results[tfidf.name] = evaluation(tfidf)
+    del tfidf
 
     if args.model:
         print("Loading word2vec model: {}".format(args.model))
@@ -119,26 +118,25 @@ def main():
 
     print("Done.")
 
-    # n_similarity = Word2VecRetrieval(model, analyzer=analyzer,
-    #                                  method='wcd')
-    # results[n_similarity.name] = evaluation(n_similarity)
-    # del n_similarity
+    n_similarity = Word2VecRetrieval(model, analyzer=analyzer,
+                                     method='wcd')
+    results[n_similarity.name] = evaluation(n_similarity)
+    del n_similarity
 
-    # wmdistance = Word2VecRetrieval(model, analyzer=analyzer,
-    #                                method='wmd')
-    # results[wmdistance.name] = evaluation(wmdistance)
-    # del wmdistance
-
-    expander = Word2VecRetrieval(model, analyzer=analyzer,
-                                 method='wcd', name='w2v+wcd+expand5',
-                                 n_expansions=5)
-    results[expander.name] = evaluation(expander)
+    wmdistance = Word2VecRetrieval(model, analyzer=analyzer,
+                                   method='wmd')
+    results[wmdistance.name] = evaluation(wmdistance)
+    del wmdistance
 
     nomatcher = Word2VecRetrieval(model, analyzer=analyzer,
-                                  method='wcd', name='w2v+wcd+nomatching')
-    results[nomatcher.name] = evaluation(expander)
+                                  method='wcd', name='w2v+wcd+nomatching',
+                                  matching=False)
+    results[nomatcher.name] = evaluation(nomatcher)
+    nomatcher.method = 'wmd'
+    nomatcher.name = 'w2v+wmd+nomatching'
+    results[nomatcher.name] = evaluation(nomatcher)
+    del nomatcher
 
-    results['args'] = args
 
     pprint.pprint(results, stream=args.outfile)
 

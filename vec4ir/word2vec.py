@@ -117,6 +117,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
         self.analyzer = self._cv.build_analyzer()
 
     def _filter_vocab(self, words, analyze=False):
+        """ if analyze is given, analyze words first (split string) """
         if analyze:
             words = self.analyzer(words)
         filtered = [word for word in words if word in self.model]
@@ -137,13 +138,11 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
         exps, _scores = zip(*exps)
         exps = list(exps)
         if self.verbose > 0:
-            print("Expanded", words, "with:", exps, file=sys.stderr)
+            print("Expanded", words, "by:", exps, file=sys.stderr)
         return words + exps
 
-
     def fit(self, docs, y=None):
-        if self.matching:
-            self._fit(docs, y)
+        self._fit(docs, y)
         # self._X = np.apply_along_axis(lambda d: self.analyzer(str(d)), 0, X)
         self._X = np.asarray(
             [self._filter_vocab(doc, analyze=True) for doc in docs]
@@ -151,36 +150,34 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
         return self
 
     def partial_fit(self, docs, y=None):
-        if self.matching:
-            self._partial_fit(docs, y)
+        self._partial_fit(docs, y)
+
         Xprep = np.asarray(
             [self._filter_vocab(doc, analyze=True) for doc in docs]
         )
-        self._X = np.hstack[self._X, Xprep]
+        self._X = np.hstack([self._X, Xprep])
 
-    def query(self, query, k=1, verbose=0):
+    def query(self, query, k=1, verbose=None):
+        verbose = verbose if verbose is not None else self.verbose
         wcd = self.method == 'wcd'
         model = self.model
         q = self._filter_vocab(query, analyze=True)
-        if verbose > 0:
-            print("analyzed and filtered:", q)
         if len(q) > 0 and self.n_expansions:
             q = self._medoid_expansion(q, n_expansions=self.n_expansions)
-
-        indices = self._matching(' '.join(q), return_indices=True)
         if self.matching:
+            indices = self._matching(' '.join(q), return_indices=True)
             docs, labels = self._X[indices], self._y[indices]
         else:
             docs, labels = self._X, self._y
+        # docs, labels set
         n_ret = min(len(docs), k)
         if verbose > 0:
+            print("preprocessed query:", q)
             print(len(docs), "documents matched.")
-        if n_ret == 0:
+        if n_ret == 0 or len(q) == 0:
             return []
-        if len(q) == 0:
-            return labels  # this is odd... feelin really lucky?
         cosine_similarities = np.asarray(
-            [model.n_similarity(q, doc) for doc in docs]
+            [model.n_similarity(q, doc) if len(doc) > 0 else 0 for doc in docs]
         )
         topk = argtopk(cosine_similarities, n_ret, sort=wcd)  # sort when wcd
         # It is important to also clip the labels #
@@ -191,6 +188,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
         ind = np.argsort(scores)  # ascending
         ind = ind[:k]
         return labels[ind]
+
 
 if __name__ == '__main__':
     import doctest
