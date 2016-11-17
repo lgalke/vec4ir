@@ -4,9 +4,9 @@ import numpy as np
 import sys
 import logging
 try:
-    from .base import RetrievalBase, RetriEvalMixin
+    from .base import RetrievalBase, RetriEvalMixIn, CombinatorMixIn
 except SystemError:
-    from base import RetrievalBase, RetriEvalMixin
+    from base import RetrievalBase, RetriEvalMixIn, CombinatorMixIn
 
 default_analyzer = CountVectorizer().build_analyzer()
 
@@ -85,7 +85,7 @@ def argtopk(A, k, axis=-1, sort=True):
     return ind
 
 
-class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
+class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
     """ Kwargs are passed down to RetrievalBase's countvectorizer,
     whose analyzer is then used to decompose the documents into tokens
     >>> docs = ["the quick", "brown fox", "jumps over", "the lazy dog", "This is a document about coookies and cream and fox and dog", "why did you chose to do a masters thesis on the information retrieval task"]
@@ -111,7 +111,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
         self.verbose = kwargs.get('verbose', 0)
         # inits self._cv
         if name is None:
-            name = '+'.join(["w2v",method])
+            name = '+'.join(["w2v", method])
         self._init_params(name=name, **kwargs)
         # uses cv's analyzer which can be specified by kwargs
         self.analyzer = self._cv.build_analyzer()
@@ -157,21 +157,20 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin):
         )
         self._X = np.hstack([self._X, Xprep])
 
-    def query(self, query, k=1, verbose=None):
-        verbose = verbose if verbose is not None else self.verbose
+    def query(self, query, k=1):
         wcd = self.method == 'wcd'
         model = self.model
         q = self._filter_vocab(query, analyze=True)
         if len(q) > 0 and self.n_expansions:
             q = self._medoid_expansion(q, n_expansions=self.n_expansions)
         if self.matching:
-            indices = self._matching(' '.join(q), return_indices=True)
+            indices = self._matching(' '.join(q))
             docs, labels = self._X[indices], self._y[indices]
         else:
             docs, labels = self._X, self._y
         # docs, labels set
         n_ret = min(len(docs), k)
-        if verbose > 0:
+        if self.verbose > 0:
             print("preprocessed query:", q)
             print(len(docs), "documents matched.")
         if n_ret == 0 or len(q) == 0:

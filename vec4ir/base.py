@@ -3,7 +3,12 @@
 from sklearn.base import BaseEstimator
 from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
+from sklearn.preprocessing import maxabs_scale
 from abc import abstractmethod
+from collections import defaultdict, OrderedDict
+from operator import itemgetter
+from operator import mul
+from functools import reduce
 import scipy.sparse as sp
 import numpy as np
 
@@ -115,25 +120,25 @@ class RetrievalBase(BaseEstimator):
     (2, 8)
     >>> retrieval._y.shape
     (2,)
-    >>> ind = retrieval._matching( "fox" , return_indices=True)
+    >>> ind = retrieval._matching( "fox" )
     >>> print(ind.shape)
     (1,)
     >>> str(docs[ind[0]])
     'the quick brown fox'
     >>> ind
     array([0], dtype=int32)
-    >>> len(retrieval._matching( "brown dog" , return_indices=True))
+    >>> len(retrieval._matching( "brown dog" ))
     2
     """
     @abstractmethod
     def __init__(self, **kwargs):
         pass
 
-    def _init_params(self, name=None, matching='term', **kwargs):
+    def _init_params(self, name=None, match_fn='term', **kwargs):
         # reasonable defaults for indexing use case
         binary = kwargs.pop('binary', True)
         dtype = kwargs.pop('dtype', np.bool_)
-        self._match_fn = TermMatch if matching == 'term' else matching
+        self._match_fn = TermMatch if match_fn == 'term' else match_fn
         self._cv = CountVectorizer(binary=binary, dtype=dtype, **kwargs)
         self.name = name
 
@@ -167,22 +172,16 @@ class RetrievalBase(BaseEstimator):
         self.n_docs += len(X)
         return self
 
-    def _matching(self, query, return_indices=False):
+    def _matching(self, query):
         match_fn = self._match_fn
         _X = self._inv_X
         q = self._cv.transform(np.asarray([query]))
         # q = self._cv.transform(query)
-        if match_fn is not None:
-            ind = match_fn(_X, q)
-            if return_indices is True:
-                return ind
-            else:
-                return self._fit_X[ind], self._y[ind]
-        else:
-            return self._fit_X, self._y
+        ind = match_fn(_X, q)
+        return ind
 
 
-class RetriEvalMixin():
+class RetriEvalMixIn():
     @abstractmethod
     def __init__(self, **kwargs):
         pass
@@ -201,7 +200,7 @@ class RetriEvalMixin():
             # execute query
             if verbose > 0:
                 print(qid, ":", query)
-            result = self.query(query, k=k, verbose=verbose-1)
+            result = self.query(query, k=k)
             # replacement with relevancy values
             # if verbose:
             #     for docid in result:
@@ -228,7 +227,122 @@ class RetriEvalMixin():
         return values
 
 
-class TfidfRetrieval(RetrievalBase, RetriEvalMixin):
+def aggregate_dicts(dicts, agg_fn=sum):
+    """
+    Aggregates the contents of two dictionaries by key
+    @param agg_fn is used to aggregate the values (defaults to sum)
+    >>> dict1 = {'a': 0.8, 'b': 0.4, 'd': 0.4}
+    >>> dict2 = {'a': 0.7, 'c': 0.3, 'd': 0.3}
+    >>> agg = aggregate_dicts([dict1, dict2])
+    >>> OrderedDict(sorted(agg.items(), key=itemgetter(1), reverse=True))
+    OrderedDict([('a', 1.5), ('d', 0.7), ('b', 0.4), ('c', 0.3)])
+    """
+    acc = defaultdict(list)
+    for d in dicts:
+        for k in d:
+            acc[k].append(d[k])
+
+    for key, values in acc.items():
+        acc[key] = agg_fn(values)
+
+    return dict(acc)  # no need to default to list anymore
+
+
+def product(values):
+    """
+    Computes the product from a list of values 
+    >>> product([2,3,2])
+    12
+    >>> product([0,2,3])
+    0
+    >>> product([42])
+    42
+    """
+    return reduce(mul, values)
+
+
+def fuzzy_or(values):
+    """
+    Applies fuzzy or to a list of values
+    >>> fuzzy_or([0.5])
+    0.5
+    >>> fuzzy_or([0.5, 0.5])
+    0.75
+    >>> fuzzy_or([0.5, 0.5, 0.5])
+    0.875
+    """
+    if min(values) < 0 or max(values) > 0:
+        raise ValueError("fuzzy_or expects values in [0,1]")
+    return reduce(lambda x, y: 1 - (1 - x) * (1 - y), values)
+
+
+class CombinatorMixIn(object):
+    """ Creates a computational tree with retrieval models as leafs
+    """
+    def __get_weights(self, other):
+        if not isinstance(other, CombinatorMixIn):
+            raise ValueError("other is not Combinable")
+
+        if hasattr(self, '__weight'):
+            weight = self.__weight
+        else:
+            weight = 1.0
+
+        if hasattr(other, '__weight'):
+            otherweight = other.__weight
+        else:
+            otherweight = 1.0
+
+        return weight, otherweight
+
+    # This is evil since it can exceed [0,1], rescaling at the end would be not
+    # that beautiful
+    # def __add__(self, other):
+    #     weights = self.__get_weights(other)
+    #     return Combined([self, other], weights=weights, agg_fn=sum)
+
+    def __and__(self, other):
+        weights = self.__get_weights(other)
+        return Combined([self, other], weights=weights, agg_fn=product)
+
+    def __or__(self, other):
+        weights = self.__get_weights(other)
+        return Combined([self, other], weights=weights, agg_fn=fuzzy_or)
+
+    def __mul__(self, scalar):
+        self.__weight = scalar
+        return self
+
+
+class Combined(BaseEstimator, CombinatorMixIn):
+    def __init__(self, retrieval_models, weights=None, aggregation_fn=sum):
+        self.retrieval_models = retrieval_models
+        self.aggregation_fn = aggregation_fn
+        if weights is not None:
+            self.weights = weights
+        else:
+            self.weights = [1.0] * len(retrieval_models)
+
+    def query(self, query, k=1, sort=True):
+        models = self.retrieval_models
+        weights = maxabs_scale(self.weights)  # max 1 does not crash [0,1]
+        agg_fn = self.aggregation_fn
+        # we only need to sort in the final run
+        combined = [m.query(query, k=k, sort=False) for m in models]
+
+        if weights is not None:
+            combined = [{k: v * w for k, v in r.items()} for r, w in
+                        zip(combined, weights)]
+
+        combined = aggregate_dicts(combined, agg_fn=agg_fn, sort=True)
+
+        if sort:
+            combined = OrderedDict(sorted(combined.items(), key=itemgetter(1),
+                                          reverse=True))
+        return combined
+
+
+class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
     """
     Class for tfidf based retrieval
     >>> tfidf = TfidfRetrieval(input='content')
@@ -239,17 +353,17 @@ class TfidfRetrieval(RetrievalBase, RetriEvalMixin):
     >>> values = tfidf.evaluate(zip([0,1],["fox","dog"]), [{0:0,1:1,2:0,3:0}, {0:0,1:0,2:0,3:1}], k=20)
     >>> import pprint
     >>> pprint.pprint(values)
-    {'average_ndcg_at_k': 1.0,
-     'mean_average_precision': 1.0,
-     'mean_reciprocal_rank': 1.0}
+    {'mean_average_precision': 1.0,
+     'mean_reciprocal_rank': 1.0,
+     'ndcg_at_k': array([ 1.,  1.])}
     >>> _ = tfidf.partial_fit(["new fox doc"])
     >>> list(tfidf.query("new fox doc",k=2))
     [4, 1]
     >>> values = tfidf.evaluate([(0,"new fox doc")], np.asarray([[0,2,0,0,0]]), k=3)
     >>> pprint.pprint(values)
-    {'average_ndcg_at_k': 0.63092975357145753,
-     'mean_average_precision': 0.5,
-     'mean_reciprocal_rank': 0.5}
+    {'mean_average_precision': 0.5,
+     'mean_reciprocal_rank': 0.5,
+     'ndcg_at_k': array([ 1.])}
     """
 
     def __init__(self, norm='l2', use_idf=True, smooth_idf=True,
@@ -259,6 +373,8 @@ class TfidfRetrieval(RetrievalBase, RetriEvalMixin):
                                       sublinear_tf=sublinear_tf)
 
         # override defaults since we need the counts here
+        self.verbose = kwargs.get('verbose', 0)
+
         binary = kwargs.pop('binary', False)
         dtype = kwargs.pop('dtype', np.int64)
 
@@ -277,15 +393,15 @@ class TfidfRetrieval(RetrievalBase, RetriEvalMixin):
         self._X = sp.vstack([self._X, Xt])
         return self
 
-    def query(self, query, k=1, verbose=0):
+    def query(self, query, k=1, sort=True):
         # matching step
-        matching_ind = self._matching(query, return_indices=True)
+        matching_ind = self._matching(query)
         # print(matching_ind, file=sys.stderr)
         Xm, matched_doc_ids = self._X[matching_ind], self._y[matching_ind]
         # matching_docs, matching_doc_ids = self._matching(query)
         # calculate elements to retrieve
         n_match = len(matching_ind)
-        if verbose > 0:
+        if self.verbose > 0:
             print("Found {} matches:".format(n_match))
         n_ret = min(n_match, k)
         if not n_ret:

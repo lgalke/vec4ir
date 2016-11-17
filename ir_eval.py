@@ -132,11 +132,11 @@ def main():
                                   method='wcd', name='w2v+wcd+nomatching',
                                   matching=False)
     results[nomatcher.name] = evaluation(nomatcher)
+
     nomatcher.method = 'wmd'
     nomatcher.name = 'w2v+wmd+nomatching'
     results[nomatcher.name] = evaluation(nomatcher)
     del nomatcher
-
 
     pprint.pprint(results, stream=args.outfile)
 
