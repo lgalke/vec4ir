@@ -250,7 +250,7 @@ def aggregate_dicts(dicts, agg_fn=sum):
 
 def product(values):
     """
-    Computes the product from a list of values 
+    Computes the product from a list of values
     >>> product([2,3,2])
     12
     >>> product([0,2,3])
@@ -263,7 +263,7 @@ def product(values):
 
 def fuzzy_or(values):
     """
-    Applies fuzzy or to a list of values
+    Applies fuzzy-or to a list of values
     >>> fuzzy_or([0.5])
     0.5
     >>> fuzzy_or([0.5, 0.5])
@@ -337,8 +337,9 @@ class Combined(BaseEstimator, CombinatorMixIn):
         combined = aggregate_dicts(combined, agg_fn=agg_fn, sort=True)
 
         if sort:
+            # only cut-off at k if this is the final (sorted) output
             combined = OrderedDict(sorted(combined.items(), key=itemgetter(1),
-                                          reverse=True))
+                                          reverse=True)[:k])
         return combined
 
 
@@ -403,7 +404,7 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
         n_match = len(matching_ind)
         if self.verbose > 0:
             print("Found {} matches:".format(n_match))
-        n_ret = min(n_match, k)
+        n_ret = min(n_match, k) if k > 0 else n_match
         if not n_ret:
             return []
         # model dependent transformation

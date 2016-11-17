@@ -184,7 +184,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         if wcd:
             return labels
         scores = np.asarray([model.wmdistance(q, doc) for doc in docs])
-        ind = np.argsort(scores)  # ascending
+        ind = np.argsort(scores)  # ascending by distance
         ind = ind[:k]
         return labels[ind]
 

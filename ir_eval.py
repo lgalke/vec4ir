@@ -74,6 +74,9 @@ def main():
                         help="use precomputed word2vec model")
     parser.add_argument("-v", "--verbose", default=2, type=int,
                         help="verbosity level")
+    parser.add_argument("-c", "--lowercase", default=False,
+                        action='store_true',
+                        help="Case insensite analysis")
     args = parser.parse_args()
     ntcir2 = NTCIR("../data/NTCIR2/", ".cache")
     print("Loading NTCIR2 documents...")
@@ -89,11 +92,10 @@ def main():
     print("Using {:d} queries".format(n_queries))
     rels = ntcir2.rels(args.rels)['relevance']
     n_rels = len(rels.nonzero()[0])
-    print("With {:.1f} relevant documents per query".format(n_rels/n_queries))
+    print("With {:.1f} relevant documents per query".format(n_rels / n_queries))
     queries = list(zip(topics.index, topics))
-    # scores = tfidf.evaluate(queries, rels, verbose=1)
     analyzer = CountVectorizer(stop_words='english',
-                               lowercase=False).build_analyzer()
+                               lowercase=args.lowercase).build_analyzer()
 
     def evaluation(m):
         return ir_eval(m, documents, labels, queries, rels,
