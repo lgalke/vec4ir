@@ -1,0 +1,37 @@
+# NTCIR 2
+
+- Case sensitive analysis
+- k=20 retrieved documents
+- Google's Word2Vec Model
+
+## Rel 1
+
+### Title
+
+| Retrieval model | MAP     | MRR     | NDCG            |
+| TFIDF           | *.2680* | *.2943* | *.3442* (.3931) |
+| w2v+wcd         | .2283   | .2818   | .3103 (.3344)   |
+| w2v+wcd+wmd     | .1465   | .1537   | .2535 (.3012)   |
+
+### Abstract
+
+| Retrieval model | MAP     | MRR     | NDCG            |
+| TFIDF           | .1791   | *.2157* | .2331 (.3399)   |
+| w2v+wcd         | .1476   | .1817   | .2245 (.2996)   |
+| w2v+wcd+wmd     | *.1855* | .2104   | *.2509* (.3394) |
+
+## Rel 2
+
+### Title
+
+| Retrieval model | MAP   | MRR   | NDCG          |
+| TFIDF           | .3309 | .3802 | .4106 (.4008) |
+| w2v+wcd         | .2588 | .3188 | .3441 (.3520) |
+| w2v+wcd+wmd     | .1911 | .1972 | .2928 (.3223) |
+
+### Abstract
+
+| Retrieval model | MAP   | MRR   | NDCG          |
+| TFIDF           | .2133 | .2463 | .2686 (.3607) |
+| w2v+wcd         | .2054 | .2404 | .2854 (.3418) |
+| w2v+wcd+wmd     | .2144 | .2475 | .2886 (.3521) |

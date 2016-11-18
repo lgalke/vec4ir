@@ -76,7 +76,7 @@ def main():
                         help="verbosity level")
     parser.add_argument("-c", "--lowercase", default=False,
                         action='store_true',
-                        help="Case insensite analysis")
+                        help="Case insensitive analysis")
     args = parser.parse_args()
     ntcir2 = NTCIR("../data/NTCIR2/", ".cache")
     print("Loading NTCIR2 documents...")
@@ -130,15 +130,6 @@ def main():
     results[wmdistance.name] = evaluation(wmdistance)
     del wmdistance
 
-    nomatcher = Word2VecRetrieval(model, analyzer=analyzer,
-                                  method='wcd', name='w2v+wcd+nomatching',
-                                  matching=False)
-    results[nomatcher.name] = evaluation(nomatcher)
-
-    nomatcher.method = 'wmd'
-    nomatcher.name = 'w2v+wmd+nomatching'
-    results[nomatcher.name] = evaluation(nomatcher)
-    del nomatcher
 
     pprint.pprint(results, stream=args.outfile)
 
