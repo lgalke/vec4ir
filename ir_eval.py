@@ -120,16 +120,13 @@ def main():
 
     print("Done.")
 
-    n_similarity = Word2VecRetrieval(model, analyzer=analyzer,
-                                     method='wcd')
+    n_similarity = Word2VecRetrieval(model, analyzer=analyzer, wmd=False)
     results[n_similarity.name] = evaluation(n_similarity)
     del n_similarity
 
-    wmdistance = Word2VecRetrieval(model, analyzer=analyzer,
-                                   method='wmd')
+    wmdistance = Word2VecRetrieval(model, analyzer=analyzer, wmd=1.0)
     results[wmdistance.name] = evaluation(wmdistance)
     del wmdistance
-
 
     pprint.pprint(results, stream=args.outfile)
 

@@ -57,7 +57,7 @@ class StringSentence(object):
 
 def argtopk(A, k, axis=-1, sort=True):
     """
-    >>> A = np.asarray([5,4,3,6,7,8,9,0])
+    >>> A = [5,4,3,6,7,8,9,0]
     >>> argtopk(A, 3)
     array([6, 5, 4])
     >>> argtopk(A, 1)
@@ -70,9 +70,13 @@ def argtopk(A, k, axis=-1, sort=True):
     array([7, 2, 1, 0, 3, 4])
     >>> argtopk(A, 6)
     array([6, 5, 4, 3, 0, 1])
+    >>> argtopk(A, 10)
+    array([6, 5, 4, 3, 0, 1, 2, 7])
     """
-    if k == 0:
-        raise UserWarning("k == 0? result [] may be undesired.")
+    k = min(len(A), k)
+    A = np.asarray(A)
+    if k <= 0:
+        raise UserWarning("k <= 0? result [] may be undesired.")
         return []
     ind = np.argpartition(A, -k, axis=axis)
     ind = ind[-k:] if k > 0 else ind[:-k]
@@ -101,11 +105,9 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
      'ndcg_at_k': array([ 1.,  1.])}
     """
     def __init__(self, model, name=None, matching=True, method="wcd",
-                 n_expansions=None, **kwargs):
-        if method not in ["wcd", "wmd"]:
-            raise ValueError
+                 n_expansions=None, wmd=1.0, **kwargs):
         self.model = model
-        self.method = method
+        self.wmd = wmd
         self.n_expansions = n_expansions
         self.matching = matching
         self.verbose = kwargs.get('verbose', 0)
@@ -157,8 +159,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         )
         self._X = np.hstack([self._X, Xprep])
 
-    def query(self, query, k=1):
-        wcd = self.method == 'wcd'
+    def query(self, query, k=1, sort=True):
         model = self.model
         q = self._filter_vocab(query, analyze=True)
         if len(q) > 0 and self.n_expansions:
@@ -168,25 +169,40 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
             docs, labels = self._X[indices], self._y[indices]
         else:
             docs, labels = self._X, self._y
+
+        if isinstance(self.wmd, int):
+            wmd = k + self.wmd
+        elif isinstance(self.wmd, float):
+            wmd = int(k * self.wmd)
+        elif self.wmd:  # if it evaluates to True, but is neither int or float
+            wmd = k     # just use k
+        else:
+            wmd = False
+
         # docs, labels set
-        n_ret = min(len(docs), k)
         if self.verbose > 0:
             print("preprocessed query:", q)
             print(len(docs), "documents matched.")
-        if n_ret == 0 or len(q) == 0:
+        if len(docs) == 0 or len(q) == 0:
             return []
         cosine_similarities = np.asarray(
             [model.n_similarity(q, doc) if len(doc) > 0 else 0 for doc in docs]
         )
-        topk = argtopk(cosine_similarities, n_ret, sort=wcd)  # sort when wcd
+
+        topk = argtopk(cosine_similarities, wmd, sort=not wmd)  # sort when wcd
         # It is important to also clip the labels #
         docs, labels = docs[topk], labels[topk]
-        if wcd:
-            return labels
-        scores = np.asarray([model.wmdistance(q, doc) for doc in docs])
-        ind = np.argsort(scores)  # ascending by distance
-        ind = ind[:k]
-        return labels[ind]
+        # may be fewer than k
+
+        if not wmd:  # if wmd is False
+            result = labels[:k]
+        else:
+            scores = np.asarray([model.wmdistance(q, doc) for doc in docs])
+            ind = np.argsort(scores)  # ascending by distance
+            ind = ind[:k]             # may be more than k
+            result = labels[ind]
+
+        return result
 
 
 if __name__ == '__main__':
