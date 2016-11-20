@@ -1,4 +1,5 @@
 from gensim.models import Word2Vec
+from gensim.models import Phrases
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 import sys
@@ -104,11 +105,16 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
      'mean_reciprocal_rank': 1.0,
      'ndcg_at_k': array([ 1.,  1.])}
     """
-    def __init__(self, model, name=None, matching=True,
-                 n_expansions=None, wmd=1.0, verbose=0, **kwargs):
+    def __init__(self,
+                 model,
+                 name=None,
+                 matching=True,
+                 wmd=1.0,
+                 verbose=0,
+                 oov='UNK',
+                 **kwargs):
         self.model = model
         self.wmd = wmd
-        self.n_expansions = n_expansions
         self.matching = matching
         self.verbose = verbose
         # inits self._cv
@@ -120,15 +126,17 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         self._init_params(name=name, **kwargs)
         # uses cv's analyzer which can be specified by kwargs
         self.analyzer = self._cv.build_analyzer()
+        self.oov = oov
 
     def _filter_vocab(self, words, analyze=False):
         """ if analyze is given, analyze words first (split string) """
         if analyze:
             words = self.analyzer(words)
-        filtered = [word for word in words if word in self.model]
-        # if len(filtered) == 0:
-        #     print("NO MATCH IN VOCAB:", words)
+        filtered = [word if word in self.model else self.oov for word in words]
         return filtered
+
+    def _filter_oov_token(self, words):
+        return [word for word in words if word != self.oov]
 
     def _medoid_expansion(self, words, n_expansions=1):
         """
@@ -165,31 +173,34 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
     def query(self, query, k=1, sort=True):
         model = self.model
         verbose = self.verbose
-        q = self._filter_vocab(query, analyze=True)
-        if len(q) > 0 and self.n_expansions:
-            q = self._medoid_expansion(q, n_expansions=self.n_expansions)
         if self.matching:
-            indices = self._matching(' '.join(q))
+            # indices = self._matching(' '.join(q))
+            indices = self._matching(query)
             docs, labels = self._X[indices], self._y[indices]
         else:
             docs, labels = self._X, self._y
+        if verbose > 0:
+            print(len(docs), "documents matched.")
+
         if self.wmd:
-            if isinstance(self.wmd, int):
+            if self.wmd is True:
+                wmd = k
+            elif isinstance(self.wmd, int):
                 wmd = k + self.wmd
             elif isinstance(self.wmd, float):
                 wmd = int(k * self.wmd)
             else:
-                wmd = k     # just use k
+                raise ValueError("wmd= what?")
         else:
             wmd = False
 
+        q = self._filter_vocab(query, analyze=True)
         if verbose > 0:
             print("Threshold for wmd:", wmd)
 
         # docs, labels set
         if verbose > 0:
             print("preprocessed query:", q)
-            print(len(docs), "documents matched.")
         if len(docs) == 0 or len(q) == 0:
             return []
         cosine_similarities = np.asarray(
@@ -206,8 +217,13 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         else:
             if verbose > 0:
                 print("Computing wmdistance")
-            scores = np.asarray([model.wmdistance(q, doc) for doc in docs])
+            q = self._filter_oov_token(q)
+            scores = np.asarray([model.wmdistance(q,
+                                                  self._filter_oov_token(doc))
+                                 for doc in docs])
             ind = np.argsort(scores)  # ascending by distance
+            if verbose > 0:
+                print(scores[ind])
             ind = ind[:k]             # may be more than k
             result = labels[ind]
 

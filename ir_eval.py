@@ -124,11 +124,27 @@ def main():
                                      verbose=args.verbose)
     results[n_similarity.name] = evaluation(n_similarity)
     del n_similarity
-
-    wmdistance = Word2VecRetrieval(model, analyzer=analyzer, wmd=1.0,
+    wmdistance = Word2VecRetrieval(model,
+                                   analyzer=analyzer,
+                                   wmd=True,
                                    verbose=args.verbose)
     results[wmdistance.name] = evaluation(wmdistance)
     del wmdistance
+ 
+    # for wmd in [1.0, 1.5, 2.0, 3.0, 5.0, 10.0]:
+    #     name="w2v+wcd+"+str(wmd)+"wmd"
+    #     wmdistance = Word2VecRetrieval(model, analyzer=analyzer, wmd=wmd,
+    #                                    name=name, verbose=args.verbose)
+    #     results[wmdistance.name] = evaluation(wmdistance)
+    #     del wmdistance
+
+    # for i in [1, 2, 3, 5, 10]:
+    #     name="w2v+wcd+wmd+"+str(i)+"exps"
+    #     wmdistance = Word2VecRetrieval(model, analyzer=analyzer, wmd=False,
+    #                                    name=name, verbose=args.verbose,
+    #                                    n_expansions=i)
+    #     results[wmdistance.name] = evaluation(wmdistance)
+    #     del wmdistance
 
     pprint.pprint(results, stream=args.outfile)
 
