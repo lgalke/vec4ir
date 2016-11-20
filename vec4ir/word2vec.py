@@ -105,12 +105,12 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
      'ndcg_at_k': array([ 1.,  1.])}
     """
     def __init__(self, model, name=None, matching=True,
-                 n_expansions=None, wmd=1.0, **kwargs):
+                 n_expansions=None, wmd=1.0, verbose=0, **kwargs):
         self.model = model
         self.wmd = wmd
         self.n_expansions = n_expansions
         self.matching = matching
-        self.verbose = kwargs.get('verbose', 0)
+        self.verbose = verbose
         # inits self._cv
         if name is None:
             if not self.wmd:
@@ -164,6 +164,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
 
     def query(self, query, k=1, sort=True):
         model = self.model
+        verbose = self.verbose
         q = self._filter_vocab(query, analyze=True)
         if len(q) > 0 and self.n_expansions:
             q = self._medoid_expansion(q, n_expansions=self.n_expansions)
@@ -172,18 +173,21 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
             docs, labels = self._X[indices], self._y[indices]
         else:
             docs, labels = self._X, self._y
-
-        if isinstance(self.wmd, int):
-            wmd = k + self.wmd
-        elif isinstance(self.wmd, float):
-            wmd = int(k * self.wmd)
-        elif self.wmd:  # if it evaluates to True, but is neither int or float
-            wmd = k     # just use k
+        if self.wmd:
+            if isinstance(self.wmd, int):
+                wmd = k + self.wmd
+            elif isinstance(self.wmd, float):
+                wmd = int(k * self.wmd)
+            else:
+                wmd = k     # just use k
         else:
             wmd = False
 
+        if verbose > 0:
+            print("Threshold for wmd:", wmd)
+
         # docs, labels set
-        if self.verbose > 0:
+        if verbose > 0:
             print("preprocessed query:", q)
             print(len(docs), "documents matched.")
         if len(docs) == 0 or len(q) == 0:
@@ -192,7 +196,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
             [model.n_similarity(q, doc) if len(doc) > 0 else 0 for doc in docs]
         )
 
-        topk = argtopk(cosine_similarities, wmd, sort=not wmd)  # sort when wcd
+        topk = argtopk(cosine_similarities, wmd if wmd else k, sort=not wmd)  # sort when wcd
         # It is important to also clip the labels #
         docs, labels = docs[topk], labels[topk]
         # may be fewer than k
@@ -200,6 +204,8 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         if not wmd:  # if wmd is False
             result = labels[:k]
         else:
+            if verbose > 0:
+                print("Computing wmdistance")
             scores = np.asarray([model.wmdistance(q, doc) for doc in docs])
             ind = np.argsort(scores)  # ascending by distance
             ind = ind[:k]             # may be more than k
