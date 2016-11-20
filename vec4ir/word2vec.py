@@ -104,7 +104,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
      'mean_reciprocal_rank': 1.0,
      'ndcg_at_k': array([ 1.,  1.])}
     """
-    def __init__(self, model, name=None, matching=True, method="wcd",
+    def __init__(self, model, name=None, matching=True,
                  n_expansions=None, wmd=1.0, **kwargs):
         self.model = model
         self.wmd = wmd
@@ -113,7 +113,10 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         self.verbose = kwargs.get('verbose', 0)
         # inits self._cv
         if name is None:
-            name = '+'.join(["w2v", method])
+            if not self.wmd:
+                name = "w2v+wcd"
+            else:
+                name = "w2v+wcd+wmd"
         self._init_params(name=name, **kwargs)
         # uses cv's analyzer which can be specified by kwargs
         self.analyzer = self._cv.build_analyzer()
