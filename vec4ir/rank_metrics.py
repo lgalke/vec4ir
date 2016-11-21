@@ -200,6 +200,7 @@ def dcg_at_k(r, k, method=0):
     return 0.
 
 
+
 def ndcg_at_k(r, k, method=0):
     """Score is normalized discounted cumulative gain (ndcg)
 

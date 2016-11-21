@@ -9,6 +9,7 @@ from collections import defaultdict, OrderedDict
 from operator import itemgetter
 from operator import mul
 from functools import reduce
+from timeit import default_timer as timer
 import scipy.sparse as sp
 import numpy as np
 
@@ -17,9 +18,6 @@ try:
 except SystemError:
     import rank_metrics as rm
 import sys
-
-VALID_METRICS = ["mean_reciprocal_rank", "mean_average_precision", "average_ndcg_at_k"]
-
 
 def TermMatch(X, q):
     """
@@ -90,12 +88,6 @@ def _checkXy(X, y):
         return
     if len(X) != len(y):
         raise ValueError("Shapes of X and y do not match.")
-
-
-def average_ndcg_at_k(rs, k, method=1):
-    """ method 0 behaves strange as it rates [1,2] as perfect """
-    ndcgs = [rm.ndcg_at_k(r, k, method) for r in rs]
-    return np.mean(ndcgs)
 
 
 class RetrievalBase(BaseEstimator):
@@ -196,11 +188,14 @@ class RetriEvalMixIn():
         Y : pandas dataseries with qid,docid index
         """
         rs = []
+        tpq = []
         for qid, query in X:
             # execute query
             if verbose > 0:
                 print(qid, ":", query)
+            t0 = timer()
             result = self.query(query, k=k)
+            tpq.append(timer() - t0)
             # replacement with relevancy values
             # if verbose:
             #     for docid in result:
@@ -216,7 +211,6 @@ class RetriEvalMixIn():
                 print(r)
             rs.append(r)
         values = {}
-        # values["average_ndcg_at_k"] = average_ndcg_at_k(rs, k)
         values["ndcg_at_k"] = np.asarray([rm.ndcg_at_k(r, k) for r in rs])
         # values["precision@5"] = np.asarray([rm.precision_at_k(r, 5)
         #                                     for r in rs])
@@ -224,6 +218,7 @@ class RetriEvalMixIn():
         #                                      for r in rs])
         values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
         values["mean_average_precision"] = rm.mean_average_precision(rs)
+        values["time_per_query"] = np.mean(np.asarray(tpq)) * 1000
         return values
 
 

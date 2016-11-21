@@ -37,8 +37,6 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
     if verbose > 1:
         print("-" * 79)
     if verbose > 0:
-        print("Average time per query:",
-              timedelta(seconds=(timer()-t1)/len(queries)))
         pprint.pprint(values)
         print("=" * 79)
 
@@ -62,7 +60,7 @@ def main():
                         default='title',
                         help="field to use (defaults to 'title')")
     parser.add_argument("-t", "--topics", type=str, default='title',
-                        choices=['title'],
+                        choices=['title', 'description'],
                         help="topics' field to use (defaults to 'title')")
     parser.add_argument("-r", "--rels", type=int, default=1, choices=[1, 2],
                         help="relevancies to use (defaults to 1)")
@@ -86,10 +84,13 @@ def main():
         .apply(lambda x: ' '.join(x), axis=1)
     documents = docs_df[args.field].values
     labels = docs_df.index.values
-    print("Loading queries and relevancies")
-    topics = ntcir2.topics()[args.topics]  # could be variable
+
+    print("Loading topics...")
+    topics = ntcir2.topics(names=args.topics)[args.topics]  # could be variable
     n_queries = len(topics)
     print("Using {:d} queries".format(n_queries))
+
+    print("Loading relevances...")
     rels = ntcir2.rels(args.rels)['relevance']
     n_rels = len(rels.nonzero()[0])
     print("With {:.1f} relevant documents per query".format(n_rels / n_queries))
@@ -124,6 +125,7 @@ def main():
                                      verbose=args.verbose)
     results[n_similarity.name] = evaluation(n_similarity)
     del n_similarity
+
     wmdistance = Word2VecRetrieval(model,
                                    analyzer=analyzer,
                                    wmd=True,
