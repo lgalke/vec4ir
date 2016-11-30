@@ -76,7 +76,7 @@ def argtopk(A, k, axis=-1, sort=True):
     """
     k = min(len(A), k)
     A = np.asarray(A)
-    if k <= 0:
+    if k == 0:
         raise UserWarning("k <= 0? result [] may be undesired.")
         return []
     ind = np.argpartition(A, -k, axis=axis)
@@ -93,35 +93,42 @@ def argtopk(A, k, axis=-1, sort=True):
 class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
     """ Kwargs are passed down to RetrievalBase's countvectorizer,
     whose analyzer is then used to decompose the documents into tokens
+    model - the Word Embedding model to use
+    name  - identifier for the retrieval model
+    verbose - verbosity level
+    oov    - token to use for out of vocabulary words
+    try_lowercase - try to match with an uncased word if cased failed
     >>> docs = ["the quick", "brown fox", "jumps over", "the lazy dog", "This is a document about coookies and cream and fox and dog", "why did you chose to do a masters thesis on the information retrieval task"]
     >>> sentences = StringSentence(docs)
     >>> model = Word2Vec(sentences, min_count=1)
     >>> word2vec = Word2VecRetrieval(model)
     >>> _ = word2vec.fit(docs)
     >>> values = word2vec.evaluate([(0,"fox"), (1,"dog")], [[0,1,0,0,1,0],[0,0,0,1,1,0]])
-    >>> import pprint
-    >>> pprint.pprint(values)
-    {'mean_average_precision': 1.0,
-     'mean_reciprocal_rank': 1.0,
-     'ndcg_at_k': array([ 1.,  1.])}
+    >>> values['mean_average_precision']
+    1.0
+    >>> values['mean_reciprocal_rank']
+    1.0
+    >>> values['ndcg_at_k']
+    array([ 1.,  1.])
     """
     def __init__(self,
                  model,
                  name=None,
-                 matching=True,
                  wmd=1.0,
                  verbose=0,
                  oov='UNK',
+                 try_lowercase=False,
                  **kwargs):
         self.model = model
         self.wmd = wmd
         self.verbose = verbose
+        self.try_lowercase = try_lowercase
         # inits self._cv
         if name is None:
             if not self.wmd:
-                name = "w2v+wcd"
+                name = "wcd"
             else:
-                name = "w2v+wcd+wmd"
+                name = "wcd+wmd"
         self._init_params(name=name, **kwargs)
         # uses cv's analyzer which can be specified by kwargs
         self.analyzer = self._cv.build_analyzer()
@@ -131,7 +138,17 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         """ if analyze is given, analyze words first (split string) """
         if analyze:
             words = self.analyzer(words)
-        filtered = [word if word in self.model else self.oov for word in words]
+        # filtered = [word if word in self.model else self.oov for word in words]
+        # TODO try lowercasing
+        filtered = []
+        for word in words:
+            if word in self.model:
+                filtered.append(word)
+            elif self.try_lowercase and word.lower() in self.model:
+                filtered.append(word.lower())  # FIXME could be optimized
+                print("YAY hit a word with lowering!")
+            else:
+                filtered.append(self.oov)
         return filtered
 
     def _filter_oov_token(self, words):
