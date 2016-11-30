@@ -110,8 +110,9 @@ def main():
     del tfidf
 
     if args.model:
-        print("Loading word2vec model: {}".format(args.model))
-        model = Word2Vec.load_word2vec_format(args.model, binary=True)
+        binary = ".bin" in args.model
+        print("Loading word2vec model: {}, binary={}".format(args.model, binary))
+        model = Word2Vec.load_word2vec_format(args.model, binary=binary)
 
     else:
         print("Training word2vec model on all available data...")
