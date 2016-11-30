@@ -115,7 +115,6 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
                  **kwargs):
         self.model = model
         self.wmd = wmd
-        self.matching = matching
         self.verbose = verbose
         # inits self._cv
         if name is None:
@@ -157,10 +156,10 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
     def fit(self, docs, y=None):
         self._fit(docs, y)
         # self._X = np.apply_along_axis(lambda d: self.analyzer(str(d)), 0, X)
-        sentences = [self.analyzer(doc) for doc in docs]
-        self.bigrams = Phrases(sentences)
-        sentences = [self.bigrams[sentence] for sentence in sentences]
-        X = [self._filter_vocab(sentence) for sentence in sentences]
+        # sentences = [self.analyzer(doc) for doc in docs]
+        # self.bigrams = Phrases(sentences)
+        # sentences = [self.bigrams[sentence] for sentence in sentences]
+        X = [self._filter_vocab(doc, analyze=True) for doc in docs]
 
         self._X = np.asarray(X)
         return self
@@ -176,12 +175,8 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
     def query(self, query, k=1, sort=True):
         model = self.model
         verbose = self.verbose
-        if self.matching:
-            # indices = self._matching(' '.join(q))
-            indices = self._matching(query)
-            docs, labels = self._X[indices], self._y[indices]
-        else:
-            docs, labels = self._X, self._y
+        indices = self._matching(query)
+        docs, labels = self._X[indices], self._y[indices]
         if verbose > 0:
             print(len(docs), "documents matched.")
 
@@ -198,7 +193,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
             wmd = False
 
         q = self.analyzer(query)
-        q = self.bigrams[q]
+        # q = self.bigrams[q]
         q = self._filter_vocab(q)
 
         # docs, labels set
@@ -207,10 +202,10 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         if len(docs) == 0 or len(q) == 0:
             return []
         cosine_similarities = np.asarray(
-            [model.n_similarity(q, doc) if len(doc) > 0 else 0 for doc in docs]
+            [model.n_similarity(q, doc) for doc in docs]
         )
 
-        topk = argtopk(cosine_similarities, wmd if wmd else k, sort=True)  # sort when wcd
+        topk = argtopk(cosine_similarities, k, sort=not wmd)  # sort when wcd
         # It is important to also clip the labels #
         docs, labels = docs[topk], labels[topk]
         # may be fewer than k
@@ -220,7 +215,6 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         else:
             if verbose > 0:
                 print("Computing wmdistance")
-            # q = self._filter_oov_token(q)
             scores = np.asarray([model.wmdistance(q, doc) for doc in docs])
             ind = np.argsort(scores)  # ascending by distance
             if verbose > 0:
