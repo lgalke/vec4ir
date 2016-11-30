@@ -105,7 +105,7 @@ def main():
     results = {}
     results['args'] = args
 
-    tfidf = TfidfRetrieval(analyzer=analyzer)
+    tfidf = TfidfRetrieval(lowercase=args.lowercase, stop_words='english')
     results[tfidf.name] = evaluation(tfidf)
     del tfidf
 
@@ -122,13 +122,18 @@ def main():
 
     print("Done.")
 
-    n_similarity = Word2VecRetrieval(model, analyzer=analyzer, wmd=False,
+    n_similarity = Word2VecRetrieval(model, wmd=False,
+                                     lowercase=False,
+                                     try_lowercase=args.lowercase,
+                                     stop_words='english',
                                      verbose=args.verbose)
     results[n_similarity.name] = evaluation(n_similarity)
     del n_similarity
 
     wmdistance = Word2VecRetrieval(model,
-                                   analyzer=analyzer,
+                                   lowercase=False,
+                                   try_lowercase=args.lowercase,
+                                   stop_words='english',
                                    wmd=True,
                                    verbose=args.verbose)
     results[wmdistance.name] = evaluation(wmdistance)
