@@ -74,7 +74,10 @@ def main():
                         help="verbosity level")
     parser.add_argument("-c", "--lowercase", default=False,
                         action='store_true',
-                        help="Case insensitive analysis")
+                        help="Case insensitive matching analysis (also relevant for baseline tfidf)")
+    parser.add_argument("-l", "--try-lowercase", default=False,
+                        action='store_true',
+                        help="For embedding-based models, try lowercasing when there is no initial vocabulary match!")
     args = parser.parse_args()
     ntcir2 = NTCIR("../data/NTCIR2/", ".cache")
     print("Loading NTCIR2 documents...")
@@ -127,7 +130,7 @@ def main():
     n_similarity = Word2VecRetrieval(model, wmd=False,
                                      analyzer=analyzer,
                                      vocab_analyzer=cased_analyzer,
-                                     try_lowercase=args.lowercase,
+                                     try_lowercase=args.try_lowercase,
                                      verbose=args.verbose)
     results[n_similarity.name] = evaluation(n_similarity)
     del n_similarity
@@ -135,7 +138,7 @@ def main():
     wmdistance = Word2VecRetrieval(model,
                                    analyzer=analyzer,
                                    vocab_analyzer=cased_analyzer,
-                                   try_lowercase=args.lowercase,
+                                   try_lowercase=args.try_lowercase,
                                    wmd=True,
                                    verbose=args.verbose)
     results[wmdistance.name] = evaluation(wmdistance)
