@@ -4,4 +4,4 @@ pandas
 scikit-learn
 gensim
 pyemd
-
+smart_open
