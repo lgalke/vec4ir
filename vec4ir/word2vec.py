@@ -97,6 +97,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
     name  - identifier for the retrieval model
     verbose - verbosity level
     oov    - token to use for out of vocabulary words
+    vocab_analyzer - analyzer to use to prepare for vocabulary filtering
     try_lowercase - try to match with an uncased word if cased failed
     >>> docs = ["the quick", "brown fox", "jumps over", "the lazy dog", "This is a document about coookies and cream and fox and dog", "why did you chose to do a masters thesis on the information retrieval task"]
     >>> sentences = StringSentence(docs)
@@ -116,9 +117,10 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
                  name=None,
                  wmd=1.0,
                  verbose=0,
+                 vocab_analyzer=None,
                  oov='UNK',
                  try_lowercase=False,
-                 **kwargs):
+                 **matching_params):
         self.model = model
         self.wmd = wmd
         self.verbose = verbose
@@ -129,9 +131,13 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
                 name = "wcd"
             else:
                 name = "wcd+wmd"
-        self._init_params(name=name, **kwargs)
+        self._init_params(name=name, **matching_params)
         # uses cv's analyzer which can be specified by kwargs
-        self.analyzer = self._cv.build_analyzer()
+        if vocab_analyzer is None:
+            # if none, infer from analyzer used in matching
+            self.analyzer = self._cv.build_analyzer()
+        else:
+            self.analyzer = vocab_analyzer
         self.oov = oov
 
     def _filter_vocab(self, words, analyze=False):

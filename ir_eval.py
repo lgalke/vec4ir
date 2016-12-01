@@ -97,6 +97,8 @@ def main():
     queries = list(zip(topics.index, topics))
     analyzer = CountVectorizer(stop_words='english',
                                lowercase=args.lowercase).build_analyzer()
+    cased_analyzer = CountVectorizer(stop_words='english',
+                                     lowercase=False).build_analyzer()
 
     def evaluation(m):
         return ir_eval(m, documents, labels, queries, rels,
@@ -116,24 +118,24 @@ def main():
 
     else:
         print("Training word2vec model on all available data...")
-        model = Word2Vec(StringSentence(docs_df['both'].values, analyzer),
+        model = Word2Vec(StringSentence(docs_df['both'].values, cased_analyzer),
                          min_count=1, iter=10)
         model.init_sims(replace=True)  # model becomes read-only
 
     print("Done.")
 
     n_similarity = Word2VecRetrieval(model, wmd=False,
-                                     lowercase=False,
+                                     analyzer=analyzer,
+                                     vocab_analyzer=cased_analyzer,
                                      try_lowercase=args.lowercase,
-                                     stop_words='english',
                                      verbose=args.verbose)
     results[n_similarity.name] = evaluation(n_similarity)
     del n_similarity
 
     wmdistance = Word2VecRetrieval(model,
-                                   lowercase=False,
+                                   analyzer=analyzer,
+                                   vocab_analyzer=cased_analyzer,
                                    try_lowercase=args.lowercase,
-                                   stop_words='english',
                                    wmd=True,
                                    verbose=args.verbose)
     results[wmdistance.name] = evaluation(wmdistance)
