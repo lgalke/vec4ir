@@ -1,9 +1,9 @@
 #!/bin/sh
-OUT='uncased_analysis_cased_embeddings'
+OUT='uncased_analysis_cased_embeddings_fallback'
 MODEL='-m /data3/lgalke/GoogleNews-vectors-negative300.bin.gz'
 # MODEL='-m /data3/lgalke/glove.840B.300d.w2v_format.txt'
 K=20
-PARAMS='-c'
+PARAMS='-cl'
 
 mkdir -p $OUT
 
