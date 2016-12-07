@@ -3,5 +3,6 @@ scipy
 pandas
 scikit-learn
 gensim
+cython
 pyemd
 smart_open

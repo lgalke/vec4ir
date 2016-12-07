@@ -118,7 +118,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
                  wmd=1.0,
                  verbose=0,
                  vocab_analyzer=None,
-                 oov='UNK',
+                 oov=None,
                  try_lowercase=False,
                  **matching_params):
         self.model = model
@@ -153,7 +153,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
             elif self.try_lowercase and word.lower() in self.model:
                 filtered.append(word.lower())  # FIXME could be optimized
                 print("YAY hit a word with lowering!")
-            else:
+            elif self.oov is not None:
                 filtered.append(self.oov)
         return filtered
 

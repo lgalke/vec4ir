@@ -4,5 +4,6 @@ command -v python3 >/dev/null 2>&1 || { echo >&2 "Required package python3 is no
 if [ ! -e $VENV_PATH ]; then
     virtualenv -p python3 $VENV_PATH
 fi
+echo $VENV_PATH
 source $VENV_PATH/bin/activate && python setup.py develop
 deactivate 2>/dev/null

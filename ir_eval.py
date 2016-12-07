@@ -9,6 +9,7 @@ from gensim.models import Word2Vec
 from gensim.models import Phrases
 from sklearn.feature_extraction.text import CountVectorizer
 import sys
+import os
 import pprint
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
@@ -114,10 +115,16 @@ def main():
     results[tfidf.name] = evaluation(tfidf)
     del tfidf
 
-    if args.model:
-        binary = ".bin" in args.model
-        print("Loading word2vec model: {}, binary={}".format(args.model, binary))
-        model = Word2Vec.load_word2vec_format(args.model, binary=binary)
+    mpath = args.model
+    if mpath:
+        _, ext = os.path.splitext(mpath)
+        if ext == ".gnsm":
+            print("Loading native gensim format: {}".format(mpath))
+            model = Word2Vec.load(mpath)
+        else:
+            binary = ".bin" in mpath
+            print("Loading word2vec model: {}, binary={}".format(mpath, binary))
+            model = Word2Vec.load_word2vec_format(mpath, binary=binary)
 
     else:
         print("Training word2vec model on all available data...")
