@@ -68,9 +68,9 @@ def main():
     parser.add_argument("-o", "--outfile", default=sys.stdout,
                         type=FileType('a'))
     parser.add_argument("-k", dest='k', default=20, type=int,
-                        help="number of documentss to retrieve")
+                        help="number of documents to retrieve")
     parser.add_argument("-m", "--model", default=None, type=str,
-                        help="use precomputed word2vec model")
+                        help="use precomputed embedding model")
     parser.add_argument("-v", "--verbose", default=2, type=int,
                         help="verbosity level")
     parser.add_argument("-c", "--lowercase", default=False,
@@ -79,6 +79,8 @@ def main():
     parser.add_argument("-l", "--try-lowercase", default=False,
                         action='store_true',
                         help="For embedding-based models, try lowercasing when there is no initial vocabulary match!")
+    parser.add_argument("-M", "--oov", default=None, type=str,
+                        help="token for out-of-vocabulary words, default is ignoreing out-of-vocabulary words")
     args = parser.parse_args()
     ntcir2 = NTCIR("../data/NTCIR2/", ".cache")
     print("Loading NTCIR2 documents...")
@@ -138,6 +140,7 @@ def main():
                                      analyzer=analyzer,
                                      vocab_analyzer=cased_analyzer,
                                      try_lowercase=args.try_lowercase,
+                                     oov=args.oov,
                                      verbose=args.verbose)
     results[n_similarity.name] = evaluation(n_similarity)
     del n_similarity
@@ -147,6 +150,7 @@ def main():
                                    vocab_analyzer=cased_analyzer,
                                    try_lowercase=args.try_lowercase,
                                    wmd=True,
+                                   oov=args.oov,
                                    verbose=args.verbose)
     results[wmdistance.name] = evaluation(wmdistance)
     del wmdistance
