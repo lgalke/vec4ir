@@ -141,6 +141,7 @@ def main():
                                      vocab_analyzer=cased_analyzer,
                                      try_lowercase=args.try_lowercase,
                                      oov=args.oov,
+                                     stop_words='english',
                                      verbose=args.verbose)
     results[n_similarity.name] = evaluation(n_similarity)
     del n_similarity
@@ -151,6 +152,7 @@ def main():
                                    try_lowercase=args.try_lowercase,
                                    wmd=True,
                                    oov=args.oov,
+                                   stop_words='english',
                                    verbose=args.verbose)
     results[wmdistance.name] = evaluation(wmdistance)
     del wmdistance
