@@ -235,7 +235,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         else:
             if verbose > 0:
                 print("Computing wmdistance")
-            scores = np.asarray([model.wmdistance(q, doc) for doc in docs])
+            scores = np.asarray([model.wmdistance(self._filter_oov_token(q), self._filter_oov_token(doc)) for doc in docs])
             ind = np.argsort(scores)  # ascending by distance
             if verbose > 0:
                 print(scores[ind])
