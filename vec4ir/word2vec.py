@@ -1,9 +1,6 @@
-from gensim.models import Word2Vec
-from gensim.models import Phrases
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 import sys
-import logging
 try:
     from .base import RetrievalBase, RetriEvalMixIn, CombinatorMixIn
 except SystemError:

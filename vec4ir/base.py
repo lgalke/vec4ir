@@ -17,7 +17,7 @@ try:
     from . import rank_metrics as rm
 except SystemError:
     import rank_metrics as rm
-import sys
+
 
 def TermMatch(X, q):
     """
