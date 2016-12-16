@@ -13,5 +13,11 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixin, Word2VecRetrieval):
         self._init_params(name=name, **kwargs)
         self.analyzer = self._cv.build_analyzer()
 
-    def query(self, query, k=1, verbose=None):
-        verbose = verbose if verbose is not None else self.verbose
+    def fit(self, X, y):
+        pass
+
+    def query(self, query, k=1):
+        docs, labels = self._matching(query)
+
+        y = labels
+        return y
