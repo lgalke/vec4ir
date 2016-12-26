@@ -9,6 +9,7 @@ except SystemError:
 default_analyzer = CountVectorizer().build_analyzer()
 
 
+  autocmd FileType pandoc
 class StringSentence(object):
     """
     Uses analyze_fn to decompose strings into words
@@ -35,7 +36,6 @@ class StringSentence(object):
     >>> x[1]
     ['over', 'the', 'lazy', 'dog']
     """
-
     def __init__(self, documents, analyze_fn=None, max_sentence_length=10000):
         if analyze_fn is None:
             self.analyze_fn = default_analyzer

@@ -6,7 +6,6 @@ from vec4ir.datasets import NTCIR
 from vec4ir.base import TfidfRetrieval
 from vec4ir.word2vec import StringSentence, Word2VecRetrieval
 from gensim.models import Word2Vec
-from gensim.models import Phrases
 from sklearn.feature_extraction.text import CountVectorizer
 import sys
 import os
@@ -17,7 +16,7 @@ import pprint
 
 
 def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
-            verbose=3):
+            verbose=3, repstrat="zero"):
     """
     irmodel
     X : iterator of documents
@@ -27,14 +26,14 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
     if verbose > 0:
         print("=" * 79)
         t0 = timer()
-        print("Fit", irmodel.name, "... ", end='')
+        print("Fit", irmodel.name, "... ")
         irmodel.fit(documents, labels)
         t1 = timer()
-        print("took {} seconds.".format(timedelta(seconds=t1-t0)))
+        print("took {} seconds.".format(timedelta(seconds=t1 - t0)))
         print("Evaluating", irmodel.name, "...")
     if verbose > 1:
         print("-" * 79)
-    values = irmodel.evaluate(queries, rels, verbose=verbose-1, k=k)
+    values = irmodel.evaluate(queries, rels, verbose=verbose - 1, k=k)
     if verbose > 1:
         print("-" * 79)
     if verbose > 0:
@@ -65,6 +64,11 @@ def main():
                         help="topics' field to use (defaults to 'title')")
     parser.add_argument("-r", "--rels", type=int, default=1, choices=[1, 2],
                         help="relevancies to use (defaults to 1)")
+    parser.add_argument("-R", "--replacement-strategy", type=str,
+                        dest='repstrat', default=None,
+                        choices=['ignore', 'zero'],
+                        help="Out of relevancy file document ids,\
+                        default is to use zero relevancy")
     parser.add_argument("-o", "--outfile", default=sys.stdout,
                         type=FileType('a'))
     parser.add_argument("-k", dest='k', default=20, type=int,
@@ -75,12 +79,15 @@ def main():
                         help="verbosity level")
     parser.add_argument("-c", "--lowercase", default=False,
                         action='store_true',
-                        help="Case insensitive matching analysis (also relevant for baseline tfidf)")
+                        help="Case insensitive matching analysis \
+                        (also relevant for baseline tfidf)")
     parser.add_argument("-l", "--try-lowercase", default=False,
                         action='store_true',
-                        help="For embedding-based models, try lowercasing when there is no initial vocabulary match!")
+                        help="For embedding-based models, try lowercasing \
+                        when there is no initial vocabulary match!")
     parser.add_argument("-M", "--oov", default=None, type=str,
-                        help="token for out-of-vocabulary words, default is ignoreing out-of-vocabulary words")
+                        help="token for out-of-vocabulary words, \
+                        default is ignoreing out-of-vocabulary words")
     args = parser.parse_args()
     ntcir2 = NTCIR("../data/NTCIR2/", ".cache")
     print("Loading NTCIR2 documents...")
@@ -99,7 +106,7 @@ def main():
     print("Loading relevances...")
     rels = ntcir2.rels(args.rels)['relevance']
     n_rels = len(rels.nonzero()[0])
-    print("With {:.1f} relevant documents per query".format(n_rels / n_queries))
+    print("With {:.1f} relevant docs per query".format(n_rels / n_queries))
     queries = list(zip(topics.index, topics))
     analyzer = CountVectorizer(stop_words='english',
                                lowercase=args.lowercase).build_analyzer()
@@ -108,7 +115,7 @@ def main():
 
     def evaluation(m):
         return ir_eval(m, documents, labels, queries, rels,
-                       verbose=args.verbose, k=args.k)
+                       verbose=args.verbose, k=args.k, replacement=args.repstrat)
 
     results = {}
     results['args'] = args
@@ -125,12 +132,14 @@ def main():
             model = Word2Vec.load(mpath)
         else:
             binary = ".bin" in mpath
-            print("Loading word2vec model: {}, binary={}".format(mpath, binary))
+            print("Loading word2vec model: {}, binary={}"
+                  .format(mpath, binary))
             model = Word2Vec.load_word2vec_format(mpath, binary=binary)
 
     else:
         print("Training word2vec model on all available data...")
-        model = Word2Vec(StringSentence(docs_df['both'].values, cased_analyzer),
+        model = Word2Vec(StringSentence(docs_df['both'].values,
+                                        cased_analyzer),
                          min_count=1, iter=10)
         model.init_sims(replace=True)  # model becomes read-only
 
@@ -156,7 +165,6 @@ def main():
                                    verbose=args.verbose)
     results[wmdistance.name] = evaluation(wmdistance)
     del wmdistance
- 
     # for wmd in [1.0, 1.5, 2.0, 3.0, 5.0, 10.0]:
     #     name="w2v+wcd+"+str(wmd)+"wmd"
     #     wmdistance = Word2VecRetrieval(model, analyzer=analyzer, wmd=wmd,
