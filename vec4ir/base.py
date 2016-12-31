@@ -183,11 +183,13 @@ class RetriEvalMixIn():
     def query(X, k=1):
         pass
 
-    def evaluate(self, X, Y, k=20, verbose=0):
+    def evaluate(self, X, Y, k=20, verbose=0, replacement="zero"):
         """
         X : [(qid, str)] query id, query pairs
         Y : pandas dataseries with qid,docid index
         """
+        if replacement != "zero":
+            raise NotImplemented("Replacement other than zero is not implemented")
         rs = []
         tpq = []
         for qid, query in X:

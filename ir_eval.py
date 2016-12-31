@@ -17,7 +17,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 
 
 def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
-            verbose=3, repstrat="zero"):
+            verbose=3, replacement="zero"):
     """
     irmodel
     X : iterator of documents
@@ -34,7 +34,7 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
         print("Evaluating", irmodel.name, "...")
     if verbose > 1:
         print("-" * 79)
-    values = irmodel.evaluate(queries, rels, verbose=verbose - 1, k=k)
+    values = irmodel.evaluate(queries, rels, verbose=verbose - 1, k=k, replacement=replacement)
     if verbose > 1:
         print("-" * 79)
     if verbose > 0:
@@ -86,7 +86,7 @@ def main():
     parser.add_argument("-r", "--rels", type=int, default=1, choices=[1, 2],
                         help="relevancies to use (defaults to 1)")
     parser.add_argument("-R", "--replacement-strategy", type=str,
-                        dest='repstrat', default=None,
+                        dest='repstrat', default="zero",
                         choices=['ignore', 'zero'],
                         help="Out of relevancy file document ids,\
                         default is to use zero relevancy")
