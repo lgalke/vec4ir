@@ -11,13 +11,13 @@ def filter_vocab(model, words, oov=None, analyzer=None):
     """ if analyze is given, analyze words first (split string) """
     if analyzer:
         words = analyzer(words)
-        filtered = []
-        for word in words:
-            if word in model:
-                filtered.append(word)
-            elif oov is not None:
-                filtered.append(oov)
-                return filtered
+    filtered = []
+    for word in words:
+        if word in model:
+            filtered.append(word)
+        elif oov is not None:
+            filtered.append(oov)
+    return filtered
 
 
 class StringSentence(object):

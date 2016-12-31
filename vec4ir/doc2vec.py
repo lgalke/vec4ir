@@ -46,7 +46,8 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         if self.verbose > 0:
             print("Finished.")
 
-        self._X = np.asarray([filter_vocab(self.model, x, oov=self.oov) for x in X])
+        # self._X = np.asarray([filter_vocab(self.model, x, oov=self.oov) for x in X])
+        self._X = np.asarray(X)  # does not filter out of vocabulary words
         return self
 
     def query(self, query, k=1):
@@ -54,7 +55,8 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         indices = self._matching(query)
         docs, labels = self._X[indices], self._y[indices]
 
-        q = filter_vocab(model, query, analyzer=self.analyzer, oov=self.oov)
+        # q = filter_vocab(model, query, analyzer=self.analyzer, oov=self.oov)
+        q = self.analyzer(query)
 
         similarities = [model.similarity(d, model.infer_vector(q)) for d in
                         docs]
