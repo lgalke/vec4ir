@@ -5,7 +5,7 @@ from gensim.models.doc2vec import TaggedDocument, Doc2Vec
 import numpy as np
 
 
-class Doc2VecRetrieval(RetrievalBase, RetriEvalMixin):
+class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
     def __init__(self,
                  model,
                  vocab_analyzer=None,
