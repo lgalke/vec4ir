@@ -1,5 +1,5 @@
 # from gensim.models import Doc2Vec
-from .base import RetrievalBase, RetriEvalMixin
+from .base import RetrievalBase, RetriEvalMixIn
 from .word2vec import filter_vocab
 from gensim.models.doc2vec import TaggedDocument, Doc2Vec
 import numpy as np
