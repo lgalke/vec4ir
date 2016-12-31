@@ -81,6 +81,14 @@ class NTCIRParser(HTMLParser):
 
 
 class NTCIR(object):
+    def __init__(self, root_path, cache_dir=None):
+        self.root_path = root_path
+        try:
+            os.mkdir(cache_dir)
+        except FileExistsError:
+            pass
+        self.cache_dir = cache_dir
+
     def _read_docs(path, title_tag, verify_integrity=False):
         parser = NTCIRParser(title_tag=title_tag)
         with open(path, 'r') as f:
@@ -105,13 +113,6 @@ class NTCIR(object):
         df.set_index("qid", inplace=True, verify_integrity=verify_integrity)
         return df
 
-    def __init__(self, root_path, cache_dir=None):
-        self.root_path = root_path
-        try:
-            os.mkdir(cache_dir)
-        except FileExistsError:
-            pass
-        self.cache_dir = cache_dir
 
     def docs(self, kaken=True, gakkai=True, verify_integrity=False, verbose=0):
         """ Method to access NTCIR documents with caching """

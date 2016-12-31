@@ -60,7 +60,8 @@ def TermMatch(X, q):
     matching_terms = inverted_index[query_terms, :]
     # print("matching matching_terms", matching_terms, file=sys.stderr)
     matching_doc_indices = np.unique(matching_terms.nonzero()[1])
-    # print("matching matching_doc_indices", matching_doc_indices, file=sys.stderr)
+    # print("matching matching_doc_indices", matching_doc_indices,
+    # file=sys.stderr)
     return matching_doc_indices
 
 
@@ -195,6 +196,7 @@ class RetriEvalMixIn():
                 print(qid, ":", query)
             t0 = timer()
             result = self.query(query, k=k)
+            result = result[:k]  # TRIM HERE
             tpq.append(timer() - t0)
             # replacement with relevancy values
             # if verbose:
@@ -202,14 +204,14 @@ class RetriEvalMixIn():
             #         print(docid)
             # r = [Y.loc(axis=0)[qid, docid] for docid in result]
             try:
-                r = [Y.get((qid, docid), 0) for docid in result]
+                ranks = [Y.get((qid, docid), 0) for docid in result]
             except AttributeError:
-                r = [Y[qid][docid] for docid in result]
+                ranks = [Y[qid][docid] for docid in result]
             # does not change scores
             # r += [0] * (k - len(r))  # python magic for padding
             if verbose > 0:
-                print(r)
-            rs.append(r)
+                print(ranks)
+            rs.append(ranks)
         values = {}
         values["ndcg_at_k"] = np.asarray([rm.ndcg_at_k(r, k) for r in rs])
         # values["precision@5"] = np.asarray([rm.precision_at_k(r, 5)
@@ -346,7 +348,8 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
     >>> _ = tfidf.fit(docs)
     >>> tfidf._y.shape
     (4,)
-    >>> values = tfidf.evaluate(zip([0,1],["fox","dog"]), [{0:0,1:1,2:0,3:0}, {0:0,1:0,2:0,3:1}], k=20)
+    >>> values = tfidf.evaluate(zip([0,1],["fox","dog"]),\
+    >>> [{0:0,1:1,2:0,3:0}, {0:0,1:0,2:0,3:1}], k=20)
     >>> import pprint
     >>> pprint.pprint(values)
     {'mean_average_precision': 1.0,

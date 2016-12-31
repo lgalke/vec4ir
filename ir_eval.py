@@ -5,14 +5,15 @@ from datetime import timedelta
 from vec4ir.datasets import NTCIR
 from vec4ir.base import TfidfRetrieval
 from vec4ir.word2vec import StringSentence, Word2VecRetrieval
+from vec4ir.doc2vec import Doc2VecRetrieval
 from gensim.models import Word2Vec
 from sklearn.feature_extraction.text import CountVectorizer
 import sys
 import os
 import pprint
-# import logging
-# logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
-#                     level=logging.INFO)
+import logging
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
+                    level=logging.INFO)
 
 
 def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
@@ -46,6 +47,26 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
     values['params'] = irmodel.get_params(deep=True)
 
     return values
+
+
+def smart_load_word2vec(model_path):
+    _, ext = os.path.splitext(model_path)
+    if model_path is None:
+        return None
+    if ext == ".gnsm":  # Native format
+        print("Loading word2vec model in native gensim format: {}"
+              .format(model_path))
+        model = Word2Vec.load(model_path)
+    else:  # either word2vec text or word2vec binary format
+        binary = ".bin" in model_path
+        print("Loading {}word2vec model: {}, binary={}" .format("binary " if
+                                                                binary else "",
+                                                                binary))
+        model = Word2Vec.load_word2vec_format(model_path, binary=binary)
+
+    # FIXME catch the occasional exception?
+
+    return model
 
 
 def main():
@@ -89,12 +110,11 @@ def main():
                         help="token for out-of-vocabulary words, \
                         default is ignoreing out-of-vocabulary words")
     args = parser.parse_args()
+
     ntcir2 = NTCIR("../data/NTCIR2/", ".cache")
     print("Loading NTCIR2 documents...")
     docs_df = ntcir2.docs(kaken=True, gakkai=True)
     print("Loaded {:d} documents.".format(len(docs_df)))
-    docs_df['both'] = docs_df[['title', 'content']]\
-        .apply(lambda x: ' '.join(x), axis=1)
     documents = docs_df[args.field].values
     labels = docs_df.index.values
 
@@ -114,31 +134,26 @@ def main():
                                      lowercase=False).build_analyzer()
 
     def evaluation(m):
-        return ir_eval(m, documents, labels, queries, rels,
-                       verbose=args.verbose, k=args.k, replacement=args.repstrat)
+        return ir_eval(m,
+                       documents,
+                       labels,
+                       queries,
+                       rels,
+                       verbose=args.verbose,
+                       k=args.k,
+                       replacement=args.repstrat)
 
-    results = {}
+    results = dict()
     results['args'] = args
 
     tfidf = TfidfRetrieval(lowercase=args.lowercase, stop_words='english')
     results[tfidf.name] = evaluation(tfidf)
     del tfidf
 
-    mpath = args.model
-    if mpath:
-        _, ext = os.path.splitext(mpath)
-        if ext == ".gnsm":
-            print("Loading native gensim format: {}".format(mpath))
-            model = Word2Vec.load(mpath)
-        else:
-            binary = ".bin" in mpath
-            print("Loading word2vec model: {}, binary={}"
-                  .format(mpath, binary))
-            model = Word2Vec.load_word2vec_format(mpath, binary=binary)
-
-    else:
+    mpath = smart_load_word2vec(args.model)
+    if not mpath:
         print("Training word2vec model on all available data...")
-        model = Word2Vec(StringSentence(docs_df['both'].values,
+        model = Word2Vec(StringSentence(documents,
                                         cased_analyzer),
                          min_count=1, iter=10)
         model.init_sims(replace=True)  # model becomes read-only
@@ -179,6 +194,11 @@ def main():
     #                                    n_expansions=i)
     #     results[wmdistance.name] = evaluation(wmdistance)
     #     del wmdistance
+
+    pvdm = Doc2VecRetrieval(name="pvdm")
+    pvdm.fit(documents, labels, analyzer=analyzer, vocab_analyzer=cased_analyzer)
+
+    results[pvdm.name] = evaluation(pvdm)
 
     pprint.pprint(results, stream=args.outfile)
 

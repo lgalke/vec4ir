@@ -1,6 +1,5 @@
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
-import sys
 try:
     from .base import RetrievalBase, RetriEvalMixIn, CombinatorMixIn
 except SystemError:
@@ -8,8 +7,19 @@ except SystemError:
 
 default_analyzer = CountVectorizer().build_analyzer()
 
+def filter_vocab(model, words, oov=None, analyzer=None):
+    """ if analyze is given, analyze words first (split string) """
+    if analyzer:
+        words = analyzer(words)
+        filtered = []
+        for word in words:
+            if word in model:
+                filtered.append(word)
+            elif oov is not None:
+                filtered.append(oov)
+                return filtered
 
-  autocmd FileType pandoc
+
 class StringSentence(object):
     """
     Uses analyze_fn to decompose strings into words
@@ -96,8 +106,9 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
     oov    - token to use for out of vocabulary words
     vocab_analyzer - analyzer to use to prepare for vocabulary filtering
     try_lowercase - try to match with an uncased word if cased failed
-    >>> docs = ["the quick", "brown fox", "jumps over", "the lazy dog", "This is a document about coookies and cream and fox and dog", "why did you chose to do a masters thesis on the information retrieval task"]
+    >>> docs = ["the quick", "brown fox", "jumps over", "the lazy dog", "This is a document about coookies and cream and fox and dog", "The master thesis on the information retrieval task"]
     >>> sentences = StringSentence(docs)
+    >>> from gensim.models import Word2Vec
     >>> model = Word2Vec(sentences, min_count=1)
     >>> word2vec = Word2VecRetrieval(model)
     >>> _ = word2vec.fit(docs)
@@ -137,28 +148,13 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
             self.analyzer = vocab_analyzer
         self.oov = oov
 
-    def _filter_vocab(self, words, analyze=False):
-        """ if analyze is given, analyze words first (split string) """
-        if analyze:
-            words = self.analyzer(words)
-        # filtered = [word if word in self.model else self.oov for word in words]
-        # TODO try lowercasing
-        filtered = []
-        for word in words:
-            if word in self.model:
-                filtered.append(word)
-            elif self.try_lowercase and word.lower() in self.model:
-                filtered.append(word.lower())  # FIXME could be optimized
-                print("YAY hit a word with lowering!")
-            elif self.oov is not None:
-                filtered.append(self.oov)
-        return filtered
 
     def _filter_oov_token(self, words):
         return [word for word in words if word != self.oov]
 
     def _medoid_expansion(self, words, n_expansions=1):
         """
+        >>> from gensim.models import Word2Vec
         >>> model = Word2Vec(["brown fox".split()],min_count=1)
         >>> rtrvl = Word2VecRetrieval(model)
         >>> rtrvl._medoid_expansion(["brown"], n_expansions=1)
@@ -170,7 +166,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         exps, _scores = zip(*exps)
         exps = list(exps)
         if self.verbose > 0:
-            print("Expanded", words, "by:", exps, file=sys.stderr)
+            print("Expanded", words, "by:", exps)
         return words + exps
 
     def fit(self, docs, y=None):
@@ -179,7 +175,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         # sentences = [self.analyzer(doc) for doc in docs]
         # self.bigrams = Phrases(sentences)
         # sentences = [self.bigrams[sentence] for sentence in sentences]
-        X = [self._filter_vocab(doc, analyze=True) for doc in docs]
+        X = [filter_vocab(self.model, doc, analyzer=self.analyzer, oov=self.oov) for doc in docs]
 
         self._X = np.asarray(X)
         return self
@@ -188,7 +184,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         self._partial_fit(docs, y)
 
         Xprep = np.asarray(
-            [self._filter_vocab(doc, analyze=True) for doc in docs]
+            [filter_vocab(self.model, doc, analyzer=self.analyzer, oov=self.oov) for doc in docs]
         )
         self._X = np.hstack([self._X, Xprep])
 
@@ -196,25 +192,26 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         model = self.model
         verbose = self.verbose
         indices = self._matching(query)
+        wmd = self.wmd
         docs, labels = self._X[indices], self._y[indices]
         if verbose > 0:
             print(len(docs), "documents matched.")
 
-        if self.wmd:
-            if self.wmd is True:
-                wmd = k
-            elif isinstance(self.wmd, int):
-                wmd = k + self.wmd
-            elif isinstance(self.wmd, float):
-                wmd = int(k * self.wmd)
-            else:
-                raise ValueError("wmd= what?")
-        else:
-            wmd = False
+        # if self.wmd:
+        #     if self.wmd is True:
+        #         wmd = k
+        #     elif isinstance(self.wmd, int):
+        #         wmd = k + self.wmd
+        #     elif isinstance(self.wmd, float):
+        #         wmd = int(k * self.wmd)
+        #     else:
+        #         raise ValueError("wmd= what?")
+        # else:
+        #     wmd = False
 
         q = self.analyzer(query)
         # q = self.bigrams[q]
-        q = self._filter_vocab(q)
+        q = filter_vocab(self.model, q, oov=self.oov)
 
         # docs, labels set
         if verbose > 0:
@@ -235,7 +232,9 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         else:
             if verbose > 0:
                 print("Computing wmdistance")
-            scores = np.asarray([model.wmdistance(self._filter_oov_token(q), self._filter_oov_token(doc)) for doc in docs])
+            scores = np.asarray([model.wmdistance(self._filter_oov_token(q),
+                                                  self._filter_oov_token(doc))
+                                 for doc in docs])
             ind = np.argsort(scores)  # ascending by distance
             if verbose > 0:
                 print(scores[ind])
