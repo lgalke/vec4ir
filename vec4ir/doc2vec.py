@@ -7,13 +7,13 @@ import numpy as np
 
 class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
     def __init__(self,
-                 model,
+                 # model,
                  vocab_analyzer=None,
                  name=None,
                  verbose=0,
                  oov=None,
                  **kwargs):
-        self.model = model
+        # self.model = model
         self.verbose = verbose
         self.oov = oov
         if name is None:
@@ -29,25 +29,24 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
     def fit(self, docs, y):
         self._fit(docs, y)
         assert len(docs) == len(y)
-        X = [TaggedDocument(filter_vocab(self.model, doc,
-                                         analyzer=self.analyzer, oov=self.oov),
+        X = [TaggedDocument(self.analyzer(doc),
                             label)
              for doc, label in zip(docs, y)]
         if self.verbose > 0:
             print("Training doc2vec model")
-        Doc2Vec(X,
-                dm=1,
-                size=100,
-                window=8,
-                min_count=1,
-                workers=8,
-                iter=20,
-                dm_concat=1,
-                dm_tag_count=1)
+        self.model = Doc2Vec(X,
+                             dm=1,
+                             size=100,
+                             window=8,
+                             min_count=1,
+                             workers=8,
+                             iter=20,
+                             dm_concat=1,
+                             dm_tag_count=1)
         if self.verbose > 0:
             print("Finished.")
 
-        self._X = np.asarray(X)
+        self._X = np.asarray([filter_vocab(self.model, x, oov=self.oov) for x in X])
         return self
 
     def query(self, query, k=1):
@@ -57,7 +56,7 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
 
         q = filter_vocab(model, query, analyzer=self.analyzer, oov=self.oov)
 
-        similarities = [model.similarity(d, model.infer_doc_vector(q)) for d in
+        similarities = [model.similarity(d, model.infer_vector(q)) for d in
                         docs]
         ind = np.argsort(similarities)[::-1]  # REVERSE! we want similar ones
         y = labels[ind]
