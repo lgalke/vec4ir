@@ -23,8 +23,8 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         if vocab_analyzer is not None:
             self.analyzer = vocab_analyzer
         else:
+            #  use analyzer of matching
             self.analyzer = self._cv.build_analyzer()
-
 
     def fit(self, docs, y):
         self._fit(docs, y)
@@ -39,7 +39,9 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
                              size=100,
                              window=8,
                              min_count=1,
+                             sample=1e5,
                              workers=16,
+                             negative=20,
                              iter=20,
                              dm_concat=1,
                              dm_tag_count=1)
@@ -63,7 +65,7 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
             print("q:", q)
             qv = model.infer_vector(q)
             print("qv:", qv)
-            sim = model.similarity(model.docvecs[d[1]], qv)
+            sim = model.similarity(model[model.docvecs[d[1]]], qv)
             print("sim:", sim)
             similarities.append(sim)
 
