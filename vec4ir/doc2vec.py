@@ -39,7 +39,7 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
                              size=100,
                              window=8,
                              min_count=1,
-                             workers=8,
+                             workers=16,
                              iter=20,
                              dm_concat=1,
                              dm_tag_count=1)
@@ -55,11 +55,20 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         indices = self._matching(query)
         docs, labels = self._X[indices], self._y[indices]
 
-        # q = filter_vocab(model, query, analyzer=self.analyzer, oov=self.oov)
         q = self.analyzer(query)
 
-        similarities = [model.similarity(d, model.infer_vector(q)) for d in
-                        docs]
-        ind = np.argsort(similarities)[::-1]  # REVERSE! we want similar ones
+        similarities = []
+        for d in docs:
+            print("d:", d)
+            print("q:", q)
+            qv = model.infer_vector(q)
+            print("qv:", qv)
+            sim = model.similarity(model.docvecs[d[1]], qv)
+            print("sim:", sim)
+            similarities.append(sim)
+
+        # similarities = [model.similarity(d, model.infer_vector(q)) for d in
+        #                 docs]
+        ind = np.argsort(np.asarray(similarities))[::-1]  # REVERSE! we want similar ones
         y = labels[ind]
         return y
