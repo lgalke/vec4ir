@@ -194,7 +194,8 @@ def main():
     #     results[wmdistance.name] = evaluation(wmdistance)
     #     del wmdistance
 
-    pvdm = Doc2VecRetrieval(name="pvdm", analyzer=analyzer, vocab_analyzer=cased_analyzer)
+    pvdm = Doc2VecRetrieval(name="pvdm", analyzer=analyzer, verbose=2,
+                            vocab_analyzer=analyzer)
     results[pvdm.name] = evaluation(pvdm)
     del pvdm
 

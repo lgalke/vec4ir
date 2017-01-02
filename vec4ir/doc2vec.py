@@ -1,7 +1,8 @@
 # from gensim.models import Doc2Vec
 from .base import RetrievalBase, RetriEvalMixIn
-from .word2vec import filter_vocab
+# from .word2vec import filter_vocab
 from gensim.models.doc2vec import TaggedDocument, Doc2Vec
+from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
 
@@ -30,47 +31,54 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         self._fit(docs, y)
         assert len(docs) == len(y)
         X = [TaggedDocument(self.analyzer(doc),
-                            label)
+                            [label])
              for doc, label in zip(docs, y)]
         if self.verbose > 0:
+            print("First 3 tagged documents:\n", X[:3])
             print("Training doc2vec model")
         self.model = Doc2Vec(X,
                              dm=1,
                              size=100,
                              window=8,
+                             # alpha=15,
                              min_count=1,
-                             sample=1e5,
+                             sample=1e-5,
                              workers=16,
                              negative=20,
                              iter=20,
+                             dm_mean=0,
                              dm_concat=1,
+                             # dbow_words=1,
                              dm_tag_count=1)
+
         if self.verbose > 0:
             print("Finished.")
+            print("model:", self.model)
 
-        # self._X = np.asarray([filter_vocab(self.model, x, oov=self.oov) for x in X])
-        self._X = np.asarray(X)  # does not filter out of vocabulary words
         return self
 
     def query(self, query, k=1):
+        """ k unused """
         model = self.model
+        verbose = self.verbose
         indices = self._matching(query)
-        docs, labels = self._X[indices], self._y[indices]
-
+        # docs, labels = self._X[indices], self._y[indices]
+        labels = self._y[indices]
+        if verbose > 0:
+            print(len(labels), "documents matched.")
         q = self.analyzer(query)
-
+        qv = model.infer_vector(q).reshape(1, -1)
+        # similarities = [model.docvecs.similarity(model.docvecs[d],qv) for d in iter(labels)]
         similarities = []
-        for d in docs:
-            print("d:", d)
-            print("q:", q)
-            qv = model.infer_vector(q)
-            print("qv:", qv)
-            sim = model.similarity(model[model.docvecs[d[1]]], qv)
-            print("sim:", sim)
+        for d in labels:
+            dv = model.docvecs[str(d)].reshape(1, -1)
+            # sim = model.similarity(qv, dv)
+            sim = cosine_similarity(qv, dv)[0]
             similarities.append(sim)
 
+        similarities = np.asarray(similarities).reshape(1, -1)
         # similarities = [model.similarity(d, model.infer_vector(q)) for d in
         #                 docs]
-        ind = np.argsort(np.asarray(similarities))[::-1]  # REVERSE! we want similar ones
+        ind = np.argsort(similarities)[::-1]  # REVERSE! we want similar ones
         y = labels[ind]
-        return y
+        return y[0]

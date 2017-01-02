@@ -205,6 +205,7 @@ class RetriEvalMixIn():
             #     for docid in result:
             #         print(docid)
             # r = [Y.loc(axis=0)[qid, docid] for docid in result]
+            print(result)
             try:
                 ranks = [Y.get((qid, docid), 0) for docid in result]
             except AttributeError:
