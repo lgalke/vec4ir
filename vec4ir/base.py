@@ -188,35 +188,49 @@ class RetriEvalMixIn():
         X : [(qid, str)] query id, query pairs
         Y : pandas dataseries with qid,docid index
         """
-        if replacement != "zero":
-            raise NotImplemented("Replacement other than zero is not implemented")
         rs = []
         tpq = []
+        ndcgs = []
         for qid, query in X:
             # execute query
             if verbose > 0:
                 print(qid, ":", query)
             t0 = timer()
             result = self.query(query, k=k)
-            result = result[:k]  # TRIM HERE
             tpq.append(timer() - t0)
+            # result = result[:k]  # TRIM HERE
+            # soak the generator
+            scored_result = []
+            for docid in result:
+                # could surround with try-catch to support dict of dicts or nmpy
+                score = Y.get((qid, docid), None)
+                if score is not None:
+                    scored_result.append(score)
+                elif replacement:
+                    scored_result.append(replacement)
+                if len(scored_result) == k:
+                    break
             # replacement with relevancy values
             # if verbose:
             #     for docid in result:
             #         print(docid)
             # r = [Y.loc(axis=0)[qid, docid] for docid in result]
-            print(result)
-            try:
-                ranks = [Y.get((qid, docid), 0) for docid in result]
-            except AttributeError:
-                ranks = [Y[qid][docid] for docid in result]
-            # does not change scores
+            # print(result)
+            # try:
+            #     ranks = [Y.get((qid, docid), 0) for docid in result]
+            # except AttributeError:
+            #     ranks = [Y[qid][docid] for docid in result]
+
+            # padding does not change scores
             # r += [0] * (k - len(r))  # python magic for padding
             if verbose > 0:
-                print(ranks)
-            rs.append(ranks)
+                print(scored_result)
+            idcg = rm.dcg_at_k(sorted(Y.get(qid)), k)
+            ndcgs.append(rm.ndcg_at_k(scored_result, k) / idcg)
+            rs.append(scored_result)
         values = {}
-        values["ndcg_at_k"] = np.asarray([rm.ndcg_at_k(r, k) for r in rs])
+        # values["ndcg_at_k"] = np.asarray([rm.ndcg_at_k(r, k) for r in rs])
+        values["ndcg_at_k"] = ndcgs
         # values["precision@5"] = np.asarray([rm.precision_at_k(r, 5)
         #                                     for r in rs])
         # values["precision@10"] = np.asarray([rm.precision_at_k(r, 10)
