@@ -7,6 +7,7 @@ except SystemError:
 
 default_analyzer = CountVectorizer().build_analyzer()
 
+
 def filter_vocab(model, words, oov=None, analyzer=None):
     """ if analyze is given, analyze words first (split string) """
     if analyzer:
@@ -148,7 +149,6 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
             self.analyzer = vocab_analyzer
         self.oov = oov
 
-
     def _filter_oov_token(self, words):
         return [word for word in words if word != self.oov]
 
@@ -188,7 +188,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         )
         self._X = np.hstack([self._X, Xprep])
 
-    def query(self, query, k=1, sort=True):
+    def query(self, query):
         model = self.model
         verbose = self.verbose
         indices = self._matching(query)
@@ -222,24 +222,40 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
             [model.n_similarity(q, doc) for doc in docs]
         )
 
-        topk = argtopk(cosine_similarities, k, sort=not wmd)  # sort when wcd
-        # It is important to also clip the labels #
-        docs, labels = docs[topk], labels[topk]
+        # topk = argtopk(cosine_similarities, k, sort=not wmd)  # sort when wcd
+        # # It is important to also clip the labels #
+        # docs, labels = docs[topk], labels[topk]
         # may be fewer than k
 
-        if not wmd:  # if wmd is False
-            result = labels[:k]
-        else:
-            if verbose > 0:
-                print("Computing wmdistance")
+        ind = np.argsort(cosine_similarities)[::-1]
+        if verbose > 0:
+            print(cosine_similarities[ind])
+
+        if not wmd:
+            # no wmd, were done
+            result = labels[ind]
+        else:  # wmd TODO prefetch and prune
             scores = np.asarray([model.wmdistance(self._filter_oov_token(q),
                                                   self._filter_oov_token(doc))
                                  for doc in docs])
-            ind = np.argsort(scores)  # ascending by distance
+            ind = np.argsort(scores)
             if verbose > 0:
                 print(scores[ind])
-            ind = ind[:k]             # may be more than k
             result = labels[ind]
+
+        # if not wmd:  # if wmd is False
+        #     result = labels[:k]
+        # else:
+        #     if verbose > 0:
+        #         print("Computing wmdistance")
+        #     scores = np.asarray([model.wmdistance(self._filter_oov_token(q),
+        #                                           self._filter_oov_token(doc))
+        #                          for doc in docs])
+        #     ind = np.argsort(scores)  # ascending by distance
+        #     if verbose > 0:
+        #         print(scores[ind])
+        #     ind = ind[:k]             # may be more than k
+        #     result = labels[ind]
 
         return result
 

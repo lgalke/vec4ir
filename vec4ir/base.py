@@ -196,7 +196,7 @@ class RetriEvalMixIn():
             if verbose > 0:
                 print(qid, ":", query)
             t0 = timer()
-            result = self.query(query, k=k)
+            result = self.query(query)
             tpq.append(timer() - t0)
             # result = result[:k]  # TRIM HERE
             # soak the generator
@@ -409,7 +409,7 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
         self._X = sp.vstack([self._X, Xt])
         return self
 
-    def query(self, query, k=1, sort=True):
+    def query(self, query):
         # matching step
         matching_ind = self._matching(query)
         # print(matching_ind, file=sys.stderr)
@@ -417,11 +417,11 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
         # matching_docs, matching_doc_ids = self._matching(query)
         # calculate elements to retrieve
         n_match = len(matching_ind)
+        if n_match == 0:
+            return []
         if self.verbose > 0:
             print("Found {} matches:".format(n_match))
-        n_ret = min(n_match, k) if k > 0 else n_match
-        if not n_ret:
-            return []
+        # n_ret = min(n_match, k) if k > 0 else n_match
         # model dependent transformation
         xq = self._cv.transform([query])
         q = self.tfidf.transform(xq)
@@ -431,7 +431,7 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
         # abuse kneighbors in this case
         # AS q only contains one element, we only need its results.
         ind = nn.kneighbors(q,  # q contains a single element
-                            n_neighbors=n_ret,  # limit to k neighbors
+                            n_neighbors=n_match,  # limit to k neighbors
                             return_distance=False)[0]  # so we only need 1 res
         # dont forget to convert the indices to document ids of matching
         labels = matched_doc_ids[ind]

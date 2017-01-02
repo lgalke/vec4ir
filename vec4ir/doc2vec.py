@@ -57,7 +57,7 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
 
         return self
 
-    def query(self, query, k=1):
+    def query(self, query):
         """ k unused """
         model = self.model
         verbose = self.verbose
