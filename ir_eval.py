@@ -86,7 +86,7 @@ def main():
                         help="relevancies to use (defaults to 1)")
     parser.add_argument("-R", "--replacement-strategy", type=str,
                         dest='repstrat', default="zero",
-                        choices=['ignore', 'zero'],
+                        choices=['drop', 'zero'],
                         help="Out of relevancy file document ids,\
                         default is to use zero relevancy")
     parser.add_argument("-o", "--outfile", default=sys.stdout,
@@ -131,6 +131,8 @@ def main():
                                lowercase=args.lowercase).build_analyzer()
     cased_analyzer = CountVectorizer(stop_words='english',
                                      lowercase=False).build_analyzer()
+    repl = { "drop": None, "zero": 0 }[args.repstrat]
+
 
     def evaluation(m):
         return ir_eval(m,
@@ -140,7 +142,7 @@ def main():
                        rels,
                        verbose=args.verbose,
                        k=args.k,
-                       replacement=args.repstrat)
+                       replacement=repl)
 
     results = dict()
     results['args'] = args
