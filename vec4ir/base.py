@@ -191,6 +191,7 @@ class RetriEvalMixIn():
         rs = []
         tpq = []
         ndcgs = []
+        gold_not_found = 0
         for qid, query in X:
             # execute query
             if verbose > 0:
@@ -208,6 +209,8 @@ class RetriEvalMixIn():
                     scored_result.append(score)
                 elif replacement:
                     scored_result.append(replacement)
+                else:
+                    gold_not_found += 1
                 if len(scored_result) == k:
                     break
             # replacement with relevancy values
@@ -225,12 +228,13 @@ class RetriEvalMixIn():
             # r += [0] * (k - len(r))  # python magic for padding
             if verbose > 0:
                 print(scored_result)
-            idcg = rm.dcg_at_k(sorted(Y.get(qid)), k)
-            ndcgs.append(rm.ndcg_at_k(scored_result, k) / idcg)
+            gold = sorted(Y.get(qid).values, reverse=True)
+            idcg = rm.dcg_at_k(gold, k)
+            ndcgs.append(rm.dcg_at_k(scored_result, k) / idcg)
             rs.append(scored_result)
         values = {}
         # values["ndcg_at_k"] = np.asarray([rm.ndcg_at_k(r, k) for r in rs])
-        values["ndcg_at_k"] = ndcgs
+        values["ndcg_at_k"] = np.asarray(ndcgs)
         # values["precision@5"] = np.asarray([rm.precision_at_k(r, 5)
         #                                     for r in rs])
         # values["precision@10"] = np.asarray([rm.precision_at_k(r, 10)
@@ -238,6 +242,7 @@ class RetriEvalMixIn():
         values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
         values["mean_average_precision"] = rm.mean_average_precision(rs)
         values["time_per_query"] = np.mean(np.asarray(tpq)) * 1000
+        values["gold_not_found"] = np.mean(np.asarray(gold_not_found))
         return values
 
 

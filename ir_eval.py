@@ -151,36 +151,36 @@ def main():
     results[tfidf.name] = evaluation(tfidf)
     del tfidf
 
-    # mpath = smart_load_word2vec(args.model)
-    # if not mpath:
-    #     print("Training word2vec model on all available data...")
-    #     model = Word2Vec(StringSentence(documents,
-    #                                     cased_analyzer),
-    #                      min_count=1, iter=10)
-    #     model.init_sims(replace=True)  # model becomes read-only
+    model = smart_load_word2vec(args.model)
+    if not model:
+        print("Training word2vec model on all available data...")
+        model = Word2Vec(StringSentence(documents,
+                                        cased_analyzer),
+                         min_count=1, iter=10)
+        model.init_sims(replace=True)  # model becomes read-only
 
-    # print("Done.")
+    print("Done.")
 
-    # n_similarity = Word2VecRetrieval(model, wmd=False,
-    #                                  analyzer=analyzer,
-    #                                  vocab_analyzer=cased_analyzer,
-    #                                  try_lowercase=args.try_lowercase,
-    #                                  oov=args.oov,
-    #                                  stop_words='english',
-    #                                  verbose=args.verbose)
-    # results[n_similarity.name] = evaluation(n_similarity)
-    # del n_similarity
+    n_similarity = Word2VecRetrieval(model, wmd=False,
+                                     analyzer=analyzer,
+                                     vocab_analyzer=cased_analyzer,
+                                     try_lowercase=args.try_lowercase,
+                                     oov=args.oov,
+                                     stop_words='english',
+                                     verbose=args.verbose)
+    results[n_similarity.name] = evaluation(n_similarity)
+    del n_similarity
 
-    # wmdistance = Word2VecRetrieval(model,
-    #                                analyzer=analyzer,
-    #                                vocab_analyzer=cased_analyzer,
-    #                                try_lowercase=args.try_lowercase,
-    #                                wmd=True,
-    #                                oov=args.oov,
-    #                                stop_words='english',
-    #                                verbose=args.verbose)
-    # results[wmdistance.name] = evaluation(wmdistance)
-    # del wmdistance
+    wmdistance = Word2VecRetrieval(model,
+                                   analyzer=analyzer,
+                                   vocab_analyzer=cased_analyzer,
+                                   try_lowercase=args.try_lowercase,
+                                   wmd=True,
+                                   oov=args.oov,
+                                   stop_words='english',
+                                   verbose=args.verbose)
+    results[wmdistance.name] = evaluation(wmdistance)
+    del wmdistance
     # for wmd in [1.0, 1.5, 2.0, 3.0, 5.0, 10.0]:
     #     name="w2v+wcd+"+str(wmd)+"wmd"
     #     wmdistance = Word2VecRetrieval(model, analyzer=analyzer, wmd=wmd,
