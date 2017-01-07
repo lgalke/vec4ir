@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-
+#!/usr/bin/env python
+# coding: utf-8
 from sklearn.base import BaseEstimator
 from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
@@ -15,8 +15,93 @@ import numpy as np
 
 try:
     from . import rank_metrics as rm
-except SystemError:
+    from .combination import CombinatorMixIn
+except (SystemError, ValueError):
+    from combination import CombinatorMixIn
     import rank_metrics as rm
+
+
+def harvest(source, query_id, doc_id=None, default=0):
+    """ harvest source for either a sorted list of relevancy scores for a given
+    query id or a relevance score for a queryid, docid pair)
+
+    Arguments:
+        source -- {pandas data frame, list of dicts, ndarray}
+        query_id -- the query id to harvest the answers for
+
+    Keyword Arguments:
+        doc_id -- if None, return sorted relevancy scores for query with query_id
+        default -- default value if no relevance score is available in source
+
+    >>> ll = [[2,3,4,5],[22,33,42,55]]
+    >>> harvest(ll, 1, 2)
+    42
+    >>> harvest(ll, 1, -42, 1337)
+    1337
+    >>> harvest(ll, 1)
+    array([55, 42, 33, 22])
+    >>> nda = np.array(ll)
+    >>> harvest(nda, 1, 2)
+    42
+    >>> harvest(nda, 1, -42, 1337)
+    1337
+    >>> ld = [{"d1":2,"d2":3,"d3":4,"d4":5},{"d1":22,"d2":33,"d3":42,"d4":55}]
+    >>> harvest(ld, 1, "d3")
+    42
+    >>> harvest(ld, 1, "fail", 1337)
+    1337
+    >>> harvest(ld, 0)
+    array([5, 4, 3, 2])
+    """
+    if doc_id is None:
+        try:
+            # source is pandas df
+            scores = source.get(query_id).values
+        except AttributeError:
+            # source is ndarray or dict
+            scores = source[query_id]
+
+        try:
+            # scores is numpy array?
+            scores = np.sort(scores)[::-1]
+        except ValueError:
+            # probably scores is a dict...
+            scores = np.asarray(scores.values())
+            scores = np.sort(scores)[::-1]
+        return scores
+    else:
+        try:
+            score = source.get((qid, doc_id), default)
+        except AttributeError:
+            scores = source[query_id]
+            # no special treatment for ndarray since we want to raise exception
+            # when query id is out of bounds
+            try:
+                score = scores[doc_id]
+            except (IndexError, KeyError):
+                score = default
+
+        return score
+
+
+def filterNone(L):
+    old_len = len(L)
+    new_L = [l for l in L if l is not None]
+    diff = old_len - len(new_L)
+    return new_L, diff
+
+def pad(r, k, padding=0):
+    """ pads relevance scores with zeros to given length """
+    r += [padding] * (k - len(r))  # python magic for padding
+    return r
+
+
+def mean_and_std(array_like):
+    array_like = np.asarray(array_like)
+    return array_like.mean(), array_like.std()
+
+def compute_mean_and_std(dictionary):
+    return {key: mean_and_std(value) for key, value in dictionary.items()}
 
 
 def TermMatch(X, q):
@@ -85,9 +170,7 @@ def cosine_similarity(X, query, n_retrieve):
 
 
 def _checkXy(X, y):
-    if y is None:
-        return
-    if len(X) != len(y):
+    if y is not None and len(X) != len(y):
         raise ValueError("Shapes of X and y do not match.")
 
 
@@ -180,43 +263,47 @@ class RetriEvalMixIn():
         pass
 
     @abstractmethod
-    def query(X, k=1):
+    def query(X):
         pass
 
-    def evaluate(self, X, Y, k=20, verbose=0, replacement="zero"):
+    def evaluate(self, X, Y, k=20, verbose=0, replacement=0):
         """
-        X : [(qid, str)] query id, query pairs
-        Y : pandas dataseries with qid,docid index
+        X : [(qid, str)] query id, query string pairs
+        Y : pandas dataseries with qid,docid index or [dict]
         """
         rs = []
-        tpq = []
-        ndcgs = []
-        gold_not_found = 0
+        values = defaultdict(list)
         for qid, query in X:
+            gold_not_found = 0
             # execute query
             if verbose > 0:
                 print(qid, ":", query)
             t0 = timer()
             result = self.query(query)
-            tpq.append(timer() - t0)
+            values["time_per_query"].append(timer() - t0)
             # result = result[:k]  # TRIM HERE
             # soak the generator
-            scored_result = []
-            for docid in result:
+            scored_result = [harvest(Y,qid,docid,replacement) for docid in result]
+            # for docid in result:
                 # could surround with try-catch to support dict of dicts or nmpy
-                score = Y.get((qid, docid), None)
-                if score is not None:
-                    scored_result.append(score)
-                elif replacement:
-                    scored_result.append(replacement)
-                else:
-                    gold_not_found += 1
-                if len(scored_result) == k:
-                    break
+                # scored_result = harvest(Y, qid, docid, replacement)
+                # try:
+                #     score = Y.get((qid, docid), None)
+                # except AttributeError:
+                #     score = Y[qid][docid]
+                # if score is not None:
+                #     scored_result.append(score)
+                # elif replacement:
+                #     scored_result.append(replacement)
+                # else:
+                #     gold_not_found += 1
+                # if len(scored_result) == k:
+                #     break
+            if replacement is None:
+                scored_result, notfound = filterNone(scored_result)
+                values["gold_not_found"].append(notfound)
+
             # replacement with relevancy values
-            # if verbose:
-            #     for docid in result:
-            #         print(docid)
             # r = [Y.loc(axis=0)[qid, docid] for docid in result]
             # print(result)
             # try:
@@ -228,138 +315,37 @@ class RetriEvalMixIn():
             # r += [0] * (k - len(r))  # python magic for padding
             if verbose > 0:
                 print(scored_result)
-            gold = sorted(Y.get(qid).values, reverse=True)
+            # try:
+            #     gold = Y.get(qid).values
+            # except AttributeError:
+            #     gold = np.asarray(Y[qid].values())
+            # gold = np.sort(gold)[::-1]
+            gold = harvest(Y, qid)
+            R = np.count_nonzero(gold)
+
+            # real ndcg
             idcg = rm.dcg_at_k(gold, k)
-            ndcgs.append(rm.dcg_at_k(scored_result, k) / idcg)
+            ndcg = rm.dcg_at_k(scored_result, k) / idcg
+            values["ndcg@k"].append(ndcg)
+
+            # R precision
+            # FIXME scored results may be shorter than R because of k
+            r_precision = rm.precision_at_k(pad(scored_result, R), R)
+            values["r_precision"].append(r_precision)
+
+            p_at_5 = rm.precision_at_k(pad(scored_result, 5), 5)
+            values["precision@5"].append(p_at_5)
+
+            p_at_10 = rm.precision_at_k(pad(scored_result, 10), 10)
+            values["precision@10"].append(p_at_10)
+
             rs.append(scored_result)
-        values = {}
-        # values["ndcg_at_k"] = np.asarray([rm.ndcg_at_k(r, k) for r in rs])
-        values["ndcg_at_k"] = np.asarray(ndcgs)
-        # values["precision@5"] = np.asarray([rm.precision_at_k(r, 5)
-        #                                     for r in rs])
-        # values["precision@10"] = np.asarray([rm.precision_at_k(r, 10)
-        #                                      for r in rs])
+
+        values = {key: mean_and_std(value) for key, value in values.items()}
         values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
         values["mean_average_precision"] = rm.mean_average_precision(rs)
-        values["time_per_query"] = np.mean(np.asarray(tpq)) * 1000
-        values["gold_not_found"] = np.mean(np.asarray(gold_not_found))
         return values
 
-
-def aggregate_dicts(dicts, agg_fn=sum):
-    """
-    Aggregates the contents of two dictionaries by key
-    @param agg_fn is used to aggregate the values (defaults to sum)
-    >>> dict1 = {'a': 0.8, 'b': 0.4, 'd': 0.4}
-    >>> dict2 = {'a': 0.7, 'c': 0.3, 'd': 0.3}
-    >>> agg = aggregate_dicts([dict1, dict2])
-    >>> OrderedDict(sorted(agg.items(), key=itemgetter(1), reverse=True))
-    OrderedDict([('a', 1.5), ('d', 0.7), ('b', 0.4), ('c', 0.3)])
-    """
-    acc = defaultdict(list)
-    for d in dicts:
-        for k in d:
-            acc[k].append(d[k])
-
-    for key, values in acc.items():
-        acc[key] = agg_fn(values)
-
-    return dict(acc)  # no need to default to list anymore
-
-
-def product(values):
-    """
-    Computes the product from a list of values
-    >>> product([2,3,2])
-    12
-    >>> product([0,2,3])
-    0
-    >>> product([42])
-    42
-    """
-    return reduce(mul, values)
-
-
-def fuzzy_or(values):
-    """
-    Applies fuzzy-or to a list of values
-    >>> fuzzy_or([0.5])
-    0.5
-    >>> fuzzy_or([0.5, 0.5])
-    0.75
-    >>> fuzzy_or([0.5, 0.5, 0.5])
-    0.875
-    """
-    if min(values) < 0 or max(values) > 0:
-        raise ValueError("fuzzy_or expects values in [0,1]")
-    return reduce(lambda x, y: 1 - (1 - x) * (1 - y), values)
-
-
-class CombinatorMixIn(object):
-    """ Creates a computational tree with retrieval models as leafs
-    """
-    def __get_weights(self, other):
-        if not isinstance(other, CombinatorMixIn):
-            raise ValueError("other is not Combinable")
-
-        if hasattr(self, '__weight'):
-            weight = self.__weight
-        else:
-            weight = 1.0
-
-        if hasattr(other, '__weight'):
-            otherweight = other.__weight
-        else:
-            otherweight = 1.0
-
-        return weight, otherweight
-
-    # This is evil since it can exceed [0,1], rescaling at the end would be not
-    # that beautiful
-    # def __add__(self, other):
-    #     weights = self.__get_weights(other)
-    #     return Combined([self, other], weights=weights, agg_fn=sum)
-
-    def __and__(self, other):
-        weights = self.__get_weights(other)
-        return Combined([self, other], weights=weights, agg_fn=product)
-
-    def __or__(self, other):
-        weights = self.__get_weights(other)
-        return Combined([self, other], weights=weights, agg_fn=fuzzy_or)
-
-    def __mul__(self, scalar):
-        self.__weight = scalar
-        return self
-
-
-class Combined(BaseEstimator, CombinatorMixIn):
-    def __init__(self, retrieval_models, weights=None, aggregation_fn=sum):
-        self.retrieval_models = retrieval_models
-        self.aggregation_fn = aggregation_fn
-        if weights is not None:
-            self.weights = weights
-        else:
-            self.weights = [1.0] * len(retrieval_models)
-
-    def query(self, query, k=1, sort=True):
-        models = self.retrieval_models
-        weights = maxabs_scale(self.weights)  # max 1 does not crash [0,1]
-        agg_fn = self.aggregation_fn
-        # we only need to sort in the final run
-        combined = [m.query(query, k=k, sort=False) for m in models]
-
-        if weights is not None:
-            combined = [{k: v * w for k, v in r.items()} for r, w in
-                        zip(combined, weights)]
-
-        combined = aggregate_dicts(combined, agg_fn=agg_fn, sort=True)
-
-        if sort:
-            # only cut-off at k if this is the final (sorted) output
-            combined = OrderedDict(sorted(combined.items(), key=itemgetter(1),
-                                          reverse=True)[:k])
-        return combined
 
 
 class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
@@ -370,21 +356,16 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
     >>> _ = tfidf.fit(docs)
     >>> tfidf._y.shape
     (4,)
-    >>> values = tfidf.evaluate(zip([0,1],["fox","dog"]),\
-    >>> [{0:0,1:1,2:0,3:0}, {0:0,1:0,2:0,3:1}], k=20)
+    >>> values = tfidf.evaluate(zip([0,1],["fox","dog"]), [{0:0,1:1,2:0,3:0}, {0:0,1:0,2:0,3:1}], k=20)
     >>> import pprint
-    >>> pprint.pprint(values)
-    {'mean_average_precision': 1.0,
-     'mean_reciprocal_rank': 1.0,
-     'ndcg_at_k': array([ 1.,  1.])}
+    >>> pprint.pprint(values["mean_average_precision"])
+    1.0
     >>> _ = tfidf.partial_fit(["new fox doc"])
-    >>> list(tfidf.query("new fox doc",k=2))
+    >>> list(tfidf.query("new fox doc"))
     [4, 1]
     >>> values = tfidf.evaluate([(0,"new fox doc")], np.asarray([[0,2,0,0,0]]), k=3)
-    >>> pprint.pprint(values)
-    {'mean_average_precision': 0.5,
-     'mean_reciprocal_rank': 0.5,
-     'ndcg_at_k': array([ 1.])}
+    >>> pprint.pprint(values["mean_average_precision"])
+    0.5
     """
 
     def __init__(self, norm='l2', use_idf=True, smooth_idf=True,

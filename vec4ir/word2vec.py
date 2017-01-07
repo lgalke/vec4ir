@@ -1,12 +1,16 @@
+#!/usr/bin/env python3
+# coding: utf-8
 from sklearn.feature_extraction.text import CountVectorizer
+from scipy.spatial.distance import cosine
 import numpy as np
 try:
-    from .base import RetrievalBase, RetriEvalMixIn, CombinatorMixIn
-except SystemError:
-    from base import RetrievalBase, RetriEvalMixIn, CombinatorMixIn
+    from .base import RetrievalBase, RetriEvalMixIn
+    from .combination import CombinatorMixIn
+except (ValueError, SystemError):
+    from base import RetrievalBase, RetriEvalMixIn
+    from combination import CombinatorMixIn
 
 default_analyzer = CountVectorizer().build_analyzer()
-
 
 def filter_vocab(model, words, oov=None, analyzer=None):
     """ if analyze is given, analyze words first (split string) """
@@ -118,8 +122,8 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
     1.0
     >>> values['mean_reciprocal_rank']
     1.0
-    >>> values['ndcg_at_k']
-    array([ 1.,  1.])
+    >>> values['ndcg@k']
+    (1.0, 0.0)
     """
     def __init__(self,
                  model,
@@ -259,6 +263,38 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
 
         return result
 
+
+
+class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
+    def __init__(self, embedding, name="WCD", vocab_analyzer=None, **kwargs):
+        self.embedding = embedding
+        self._init_params(**kwargs)
+        if vocab_analyzer is not None:
+            self.analyzer = vocab_analyzer
+        else:
+            self.analyzer = self._cv.build_analyzer()
+
+
+    def _compute_centroid(embedding, words):
+        centroid = np.mean(np.asarray([embedding[word] for word in words]),
+                           axis=0)
+        return centroid
+
+    def fit(X, y=None):
+        E = self.embedding
+        analyze = self.analyzer
+        self._fit(docs, y)
+        centroids = np.asarray([self._compute_centroid(analyze(doc)) for doc in
+                                docs])
+        return self
+
+    def query(query):
+        ind = self.matching(query)
+        centroids, labels = self.centroids[ind], self._y[ind]
+        q_centroid = self._compute_centroid(self.analyzer(query))
+        sims = [cosine(q_centroid, centroid) for centroid in centroids]
+        ranks = np.argsort(sims)
+        return labels[ranks]
 
 if __name__ == '__main__':
     import doctest

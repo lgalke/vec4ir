@@ -15,9 +15,8 @@ import logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
-
 def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
-            verbose=3, replacement="zero"):
+            verbose=3, replacement=0):
     """
     irmodel
     X : iterator of documents
@@ -34,15 +33,14 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
         print("Evaluating", irmodel.name, "...")
     if verbose > 1:
         print("-" * 79)
-    values = irmodel.evaluate(queries, rels, verbose=verbose - 1, k=k, replacement=replacement)
+    values = irmodel.evaluate(queries, rels, verbose=verbose - 1, k=k,
+                              replacement=replacement)
     if verbose > 1:
         print("-" * 79)
     if verbose > 0:
         pprint.pprint(values)
         print("=" * 79)
 
-    ndcgs = values['ndcg_at_k']
-    values['ndcg_at_k'] = (ndcgs.mean(), ndcgs.std())
 
     values['params'] = irmodel.get_params(deep=True)
 
