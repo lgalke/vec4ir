@@ -71,7 +71,7 @@ def harvest(source, query_id, doc_id=None, default=0):
         return scores
     else:
         try:
-            score = source.get((qid, doc_id), default)
+            score = source.get((query_id, doc_id), default)
         except AttributeError:
             scores = source[query_id]
             # no special treatment for ndarray since we want to raise exception
@@ -94,6 +94,9 @@ def pad(r, k, padding=0):
     """ pads relevance scores with zeros to given length """
     r += [padding] * (k - len(r))  # python magic for padding
     return r
+
+def trim(rs, k):
+    return [r[:k] for r in rs]
 
 
 def mean_and_std(array_like):
@@ -314,7 +317,7 @@ class RetriEvalMixIn():
 
         values = {key: mean_and_std(value) for key, value in values.items()}
         values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
-        values["mean_average_precision"] = rm.mean_average_precision(rs)
+        values["mean_average_precision"] = rm.mean_average_precision(trim(rs, k))
         return values
 
 
