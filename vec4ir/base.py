@@ -284,42 +284,13 @@ class RetriEvalMixIn():
             # result = result[:k]  # TRIM HERE
             # soak the generator
             scored_result = [harvest(Y,qid,docid,replacement) for docid in result]
-            # for docid in result:
-                # could surround with try-catch to support dict of dicts or nmpy
-                # scored_result = harvest(Y, qid, docid, replacement)
-                # try:
-                #     score = Y.get((qid, docid), None)
-                # except AttributeError:
-                #     score = Y[qid][docid]
-                # if score is not None:
-                #     scored_result.append(score)
-                # elif replacement:
-                #     scored_result.append(replacement)
-                # else:
-                #     gold_not_found += 1
-                # if len(scored_result) == k:
-                #     break
             if replacement is None:
                 scored_result, notfound = filterNone(scored_result)
                 values["gold_not_found"].append(notfound)
 
-            # replacement with relevancy values
-            # r = [Y.loc(axis=0)[qid, docid] for docid in result]
-            # print(result)
-            # try:
-            #     ranks = [Y.get((qid, docid), 0) for docid in result]
-            # except AttributeError:
-            #     ranks = [Y[qid][docid] for docid in result]
-
-            # padding does not change scores
-            # r += [0] * (k - len(r))  # python magic for padding
             if verbose > 0:
                 print(scored_result)
-            # try:
-            #     gold = Y.get(qid).values
-            # except AttributeError:
-            #     gold = np.asarray(Y[qid].values())
-            # gold = np.sort(gold)[::-1]
+
             gold = harvest(Y, qid)
             R = np.count_nonzero(gold)
 
