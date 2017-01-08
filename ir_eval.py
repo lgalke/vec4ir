@@ -49,9 +49,9 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
 
 def smart_load_word2vec(model_path):
     print("Smart loading", model_path)
-    _, ext = os.path.splitext(model_path)
     if model_path is None:
         return None
+    _, ext = os.path.splitext(model_path)
     if ext == ".gnsm":  # Native format
         print("Loading word2vec model in native gensim format: {}"
               .format(model_path))
