@@ -15,11 +15,15 @@ import logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
+
 def is_embedded(sentence, embedding, analyzer):
     """
     >>> embedding = ["a", "b", "c"]
     >>> queries =  ["a b c", "a", "b", "c", "a b c d", "d", "a b c"  ]
     >>> analyzer = lambda x: x.split()
+    >>> [query for query in queries if is_embedded(query, embedding, analyzer)]
+    ['a b c', 'a', 'b', 'c', 'a b c']
+    >>> analyzer = CountVectorizer().build_analyzer()
     >>> [query for query in queries if is_embedded(query, embedding, analyzer)]
     ['a b c', 'a', 'b', 'c', 'a b c']
     """
@@ -56,7 +60,6 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
         pprint.pprint(values)
         print("=" * 79)
 
-
     values['params'] = irmodel.get_params(deep=True)
 
     return values
@@ -73,7 +76,7 @@ def smart_load_word2vec(model_path):
         model = Word2Vec.load(model_path)
     else:  # either word2vec text or word2vec binary format
         binary = ".bin" in model_path
-        print("Loading {}word2vec model: {}" .format("binary " if binary else "", model_path))
+        print("Loading word2vec model: {}".format(model_path))
         model = Word2Vec.load_word2vec_format(model_path, binary=binary)
 
     # FIXME catch the occasional exception?
@@ -87,13 +90,15 @@ def main():
     """
     from argparse import ArgumentParser, FileType
     parser = ArgumentParser()
-    parser.add_argument("--doctest", action='store_true', help="Perform doctest on this module")
+    parser.add_argument("--doctest", action='store_true',
+                        help="Perform doctest on this module")
     parser.add_argument("-f",
                         "--field",
                         choices=['title', 'content'],
                         default='title',
                         help="field to use (defaults to 'title')")
-    parser.add_argument("-F", "--filter-queries", action='store_true', help="Filter queries with at least one word being not embedded")
+    parser.add_argument("-F", "--filter-queries", action='store_true',
+                        help="Filter queries without complete embedding")
     parser.add_argument("-t", "--topics", type=str, default='title',
                         choices=['title', 'description'],
                         help="topics' field to use (defaults to 'title')")
@@ -150,7 +155,7 @@ def main():
                                lowercase=args.lowercase).build_analyzer()
     cased_analyzer = CountVectorizer(stop_words='english',
                                      lowercase=False).build_analyzer()
-    repl = { "drop": None, "zero": 0 }[args.repstrat]
+    repl = {"drop": None, "zero": 0}[args.repstrat]
 
     model = smart_load_word2vec(args.model)
     if not model:
@@ -163,10 +168,9 @@ def main():
 
     if args.filter_queries is True:
         old = len(queries)
-        queries = [(query, gold) for query, gold in queries if
+        queries = [(nb, query) for nb, query in queries if
                    is_embedded(query, model, analyzer)]
-        print("Retained {} (of {}) queries".format(old, len(queries))
-
+        print("Retained {} (of {}) queries".format(len(queries), old))
 
     def evaluation(m):
         return ir_eval(m,
@@ -184,7 +188,6 @@ def main():
     tfidf = TfidfRetrieval(lowercase=args.lowercase, stop_words='english')
     results[tfidf.name] = evaluation(tfidf)
     del tfidf
-
 
     print("Done.")
 
