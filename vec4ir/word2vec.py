@@ -264,7 +264,6 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         return result
 
 
-
 class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
     def __init__(self, embedding, name="WCD", vocab_analyzer=None, **kwargs):
         self.embedding = embedding

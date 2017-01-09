@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from timeit import default_timer as timer
 from datetime import timedelta
@@ -14,6 +14,21 @@ import pprint
 import logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
+
+def is_embedded(sentence, embedding, analyzer):
+    """
+    >>> embedding = ["a", "b", "c"]
+    >>> queries =  ["a b c", "a", "b", "c", "a b c d", "d", "a b c"  ]
+    >>> analyzer = lambda x: x.split()
+    >>> [query for query in queries if is_embedded(query, embedding, analyzer)]
+    ['a b c', 'a', 'b', 'c', 'a b c']
+    """
+    for word in analyzer(sentence):
+        if word not in embedding:
+            return False
+
+    return True
+
 
 def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
             verbose=3, replacement=0):
@@ -72,11 +87,13 @@ def main():
     """
     from argparse import ArgumentParser, FileType
     parser = ArgumentParser()
+    parser.add_argument("--doctest", action='store_true', help="Perform doctest on this module")
     parser.add_argument("-f",
                         "--field",
-                        choices=['title', 'content', 'both'],
+                        choices=['title', 'content'],
                         default='title',
                         help="field to use (defaults to 'title')")
+    parser.add_argument("-F", "--filter-queries", action='store_true', help="Filter queries with at least one word being not embedded")
     parser.add_argument("-t", "--topics", type=str, default='title',
                         choices=['title', 'description'],
                         help="topics' field to use (defaults to 'title')")
@@ -107,6 +124,10 @@ def main():
                         help="token for out-of-vocabulary words, \
                         default is ignoreing out-of-vocabulary words")
     args = parser.parse_args()
+    if args.doctest:
+        import doctest
+        doctest.testmod()
+        exit(int(0))
 
     ntcir2 = NTCIR("../data/NTCIR2/", ".cache")
     print("Loading NTCIR2 documents...")
@@ -131,6 +152,21 @@ def main():
                                      lowercase=False).build_analyzer()
     repl = { "drop": None, "zero": 0 }[args.repstrat]
 
+    model = smart_load_word2vec(args.model)
+    if not model:
+        print("Training word2vec model on all available data...")
+        sentences = StringSentence(documents, cased_analyzer)
+        model = Word2Vec(sentences,
+                         min_count=1,
+                         iter=20)
+        model.init_sims(replace=True)  # model becomes read-only
+
+    if args.filter_queries is True:
+        old = len(queries)
+        queries = [(query, gold) for query, gold in queries if
+                   is_embedded(query, model, analyzer)]
+        print("Retained {} (of {}) queries".format(old, len(queries))
+
 
     def evaluation(m):
         return ir_eval(m,
@@ -149,13 +185,6 @@ def main():
     results[tfidf.name] = evaluation(tfidf)
     del tfidf
 
-    model = smart_load_word2vec(args.model)
-    if not model:
-        print("Training word2vec model on all available data...")
-        model = Word2Vec(StringSentence(documents,
-                                        cased_analyzer),
-                         min_count=1, iter=10)
-        model.init_sims(replace=True)  # model becomes read-only
 
     print("Done.")
 

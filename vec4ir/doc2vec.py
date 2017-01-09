@@ -8,7 +8,7 @@ import numpy as np
 
 class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
     def __init__(self,
-                 # model,
+                 intersect=None,
                  vocab_analyzer=None,
                  name=None,
                  verbose=0,
@@ -17,6 +17,7 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         # self.model = model
         self.verbose = verbose
         self.oov = oov
+        self.intersect = intersect
         if name is None:
             name = "paragraph-vectors"
 
@@ -33,23 +34,28 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         X = [TaggedDocument(self.analyzer(doc),
                             [label])
              for doc, label in zip(docs, y)]
+
         if self.verbose > 0:
             print("First 3 tagged documents:\n", X[:3])
             print("Training doc2vec model")
+        # d2v = Doc2Vec()
+        # d2v.build_vocab(X)
+        # if self.intersect is not None:
+        #     d2v.intersect_word2vec_format(self.intersect)
         self.model = Doc2Vec(X,
-                             dm=1,
-                             size=100,
-                             window=8,
-                             # alpha=15,
-                             min_count=1,
-                             sample=1e-5,
-                             workers=16,
-                             negative=20,
-                             iter=20,
-                             dm_mean=0,
-                             dm_concat=1,
-                             # dbow_words=1,
-                             dm_tag_count=1)
+                            dm=1,
+                            size=100,
+                            window=8,
+                            # alpha=15,
+                            min_count=1,
+                            sample=1e-5,
+                            workers=16,
+                            negative=20,
+                            iter=20,
+                            dm_mean=0,
+                            dm_concat=1,
+                            # dbow_words=1,
+                            dm_tag_count=1)
 
         if self.verbose > 0:
             print("Finished.")
