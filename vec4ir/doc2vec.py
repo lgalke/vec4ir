@@ -31,8 +31,7 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
     def fit(self, docs, y):
         self._fit(docs, y)
         assert len(docs) == len(y)
-        X = [TaggedDocument(self.analyzer(doc),
-                            [label])
+        X = [TaggedDocument(self.analyzer(doc), [label])
              for doc, label in zip(docs, y)]
 
         if self.verbose > 0:

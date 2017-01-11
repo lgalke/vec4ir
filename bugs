@@ -1,6 +1,3 @@
-uptraining? | id:398e763205e2f391a3ca65f6fbbad64bdc140945
-implement eqlm | id:3d62cd4ede82e8948e8d754df7da2573a774a52c
-restrict queries to embedded ones | id:93c38bd0b054533883e007cb4333886d5556349a
-doc2vec training params | id:9dc7c9b8fc03049eb235b7a491561fc47a4edf89
-implement semantic search | id:c8017bccc6ce46fe124fd130319691b726f88cdc
-evaluate semantic search | id:d38e5408d46691dc599539d90b60cd071c277442
+doc2vec: extract training params from doc2vec paper | id:15ccc85d498f3b6bd9f7c6ecb4df507503b5602c
+eqlm: how to proceed after query expansion | id:6330692f580c052d1b1e9c694731f484c579a31a
+dont forget about semantic search | id:748058a11c2a83d6b2e35c76aa6ece12eb9adf53

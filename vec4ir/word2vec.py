@@ -5,6 +5,7 @@ from scipy.spatial.distance import cosine
 import numpy as np
 try:
     from .base import RetrievalBase, RetriEvalMixIn
+    from .utils import argtopk
     from .combination import CombinatorMixIn
 except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixIn
@@ -67,39 +68,6 @@ class StringSentence(object):
                 yield words[i:(i + self.max_sentence_length)]
                 i += self.max_sentence_length
 
-
-def argtopk(A, k, axis=-1, sort=True):
-    """
-    >>> A = [5,4,3,6,7,8,9,0]
-    >>> argtopk(A, 3)
-    array([6, 5, 4])
-    >>> argtopk(A, 1)
-    array([6])
-    >>> argtopk(A, -3)
-    array([7, 2, 1])
-    >>> argtopk(A, -1)
-    array([7])
-    >>> argtopk(A, -6)
-    array([7, 2, 1, 0, 3, 4])
-    >>> argtopk(A, 6)
-    array([6, 5, 4, 3, 0, 1])
-    >>> argtopk(A, 10)
-    array([6, 5, 4, 3, 0, 1, 2, 7])
-    """
-    k = min(len(A), k)
-    A = np.asarray(A)
-    if k == 0:
-        raise UserWarning("k <= 0? result [] may be undesired.")
-        return []
-    ind = np.argpartition(A, -k, axis=axis)
-    ind = ind[-k:] if k > 0 else ind[:-k]
-
-    if sort:
-        ind = ind[np.argsort(A[ind])]
-        if k > 0:
-            ind = ind[::-1]
-
-    return ind
 
 
 class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):

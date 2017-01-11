@@ -3,12 +3,8 @@
 from sklearn.base import BaseEstimator
 from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
-from sklearn.preprocessing import maxabs_scale
 from abc import abstractmethod
-from collections import defaultdict, OrderedDict
-from operator import itemgetter
-from operator import mul
-from functools import reduce
+from collections import defaultdict
 from timeit import default_timer as timer
 import scipy.sparse as sp
 import numpy as np
@@ -30,7 +26,8 @@ def harvest(source, query_id, doc_id=None, default=0):
         query_id -- the query id to harvest the answers for
 
     Keyword Arguments:
-        doc_id -- if None, return sorted relevancy scores for query with query_id
+        doc_id -- if None, return sorted relevancy scores for query with
+        query_id
         default -- default value if no relevance score is available in source
 
     >>> ll = [[2,3,4,5],[22,33,42,55]]
@@ -54,6 +51,7 @@ def harvest(source, query_id, doc_id=None, default=0):
     array([5, 4, 3, 2])
     """
     if doc_id is None:
+        # Return sorted list of relevance scores for that query
         try:
             # source is pandas df
             scores = source.get(query_id).values
@@ -66,10 +64,11 @@ def harvest(source, query_id, doc_id=None, default=0):
             scores = np.sort(scores)[::-1]
         except ValueError:
             # probably scores is a dict...
-            scores = np.asarray(scores.values())
+            scores = np.asarray(list(scores.values()))
             scores = np.sort(scores)[::-1]
         return scores
     else:
+        # Return relevance score for the respective (query, document) pair
         try:
             score = source.get((query_id, doc_id), default)
         except AttributeError:
@@ -90,21 +89,20 @@ def filterNone(L):
     diff = old_len - len(new_L)
     return new_L, diff
 
+
 def pad(r, k, padding=0):
     """ pads relevance scores with zeros to given length """
     r += [padding] * (k - len(r))  # python magic for padding
     return r
 
+
 def trim(rs, k):
     return [r[:k] for r in rs]
 
 
-def mean_and_std(array_like):
+def mean_std(array_like):
     array_like = np.asarray(array_like)
     return array_like.mean(), array_like.std()
-
-def compute_mean_and_std(dictionary):
-    return {key: mean_and_std(value) for key, value in dictionary.items()}
 
 
 def TermMatch(X, q):
@@ -128,15 +126,6 @@ def TermMatch(X, q):
     array([1, 2, 3, 4, 5])
     >>> TermMatch(X, np.array([[1,1,1]]))
     array([0, 1, 2, 3, 4, 5])
-    >>> TermMatch(X, np.array([0,1,1]))
-    Traceback (most recent call last):
-      File "/usr/lib64/python3.5/doctest.py", line 1320, in __run
-        compileflags, 1), test.globs)
-      File "<doctest __main__.TermMatch[9]>", line 1, in <module>
-        TermMatch(np.array([0,1,1]), X)
-      File "retrieval.py", line 50, in TermMatch
-        indices = np.unique(X.transpose()[q.nonzero()[1], :].nonzero()[1])
-    IndexError: tuple index out of range
     """
     # indices = np.unique(X.transpose()[q.nonzero()[1], :].nonzero()[1])
     # print("matching X", X, file=sys.stderr)
@@ -211,12 +200,16 @@ class RetrievalBase(BaseEstimator):
     """
     @abstractmethod
     def __init__(self, **kwargs):
+        self._init_params(**kwargs)
         pass
 
-    def _init_params(self, name=None, match_fn='term', **kwargs):
+    def _init_params(self,
+                     name=None,
+                     match_fn='term',
+                     binary=True,
+                     dtype=np.bool_,
+                     **kwargs):
         # reasonable defaults for indexing use case
-        binary = kwargs.pop('binary', True)
-        dtype = kwargs.pop('dtype', np.bool_)
         self._match_fn = TermMatch if match_fn == 'term' else match_fn
         self._cv = CountVectorizer(binary=binary, dtype=dtype, **kwargs)
         self.name = name
@@ -233,6 +226,9 @@ class RetrievalBase(BaseEstimator):
         self._y = np.arange(n_docs) if y is None else np.asarray(y)
         self.n_docs = n_docs
         return self
+
+    def fit(self, X, y=None):
+        return self._fit(X, y)
 
     def _partial_fit(self, X, y=None):
         _checkXy(X, y)
@@ -251,6 +247,9 @@ class RetrievalBase(BaseEstimator):
         self.n_docs += len(X)
         return self
 
+    def partial_fit(self, X, y=None):
+        self._partial_fit(X, y)
+
     def _matching(self, query):
         match_fn = self._match_fn
         _X = self._inv_X
@@ -261,6 +260,7 @@ class RetrievalBase(BaseEstimator):
 
 
 class RetriEvalMixIn():
+
     @abstractmethod
     def __init__(self, **kwargs):
         pass
@@ -277,7 +277,6 @@ class RetriEvalMixIn():
         rs = []
         values = defaultdict(list)
         for qid, query in X:
-            gold_not_found = 0
             # execute query
             if verbose > 0:
                 print(qid, ":", query)
@@ -286,13 +285,11 @@ class RetriEvalMixIn():
             values["time_per_query"].append(timer() - t0)
             # result = result[:k]  # TRIM HERE
             # soak the generator
-            scored_result = [harvest(Y,qid,docid,replacement) for docid in result]
+            scored_result = [harvest(Y, qid, docid, replacement)
+                             for docid in result]
             if replacement is None:
                 scored_result, notfound = filterNone(scored_result)
                 values["gold_not_found"].append(notfound)
-
-            if verbose > 0:
-                print(scored_result)
 
             gold = harvest(Y, qid)
             R = np.count_nonzero(gold)
@@ -315,11 +312,11 @@ class RetriEvalMixIn():
 
             rs.append(scored_result)
 
-        values = {key: mean_and_std(value) for key, value in values.items()}
+        values = {key: mean_std(value) for key, value in values.items()}
         values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
-        values["mean_average_precision"] = rm.mean_average_precision(trim(rs, k))
+        values["mean_average_precision"] = rm.mean_average_precision(trim(rs,
+                                                                          k))
         return values
-
 
 
 class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
