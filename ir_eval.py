@@ -6,6 +6,7 @@ from vec4ir.datasets import NTCIR
 from vec4ir.base import TfidfRetrieval
 from vec4ir.word2vec import StringSentence, Word2VecRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
+from vec4ir.eqlm import EQLM
 from gensim.models import Word2Vec
 from sklearn.feature_extraction.text import CountVectorizer
 import sys
@@ -85,10 +86,7 @@ def smart_load_word2vec(model_path):
     return model
 
 
-def main():
-    """TODO: Docstring for main.
-    :returns: TODO
-    """
+def _ir_eval_parser():
     from argparse import ArgumentParser, FileType
     parser = ArgumentParser()
     parser.add_argument("--doctest", action='store_true',
@@ -98,7 +96,9 @@ def main():
                         choices=['title', 'content'],
                         default='title',
                         help="field to use (defaults to 'title')")
-    parser.add_argument("-F", "--filter-queries", action='store_true',
+    parser.add_arguent("-F", "--focus",
+                       choices=["tfidf", "wcd", "wmd", "pvdm", "eqlm"])
+    parser.add_argument("-Q", "--filter-queries", action='store_true',
                         help="Filter queries without complete embedding")
     parser.add_argument("-t", "--topics", type=str, default='title',
                         choices=['title', 'description'],
@@ -129,6 +129,12 @@ def main():
     parser.add_argument("-M", "--oov", default=None, type=str,
                         help="token for out-of-vocabulary words, \
                         default is ignoreing out-of-vocabulary words")
+
+def main():
+    """TODO: Docstring for main.
+    :returns: TODO
+    """
+    parser = _ir_eval_parser()
     args = parser.parse_args()
     if args.doctest:
         import doctest
@@ -186,50 +192,35 @@ def main():
     results = dict()
     results['args'] = args
 
-    tfidf = TfidfRetrieval(lowercase=args.lowercase, stop_words='english')
-    results[tfidf.name] = evaluation(tfidf)
-    del tfidf
+    # tfidf = TfidfRetrieval(lowercase=args.lowercase, stop_words='english')
+    tfidf = TfidfRetrieval(analyzer=analyzer)
 
+    RMs = {"tfidf": tfidf,
+           "wcd": Word2VecRetrieval(model, wmd=False,
+                                    analyzer=analyzer,
+                                    oov=args.oov,
+                                    verbose=args.verbose,
+                                    try_lowercase=args.try_lowercase),
+           "wmd": Word2VecRetrieval(model, wmd=True,
+                                    analyzer=analyzer,
+                                    oov=args.oov,
+                                    verbose=args.verbose,
+                                    try_lowercase=args.try_lowercase),
+           "pvdm": Doc2VecRetrieval(analyzer=analyzer,
+                                    verbose=args.verbose),
+           "eqlm": EQLM(tfidf, m=10, eqe=1)
+           }
+
+    if args.focus:
+        focus = args.focus.lower()
+        print("Focussing on", focus)
+        RM = RMs[focus]
+        results[RM.name] = evaluation(RMs[focus])
+    else:
+        for key, RM in RMs.items():
+            results[RM.name] = evaluation(RM)
+            del RM, RMs[key]
     print("Done.")
-
-    n_similarity = Word2VecRetrieval(model, wmd=False,
-                                     analyzer=analyzer,
-                                     try_lowercase=args.try_lowercase,
-                                     oov=args.oov,
-                                     stop_words='english',
-                                     verbose=args.verbose)
-    results[n_similarity.name] = evaluation(n_similarity)
-    del n_similarity
-
-    wmdistance = Word2VecRetrieval(model,
-                                   analyzer=analyzer,
-                                   try_lowercase=args.try_lowercase,
-                                   wmd=True,
-                                   oov=args.oov,
-                                   stop_words='english',
-                                   verbose=args.verbose)
-    results[wmdistance.name] = evaluation(wmdistance)
-    del wmdistance
-    # for wmd in [1.0, 1.5, 2.0, 3.0, 5.0, 10.0]:
-    #     name="w2v+wcd+"+str(wmd)+"wmd"
-    #     wmdistance = Word2VecRetrieval(model, analyzer=analyzer, wmd=wmd,
-    #                                    name=name, verbose=args.verbose)
-    #     results[wmdistance.name] = evaluation(wmdistance)
-    #     del wmdistance
-
-    # for i in [1, 2, 3, 5, 10]:
-    #     name="w2v+wcd+wmd+"+str(i)+"exps"
-    #     wmdistance = Word2VecRetrieval(model, analyzer=analyzer, wmd=False,
-    #                                    name=name, verbose=args.verbose,
-    #                                    n_expansions=i)
-    #     results[wmdistance.name] = evaluation(wmdistance)
-    #     del wmdistance
-
-    pvdm = Doc2VecRetrieval(name="pvdm", analyzer=analyzer, verbose=2,
-                            vocab_analyzer=analyzer)
-    results[pvdm.name] = evaluation(pvdm)
-    del pvdm
-
     pprint.pprint(results, stream=args.outfile)
 
 if __name__ == "__main__":

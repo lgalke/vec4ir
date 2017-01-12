@@ -311,6 +311,8 @@ class RetriEvalMixIn():
             values["precision@10"].append(p_at_10)
 
             rs.append(scored_result)
+            if verbose > 0:
+                print("r_precision: {:.2f}".format(values["r_precision"][-1]))
 
         values = {key: mean_std(value) for key, value in values.items()}
         values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
