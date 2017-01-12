@@ -11,9 +11,9 @@ from sklearn.feature_extraction.text import CountVectorizer
 import sys
 import os
 import pprint
-import logging
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
-                    level=logging.INFO)
+# import logging
+# logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
+#                     level=logging.INFO)
 
 
 def is_embedded(sentence, embedding, analyzer):
@@ -29,6 +29,7 @@ def is_embedded(sentence, embedding, analyzer):
     """
     for word in analyzer(sentence):
         if word not in embedding:
+            print("Dropping:", sentence, file=sys.stderr)
             return False
 
     return True
@@ -153,14 +154,14 @@ def main():
     queries = list(zip(topics.index, topics))
     analyzer = CountVectorizer(stop_words='english',
                                lowercase=args.lowercase).build_analyzer()
-    cased_analyzer = CountVectorizer(stop_words='english',
-                                     lowercase=False).build_analyzer()
+    # cased_analyzer = CountVectorizer(stop_words='english',
+    #                                  lowercase=False).build_analyzer()
     repl = {"drop": None, "zero": 0}[args.repstrat]
 
     model = smart_load_word2vec(args.model)
     if not model:
         print("Training word2vec model on all available data...")
-        sentences = StringSentence(documents, cased_analyzer)
+        sentences = StringSentence(documents, analyzer)
         model = Word2Vec(sentences,
                          min_count=1,
                          iter=20)
@@ -193,7 +194,6 @@ def main():
 
     n_similarity = Word2VecRetrieval(model, wmd=False,
                                      analyzer=analyzer,
-                                     vocab_analyzer=cased_analyzer,
                                      try_lowercase=args.try_lowercase,
                                      oov=args.oov,
                                      stop_words='english',
@@ -203,7 +203,6 @@ def main():
 
     wmdistance = Word2VecRetrieval(model,
                                    analyzer=analyzer,
-                                   vocab_analyzer=cased_analyzer,
                                    try_lowercase=args.try_lowercase,
                                    wmd=True,
                                    oov=args.oov,

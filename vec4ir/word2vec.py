@@ -13,6 +13,7 @@ except (ValueError, SystemError):
 
 default_analyzer = CountVectorizer().build_analyzer()
 
+
 def filter_vocab(model, words, oov=None, analyzer=None):
     """ if analyze is given, analyze words first (split string) """
     if analyzer:
@@ -67,7 +68,6 @@ class StringSentence(object):
             while i < len(words):
                 yield words[i:(i + self.max_sentence_length)]
                 i += self.max_sentence_length
-
 
 
 class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
@@ -147,7 +147,8 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         # sentences = [self.analyzer(doc) for doc in docs]
         # self.bigrams = Phrases(sentences)
         # sentences = [self.bigrams[sentence] for sentence in sentences]
-        X = [filter_vocab(self.model, doc, analyzer=self.analyzer, oov=self.oov) for doc in docs]
+        X = [filter_vocab(self.model, doc, analyzer=self.analyzer, oov=self.oov)
+                for doc in docs]
 
         self._X = np.asarray(X)
         return self
@@ -194,8 +195,9 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
             [model.n_similarity(q, doc) for doc in docs]
         )
 
-        # topk = argtopk(cosine_similarities, k, sort=not wmd)  # sort when wcd
-        # # It is important to also clip the labels #
+        # nav
+        # topk = argtopk(cosine_similarities, 1000, sort=not wmd)  # sort when wcd
+        # # # It is important to also clip the labels #
         # docs, labels = docs[topk], labels[topk]
         # may be fewer than k
 
@@ -207,8 +209,9 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
             # no wmd, were done
             result = labels[ind]
         else:  # wmd TODO prefetch and prune
-            scores = np.asarray([model.wmdistance(self._filter_oov_token(q),
-                                                  self._filter_oov_token(doc))
+            # scores = np.asarray([model.wmdistance(self._filter_oov_token(q),
+            #                                       self._filter_oov_token(doc))
+            scores = np.asarray([model.wmdistance(q, doc)
                                  for doc in docs])
             ind = np.argsort(scores)
             if verbose > 0:
