@@ -5,26 +5,13 @@ from scipy.spatial.distance import cosine
 import numpy as np
 try:
     from .base import RetrievalBase, RetriEvalMixIn
-    from .utils import argtopk
+    from .utils import argtopk, filter_vocab
     from .combination import CombinatorMixIn
 except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixIn
     from combination import CombinatorMixIn
 
 default_analyzer = CountVectorizer().build_analyzer()
-
-
-def filter_vocab(model, words, oov=None, analyzer=None):
-    """ if analyze is given, analyze words first (split string) """
-    if analyzer:
-        words = analyzer(words)
-    filtered = []
-    for word in words:
-        if word in model:
-            filtered.append(word)
-        elif oov is not None:
-            filtered.append(oov)
-    return filtered
 
 
 class StringSentence(object):
@@ -147,8 +134,8 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         # sentences = [self.analyzer(doc) for doc in docs]
         # self.bigrams = Phrases(sentences)
         # sentences = [self.bigrams[sentence] for sentence in sentences]
-        X = [filter_vocab(self.model, doc, analyzer=self.analyzer, oov=self.oov)
-                for doc in docs]
+        analyzed_docs = (self.analyzer(doc) for doc in docs)
+        X = [filter_vocab(self.model, d, oov=self.oov) for d in analyzed_docs]
 
         self._X = np.asarray(X)
         return self
@@ -156,8 +143,10 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
     def partial_fit(self, docs, y=None):
         self._partial_fit(docs, y)
 
+        analyzed_docs = (self.analyzer(doc) for doc in docs)
         Xprep = np.asarray(
-            [filter_vocab(self.model, doc, analyzer=self.analyzer, oov=self.oov) for doc in docs]
+            [filter_vocab(self.model, doc, oov=self.oov) for doc in
+                analyzed_docs]
         )
         self._X = np.hstack([self._X, Xprep])
 
@@ -250,7 +239,7 @@ class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
                            axis=0)
         return centroid
 
-    def fit(X, y=None):
+    def fit(self, X, y=None):
         E = self.embedding
         analyze = self.analyzer
         self._fit(docs, y)

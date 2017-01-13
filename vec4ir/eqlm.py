@@ -2,10 +2,10 @@
 # coding: utf-8
 
 try:
-    from .base import RetrievalBase, RetriEvalMixIn, TfidfRetrieval
+    from .base import RetrievalBase, RetriEvalMixIn
     from .utils import argtopk
 except (SystemError, ValueError):
-    from base import RetrievalBase, RetriEvalMixIn, TfidfRetrieval
+    from base import RetrievalBase, RetriEvalMixIn
     from utils import argtopk
 from scipy.spatial.distance import cosine
 from scipy.special import expit
@@ -75,7 +75,7 @@ class EQLM(RetrievalBase, RetriEvalMixIn):
                  retrieval_model,
                  embedding,
                  analyzer=None,
-                 name="EQLM",
+                 name=None,
                  m=10,
                  eqe=1,
                  erm=False,
@@ -87,27 +87,44 @@ class EQLM(RetrievalBase, RetriEvalMixIn):
         self.erm = erm
         self.embedding = embedding
         self.m = m
-        self.name = name
-        self.verbose = verbose
-        self.retrieval_model = TfidfRetrieval()
-        self._init_params(**kwargs)
-        if analyzer:
-            self.analyzer = analyzer
+        if name is not None:
+            self.name = name
         else:
-            self.analyzer = retrieval_model.analyzer
+            self.name = "eqe{:d}+{}".format(eqe, retrieval_model.name)
+        self.verbose = verbose
+        self.retrieval_model = retrieval_model
+        self._init_params(**kwargs)
+        self.analyzer = analyzer
 
     def fit(self, docs, labels):
         E, RM = self.embedding, self.retrieval_model
         # analyze = self.analyzer
         # self._fit(docs, labels)
         RM.fit(docs, labels)
-        V = self.vocabulary = RM._cv.vocabulary_
+        dirty_vocab = set(RM._cv.vocabulary_)
+        V = dirty_vocab.intersection(set(E.index2word))
+        N = len(V)
 
-        priors = np.asarray([sum(delta(E[w], E[v]) for v in V) for w in V])
         if self.verbose > 0:
-            print("priors.shape:", priors.shape)
+            print("Computing {} priors".format(N))
 
-        self.priors = priors
+        priors = []
+        for i, w in enumerate(V):
+            priors.append(sum(delta(E[w], E[v]) for v in V))
+            if self.verbose > 0:
+                progress = 100 * (i+1) / N
+                print('\r[{0:10}] {1:3.0f}%'.format("#" * int(progress//10),
+                                                    progress),
+                      flush=True,
+                      end='')
+        print()
+
+        # priors = np.asarray([sum(delta(E[w], E[v]) for v in V) for w in V])
+        if self.verbose > 0:
+            print("Done. (priors.shape: {})".format(priors.shape))
+
+        self.priors = np.asarray(priors)
+        self.vocabulary = V
 
     def query(self, query):
         E, m = self.embedding, self.m

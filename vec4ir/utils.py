@@ -3,6 +3,16 @@
 import numpy as np
 
 
+def filter_vocab(model, words, oov=None):
+    """ if analyze is given, analyze words first (split string) """
+    filtered = []
+    for word in words:
+        if word in model:
+            filtered.append(word)
+        elif oov is not None:
+            filtered.append(oov)
+    return filtered
+
 def argtopk(A, k, axis=-1, sort=True):
     """
     >>> A = [5,4,3,6,7,8,9,0]

@@ -96,8 +96,8 @@ def _ir_eval_parser():
                         choices=['title', 'content'],
                         default='title',
                         help="field to use (defaults to 'title')")
-    parser.add_arguent("-F", "--focus",
-                       choices=["tfidf", "wcd", "wmd", "pvdm", "eqlm"])
+    parser.add_argument("-F", "--focus",
+                        choices=["tfidf", "wcd", "wmd", "pvdm", "eqlm"])
     parser.add_argument("-Q", "--filter-queries", action='store_true',
                         help="Filter queries without complete embedding")
     parser.add_argument("-t", "--topics", type=str, default='title',
@@ -129,6 +129,8 @@ def _ir_eval_parser():
     parser.add_argument("-M", "--oov", default=None, type=str,
                         help="token for out-of-vocabulary words, \
                         default is ignoreing out-of-vocabulary words")
+    return parser
+
 
 def main():
     """TODO: Docstring for main.
@@ -208,7 +210,8 @@ def main():
                                     try_lowercase=args.try_lowercase),
            "pvdm": Doc2VecRetrieval(analyzer=analyzer,
                                     verbose=args.verbose),
-           "eqlm": EQLM(tfidf, m=10, eqe=1)
+           "eqlm": EQLM(tfidf, model, m=10, eqe=1, analyzer=analyzer,
+                        verbose=args.verbose)
            }
 
     if args.focus:
