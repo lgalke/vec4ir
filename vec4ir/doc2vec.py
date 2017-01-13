@@ -12,7 +12,10 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
                  vocab_analyzer=None,
                  name=None,
                  verbose=0,
+                 n_epochs=10,
                  oov=None,
+                 alpha=0.025,
+                 min_alpha=0.005,
                  **kwargs):
         # self.model = model
         self.verbose = verbose
@@ -22,15 +25,27 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
             name = "paragraph-vectors"
 
         self._init_params(name=name, **kwargs)
-        if vocab_analyzer is not None:
-            self.analyzer = vocab_analyzer
-        else:
-            #  use analyzer of matching
-            self.analyzer = self._cv.build_analyzer()
+        self.analyzer = self._cv.build_analyzer()
+        self.model = Doc2Vec(alpha=alpha,
+                             min_alpha=alpha,
+                             size=100,
+                             window=8,
+                             min_count=1,
+                             sample=1e-5,
+                             workers=8,
+                             negative=20,
+                             dm_mean=0,
+                             dm_concat=1,
+                             dm_tag_count=1
+                             )
+        self.n_epochs = n_epochs
 
     def fit(self, docs, y):
         self._fit(docs, y)
         assert len(docs) == len(y)
+        model = self.model
+        n_epochs = self.n_epochs
+        decay = (self.alpha - self.min_alpha) / n_epochs
         X = [TaggedDocument(self.analyzer(doc), [label])
              for doc, label in zip(docs, y)]
 
@@ -41,20 +56,11 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         # d2v.build_vocab(X)
         # if self.intersect is not None:
         #     d2v.intersect_word2vec_format(self.intersect)
-        self.model = Doc2Vec(X,
-                            dm=1,
-                            size=100,
-                            window=8,
-                            # alpha=15,
-                            min_count=1,
-                            sample=1e-5,
-                            workers=16,
-                            negative=20,
-                            iter=20,
-                            dm_mean=0,
-                            dm_concat=1,
-                            # dbow_words=1,
-                            dm_tag_count=1)
+        model.build_vocab(X)
+        for epoch in range(n_epochs):
+            model.train(X)
+            model.alpha -= decay  # apply global decay
+            model.min_alpha = model.alpha  # but no decay inside one epoch
 
         if self.verbose > 0:
             print("Finished.")

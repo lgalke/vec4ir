@@ -300,9 +300,11 @@ class RetriEvalMixIn():
             values["ndcg@k"].append(ndcg)
 
             # R precision
-            # FIXME scored results may be shorter than R because of k
             r_precision = rm.precision_at_k(pad(scored_result, R), R)
             values["r_precision"].append(r_precision)
+
+            precision = rm.precision_at_k(pad(scored_result, k), R)
+            values["precision@k"].append(precision)
 
             p_at_5 = rm.precision_at_k(pad(scored_result, 5), 5)
             values["precision@5"].append(p_at_5)
@@ -312,6 +314,7 @@ class RetriEvalMixIn():
 
             rs.append(scored_result)
             if verbose > 0:
+                print("precision: {:.2f}".format(values["precision@k"][-1]))
                 print("r_precision: {:.2f}".format(values["r_precision"][-1]))
 
         values = {key: mean_std(value) for key, value in values.items()}
