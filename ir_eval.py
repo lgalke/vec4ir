@@ -15,6 +15,8 @@ import pprint
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
+import pandas as pd
+MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm']
 
 
 def is_embedded(sentence, embedding, analyzer):
@@ -62,8 +64,6 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
         pprint.pprint(values)
         print("=" * 79)
 
-    values['params'] = irmodel.get_params(deep=True)
-
     return values
 
 
@@ -96,8 +96,8 @@ def _ir_eval_parser():
                         choices=['title', 'content'],
                         default='title',
                         help="field to use (defaults to 'title')")
-    parser.add_argument("-F", "--focus",
-                        choices=["tfidf", "wcd", "wmd", "pvdm", "eqlm"])
+    parser.add_argument("-F", "--focus", nargs='+',
+                        choices=MODEL_KEYS, default=None)
     parser.add_argument("-Q", "--filter-queries", action='store_true',
                         help="Filter queries without complete embedding")
     parser.add_argument("-t", "--topics", type=str, default='title',
@@ -129,6 +129,8 @@ def _ir_eval_parser():
     parser.add_argument("-M", "--oov", default=None, type=str,
                         help="token for out-of-vocabulary words, \
                         default is ignoreing out-of-vocabulary words")
+    parser.add_argument("-T", "--train", default=False, action='store_true',
+                        help="Train a whole new word2vec model")
     return parser
 
 
@@ -162,12 +164,13 @@ def main():
     queries = list(zip(topics.index, topics))
     analyzer = CountVectorizer(stop_words='english',
                                lowercase=args.lowercase).build_analyzer()
+    focus = set([F.lower() for F in args.focus]) if args.focus else None
     # cased_analyzer = CountVectorizer(stop_words='english',
     #                                  lowercase=False).build_analyzer()
     repl = {"drop": None, "zero": 0}[args.repstrat]
 
     model = smart_load_word2vec(args.model)
-    if not model:
+    if not model and args.train:
         print("Training word2vec model on all available data...")
         sentences = StringSentence(documents, analyzer)
         model = Word2Vec(sentences,
@@ -192,7 +195,7 @@ def main():
                        replacement=repl)
 
     results = dict()
-    results['args'] = args
+    # results['args'] = args
 
     # tfidf = TfidfRetrieval(lowercase=args.lowercase, stop_words='english')
     tfidf = TfidfRetrieval(analyzer=analyzer)
@@ -214,17 +217,19 @@ def main():
                         verbose=args.verbose)
            }
 
-    if args.focus:
-        focus = args.focus.lower()
-        print("Focussing on", focus)
-        RM = RMs[focus]
-        results[RM.name] = evaluation(RMs[focus])
+    if focus:
+        print("Focussing on:", " ".join(focus))
+        for f in focus:
+            RM = RMs[f]
+            results[RM.name] = evaluation(RMs[f])
+            del RM, RMs[f]
     else:
         for key, RM in RMs.items():
             results[RM.name] = evaluation(RM)
             del RM, RMs[key]
     print("Done.")
-    pprint.pprint(results, stream=args.outfile)
+    pprint.pprint(args, args.outfile)
+    pd.DataFrame(results).to_latex(args.outfile)
 
 if __name__ == "__main__":
     main()

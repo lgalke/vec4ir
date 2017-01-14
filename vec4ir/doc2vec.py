@@ -1,4 +1,4 @@
-# from gensim.models import Doc2Vec
+from gensim.models import Doc2Vec
 from .base import RetrievalBase, RetriEvalMixIn
 # from .word2vec import filter_vocab
 from gensim.models.doc2vec import TaggedDocument, Doc2Vec
@@ -18,6 +18,8 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
                  min_alpha=0.005,
                  **kwargs):
         # self.model = model
+        self.alpha = alpha
+        self.min_alpha = min_alpha
         self.verbose = verbose
         self.oov = oov
         self.intersect = intersect
@@ -28,7 +30,7 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         self.analyzer = self._cv.build_analyzer()
         self.model = Doc2Vec(alpha=alpha,
                              min_alpha=alpha,
-                             size=100,
+                             size=200,
                              window=8,
                              min_count=1,
                              sample=1e-5,
@@ -45,11 +47,12 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         assert len(docs) == len(y)
         model = self.model
         n_epochs = self.n_epochs
+        verbose = self.verbose
         decay = (self.alpha - self.min_alpha) / n_epochs
         X = [TaggedDocument(self.analyzer(doc), [label])
              for doc, label in zip(docs, y)]
 
-        if self.verbose > 0:
+        if verbose > 0:
             print("First 3 tagged documents:\n", X[:3])
             print("Training doc2vec model")
         # d2v = Doc2Vec()
@@ -58,11 +61,13 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         #     d2v.intersect_word2vec_format(self.intersect)
         model.build_vocab(X)
         for epoch in range(n_epochs):
+            if verbose:
+                print("Doc2Vec: Epoch {} of {}.".format(epoch + 1, n_epochs))
             model.train(X)
             model.alpha -= decay  # apply global decay
             model.min_alpha = model.alpha  # but no decay inside one epoch
 
-        if self.verbose > 0:
+        if verbose > 0:
             print("Finished.")
             print("model:", self.model)
 
