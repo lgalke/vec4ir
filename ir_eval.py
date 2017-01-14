@@ -118,6 +118,11 @@ def _ir_eval_parser():
                         help="use precomputed embedding model")
     parser.add_argument("-v", "--verbose", default=2, type=int,
                         help="verbosity level")
+    parser.add_argument("-p", "--plot", default=None, type=FileType('w'),
+                        metavar="PLOTFILE",
+                        help="Save precision-recall curves in PLOTFILE")
+
+    # FIXME this will be model specific soon
     parser.add_argument("-c", "--lowercase", default=False,
                         action='store_true',
                         help="Case insensitive matching analysis \
@@ -126,6 +131,7 @@ def _ir_eval_parser():
                         action='store_true',
                         help="For embedding-based models, try lowercasing \
                         when there is no initial vocabulary match!")
+    # FIXME this will be model specific soon END
     parser.add_argument("-M", "--oov", default=None, type=str,
                         help="token for out-of-vocabulary words, \
                         default is ignoreing out-of-vocabulary words")
