@@ -13,6 +13,8 @@ import sys
 import os
 import pprint
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
@@ -81,7 +83,7 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
     if verbose > 1:
         print("-" * 79)
     if verbose > 0:
-        pprint.pprint(values)
+        pprint.pprint(pd.DataFrame(values).describe())
         print("=" * 79)
 
     return values
@@ -138,7 +140,7 @@ def _ir_eval_parser():
                         help="use precomputed embedding model")
     parser.add_argument("-v", "--verbose", default=2, type=int,
                         help="verbosity level")
-    parser.add_argument("-p", "--plot", default=None, type=FileType('w'),
+    parser.add_argument("-p", "--plot", default=None, type=str,
                         metavar="PLOTFILE",
                         help="Save precision-recall curves in PLOTFILE")
 
