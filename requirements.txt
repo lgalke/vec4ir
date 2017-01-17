@@ -6,3 +6,4 @@ gensim
 cython
 pyemd
 smart_open
+matplotlib

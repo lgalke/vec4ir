@@ -26,7 +26,7 @@ def mean_std(array_like):
     return array_like.mean(), array_like.std()
 
 
-def plot_precision_recall_curves(results, plotfile, plot_f1=False):
+def plot_precision_recall_curves(path, results, plot_f1=False):
     colors = "b g r c m y k".split()
     keys = sorted(results.keys())
     for name, c in zip(keys, colors):
@@ -35,6 +35,8 @@ def plot_precision_recall_curves(results, plotfile, plot_f1=False):
         plt.plot(results[name]["f1_score"], color=c, marker="*", linestyle='dashdot')
 
     plt.legend(keys)
+    plt.savefig(plotfile)
+
 
 
 def is_embedded(sentence, embedding, analyzer):
@@ -248,7 +250,7 @@ def main():
             del RM, RMs[key]
 
     if args.plot:
-        plot_precision_recall_curves(results)
+        plot_precision_recall_curves(args.plot, results)
 
     # reduce to (mean, std) AFTER plotting precision and recall
     results = {name: {metric: mean_std(values) for metric, values in
