@@ -17,6 +17,11 @@ except (SystemError, ValueError):
     from combination import CombinatorMixIn
     import rank_metrics as rm
 
+def f1_score(precision, recall):
+    if precision == 0 and recall == 0:
+        return 0
+    return 2 * precision * recall / (precision + recall)
+
 
 def harvest(source, query_id, doc_id=None, default=0):
     """ harvest source for either a sorted list of relevancy scores for a given
@@ -301,13 +306,14 @@ class RetriEvalMixIn():
             values["MRR"].append(mrr)
 
             # R precision
+            R = max(R,k)
             r_precision = rm.precision_at_k(pad(scored_result, R), R)
             values["recall"].append(r_precision)
 
-            precision = rm.precision_at_k(pad(scored_result, k), R)
+            precision = rm.precision_at_k(pad(scored_result, k), k)
             values["precision"].append(precision)
 
-            f1 = hmean([precision, r_precision])
+            f1 = f1_score(precision, r_precision)
             values["f1_score"].append(f1)
 
             p_at_5 = rm.precision_at_k(pad(scored_result, 5), 5)
