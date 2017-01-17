@@ -12,11 +12,29 @@ from sklearn.feature_extraction.text import CountVectorizer
 import sys
 import os
 import pprint
+import numpy as np
+import matplotlib.pyplot as plt
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
 import pandas as pd
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm']
+
+
+def mean_std(array_like):
+    array_like = np.asarray(array_like)
+    return array_like.mean(), array_like.std()
+
+
+def plot_precision_recall_curves(results, plotfile, plot_f1=False):
+    colors = "b g r c m y k".split()
+    keys = sorted(results.keys())
+    for name, c in zip(keys, colors):
+        plt.plot(results[name]["precision"], color=c, marker="1", linestyle='dashed')
+        plt.plot(results[name]["recall"], color=c, marker="2", linestyle='dotted')
+        plt.plot(results[name]["f1_score"], color=c, marker="*", linestyle='dashdot')
+
+    plt.legend(keys)
 
 
 def is_embedded(sentence, embedding, analyzer):
@@ -73,12 +91,12 @@ def smart_load_word2vec(model_path):
         return None
     _, ext = os.path.splitext(model_path)
     if ext == ".gnsm":  # Native format
-        print("Loading word2vec model in native gensim format: {}"
+        print("Loading embeddings in native gensim format: {}"
               .format(model_path))
         model = Word2Vec.load(model_path)
     else:  # either word2vec text or word2vec binary format
         binary = ".bin" in model_path
-        print("Loading word2vec model: {}".format(model_path))
+        print("Loading embeddings in word2vec format: {}".format(model_path))
         model = Word2Vec.load_word2vec_format(model_path, binary=binary)
 
     # FIXME catch the occasional exception?
@@ -170,9 +188,7 @@ def main():
     queries = list(zip(topics.index, topics))
     analyzer = CountVectorizer(stop_words='english',
                                lowercase=args.lowercase).build_analyzer()
-    focus = set([F.lower() for F in args.focus]) if args.focus else None
-    # cased_analyzer = CountVectorizer(stop_words='english',
-    #                                  lowercase=False).build_analyzer()
+    focus = set([f.lower() for f in args.focus]) if args.focus else None
     repl = {"drop": None, "zero": 0}[args.repstrat]
 
     model = smart_load_word2vec(args.model)
@@ -201,9 +217,6 @@ def main():
                        replacement=repl)
 
     results = dict()
-    # results['args'] = args
-
-    # tfidf = TfidfRetrieval(lowercase=args.lowercase, stop_words='english')
     tfidf = TfidfRetrieval(analyzer=analyzer)
 
     RMs = {"tfidf": tfidf,
@@ -233,9 +246,18 @@ def main():
         for key, RM in RMs.items():
             results[RM.name] = evaluation(RM)
             del RM, RMs[key]
-    print("Done.")
+
+    if args.plot:
+        plot_precision_recall_curves(results)
+
+    # reduce to (mean, std) AFTER plotting precision and recall
+    results = {name: {metric: mean_std(values) for metric, values in
+               scores.items()} for name, scores in results.items()}
+
     pprint.pprint(args, args.outfile)
+    pprint.pprint(results, args.outfile)
     pd.DataFrame(results).to_latex(args.outfile)
+    print("Done.")
 
 if __name__ == "__main__":
     main()

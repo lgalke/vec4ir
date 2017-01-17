@@ -3,6 +3,7 @@
 from sklearn.base import BaseEstimator
 from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
+from scipy.stats import hmean
 from abc import abstractmethod
 from collections import defaultdict
 from timeit import default_timer as timer
@@ -95,14 +96,6 @@ def pad(r, k, padding=0):
     r += [padding] * (k - len(r))  # python magic for padding
     return r
 
-
-def trim(rs, k):
-    return [r[:k] for r in rs]
-
-
-def mean_std(array_like):
-    array_like = np.asarray(array_like)
-    return array_like.mean(), array_like.std()
 
 
 def TermMatch(X, q):
@@ -297,14 +290,25 @@ class RetriEvalMixIn():
             # real ndcg
             idcg = rm.dcg_at_k(gold, k)
             ndcg = rm.dcg_at_k(scored_result, k) / idcg
-            values["ndcg@k"].append(ndcg)
+            values["ndcg"].append(ndcg)
+
+            # MAP - consider at maximum k
+            values["MAP"].append(rm.average_precision(scored_result[:k]))
+
+            # MRR - compute by hand
+            ind = np.asarray(scored_result[:k]).nonzero()[0]
+            mrr = 1. / (ind[0] + 1) if ind.size else 0.
+            values["MRR"].append(mrr)
 
             # R precision
             r_precision = rm.precision_at_k(pad(scored_result, R), R)
-            values["r_precision"].append(r_precision)
+            values["recall"].append(r_precision)
 
             precision = rm.precision_at_k(pad(scored_result, k), R)
-            values["precision@k"].append(precision)
+            values["precision"].append(precision)
+
+            f1 = hmean([precision, r_precision])
+            values["f1_score"].append(f1)
 
             p_at_5 = rm.precision_at_k(pad(scored_result, 5), 5)
             values["precision@5"].append(p_at_5)
@@ -314,13 +318,10 @@ class RetriEvalMixIn():
 
             rs.append(scored_result)
             if verbose > 0:
-                print("precision: {:.2f}".format(values["precision@k"][-1]))
-                print("r_precision: {:.2f}".format(values["r_precision"][-1]))
+                print("Precision: {:.4f}".format(precision))
+                print("Recall: {:.4f}".format(r_precision))
+                print("F1-Score: {:.4f}".format(f1))
 
-        values = {key: mean_std(value) for key, value in values.items()}
-        values["mean_reciprocal_rank"] = rm.mean_reciprocal_rank(rs)
-        values["mean_average_precision"] = rm.mean_average_precision(trim(rs,
-                                                                          k))
         return values
 
 
