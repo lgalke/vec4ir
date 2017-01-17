@@ -30,13 +30,13 @@ def plot_precision_recall_curves(path, results, plot_f1=False):
     colors = "b g r c m y k".split()
     keys = sorted(results.keys())
     for name, c in zip(keys, colors):
-        plt.plot(results[name]["precision"], color=c, marker="1", linestyle='dashed')
-        plt.plot(results[name]["recall"], color=c, marker="2", linestyle='dotted')
-        plt.plot(results[name]["f1_score"], color=c, marker="*", linestyle='dashdot')
+        values = results[name]
+        plt.plot(values["precision"], color=c, marker="1", linestyle='dashed')
+        plt.plot(values["recall"], color=c, marker="2", linestyle='dotted')
+        plt.plot(values["f1_score"], color=c, marker="*", linestyle='dashdot')
 
     plt.legend(keys)
-    plt.savefig(plotfile)
-
+    plt.savefig(path)
 
 
 def is_embedded(sentence, embedding, analyzer):
