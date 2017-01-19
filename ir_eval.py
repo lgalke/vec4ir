@@ -39,7 +39,11 @@ def plot_precision_recall_curves(path, results, plot_f1=False):
         # patches.append(mpatches.Patch(color=c, label=name))
         precision_recall = zip(values["recall"], values["precision"])
         precision, recall = zip(*list(sorted(precision_recall, key=itemgetter(1), reverse=True)))
-        plt.plot(list(precision), list(recall), color=c)
+        plt.xlabel('Recall')
+        plt.ylabel('Precision')
+        plt.ylim([0.0, 1.05])
+        plt.xlim([0.0, 1.0])
+        plt.plot(list(recall), list(precision), color=c)
 
     # plt.legend(handles=patches)
     plt.legend(keys)
