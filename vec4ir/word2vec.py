@@ -230,24 +230,30 @@ class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
     def __init__(self, embedding, name="trueWCD", n_jobs=1, normalize=False, verbose=0, oov=None, **kwargs):
         self.embedding = embedding
         self.normalize = normalize
+        self.name = name
+        self.oov = oov
         self.verbose = verbose
+        self.n_jobs = n_jobs
         self._init_params(**kwargs)  # initializes self._cv
         self.analyzer = self._cv.build_analyzer()
 
     def _compute_centroid(self, words):
         E = self.embedding
-        centroid = np.mean(np.asarray([E[word] for word in words]),
-                           axis=0)
-        if self.verbose:
-            print("Centroid shape:", centroid.shape)
+        embedded_words = np.asarray([E[word] for word in words])
+        print("embedded_words.shape", embedded_words.shape)
+        centroid = np.mean(embedded_words, axis=0)
+        print("centroid.shape", embedded_words.shape)
         return centroid
+
 
     def fit(self, docs, y=None):
         E, analyze = self.embedding, self.analyzer
         self._fit(docs, y)  # we actually do not need the matching part
         analyzed_docs = (self.analyzer(doc) for doc in docs)
-        X = [filter_vocab(self.model, d, oov=self.oov) for d in analyzed_docs]
-        centroids = np.asarray([self._compute_centroid(doc) for doc in X])
+        X = [filter_vocab(E, d, oov=self.oov) for d in analyzed_docs]
+        centroids = np.vstack([self._compute_centroid(doc) for doc in X])
+        if self.verbose:
+            print("Centroids shape:", centroids.shape)
         if self.normalize:
             normalize(centroids, norm='l2', copy=False)
 
@@ -262,7 +268,7 @@ class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
         # ind = self.matching(query)
         # centroids, labels = self.centroids[ind], self._y[ind]
         q = self.analyzer(query)
-        q = filter_vocab(self.model, q, oov=self.oov)
+        q = filter_vocab(self.embedding, q, oov=self.oov)
         q_centroid = np.asarray([self._compute_centroid(q)]).reshape(1, -1)
         if self.normalize:
             normalize(q_centroid, norm='l2', copy=False)

@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
-MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm']
+MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'twcd']
 
 
 def mean_std(array_like):
@@ -170,6 +170,7 @@ def main():
     """
     parser = _ir_eval_parser()
     args = parser.parse_args()
+    print(args)
     if args.doctest:
         import doctest
         doctest.testmod()
@@ -234,6 +235,7 @@ def main():
            "twcd" : WordCentroidRetrieval(model,
                                           analyzer=analyzer,
                                           oov=args.oov,
+                                          normalize=False,
                                           verbose=args.verbose,
                                           n_jobs=args.jobs),
            "wmd": Word2VecRetrieval(model, wmd=True,
