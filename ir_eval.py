@@ -9,6 +9,7 @@ from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.eqlm import EQLM
 from gensim.models import Word2Vec
 from sklearn.feature_extraction.text import CountVectorizer
+from operator import itemgetter
 import sys
 import os
 import pprint
@@ -32,15 +33,16 @@ def mean_std(array_like):
 def plot_precision_recall_curves(path, results, plot_f1=False):
     colors = "b g r c m y k".split()
     keys = sorted(results.keys())
-    patches = []
+    # patches = []
     for name, c in zip(keys, colors):
         values = results[name]
-        patches.append(mpatches.Patch(color=c, label=name))
-        plt.plot(values["precision"], color=c, marker="1", linestyle='dashed')
-        plt.plot(values["recall"], color=c, marker="2", linestyle='dotted')
-        plt.plot(values["f1_score"], color=c, marker="*", linestyle='dashdot')
+        # patches.append(mpatches.Patch(color=c, label=name))
+        precision_recall = zip(values["recall"], values["precision"])
+        precision_recall = list(sorted(recall_prec, key=itemgetter(0)))
+        plt.plot(precision_recall, color=c)
 
-    plt.legend(handles=patches)
+    # plt.legend(handles=patches)
+    plt.legend(keys)
     plt.savefig(path)
 
 
@@ -270,8 +272,7 @@ def main():
     results = {name: {metric: mean_std(values) for metric, values in
                scores.items()} for name, scores in results.items()}
 
-    pprint.pprint(args, args.outfile)
-    pprint.pprint(results, args.outfile)
+    print("% {}".format(args), file=args.outfile)
     pd.DataFrame(results).to_latex(args.outfile)
     print("Done.")
 
