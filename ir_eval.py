@@ -18,7 +18,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')  # compat on non-gui uis
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
+# import matplotlib.patches as mpatches
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
@@ -38,7 +38,7 @@ def plot_precision_recall_curves(path, results, plot_f1=False):
         values = results[name]
         # patches.append(mpatches.Patch(color=c, label=name))
         precision_recall = zip(values["recall"], values["precision"])
-        precision, recall = zip(*list(sorted(precision_recall, key=itemgetter(0), reverse=True)))
+        precision, recall = zip(*list(sorted(precision_recall, key=itemgetter(1), reverse=True)))
         plt.plot(list(precision), list(recall), color=c)
 
     # plt.legend(handles=patches)
