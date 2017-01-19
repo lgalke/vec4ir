@@ -243,17 +243,16 @@ class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
         E = self.embedding
         embedded_words = np.vstack([E[word] for word in words])
         print("embedded_words.shape", embedded_words.shape)
-        centroid = np.mean(embedded_words, axis=0).reshape(1,-1)
+        centroid = np.mean(embedded_words, axis=0).reshape(1, -1)
         print("centroid.shape", centroid.shape)
         return centroid
-
 
     def fit(self, docs, y=None):
         E, analyze = self.embedding, self.analyzer
         self._fit(docs, y)  # we actually do not need the matching part
-        analyzed_docs = (self.analyzer(doc) for doc in docs)
-        X = [filter_vocab(E, d, oov=self.oov) for d in analyzed_docs]
-        centroids = np.vstack([self._compute_centroid(doc) for doc in X])
+        analyzed_docs = (analyze(doc) for doc in docs)
+        filtered_docs = (filter_vocab(E, d, oov=self.oov) for d in analyzed_docs)
+        centroids = np.vstack([self._compute_centroid(doc) for doc in filtered_docs])
         if self.verbose:
             print("Centroids shape:", centroids.shape)
         if self.normalize:

@@ -17,6 +17,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')  # compat on non-gui uis
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
@@ -31,13 +32,15 @@ def mean_std(array_like):
 def plot_precision_recall_curves(path, results, plot_f1=False):
     colors = "b g r c m y k".split()
     keys = sorted(results.keys())
+    patches = []
     for name, c in zip(keys, colors):
         values = results[name]
+        patches.append(mpatches.Patch(color=c, label=name))
         plt.plot(values["precision"], color=c, marker="1", linestyle='dashed')
         plt.plot(values["recall"], color=c, marker="2", linestyle='dotted')
         plt.plot(values["f1_score"], color=c, marker="*", linestyle='dashdot')
 
-    plt.legend(keys)
+    plt.legend(handles=patches)
     plt.savefig(path)
 
 
@@ -235,7 +238,7 @@ def main():
            "twcd" : WordCentroidRetrieval(model,
                                           analyzer=analyzer,
                                           oov=args.oov,
-                                          normalize=True,
+                                          normalize=False,
                                           verbose=args.verbose,
                                           n_jobs=args.jobs),
            "wmd": Word2VecRetrieval(model, wmd=True,
