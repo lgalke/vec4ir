@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # coding: utf-8
 from sklearn.feature_extraction.text import CountVectorizer
-from scipy.spatial.distance import cosine
+from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import normalize
+# from scipy.spatial.distance import cosine
 import numpy as np
 try:
     from .base import RetrievalBase, RetriEvalMixIn
-    from .utils import argtopk, filter_vocab
+    # from .utils import argtopk
+    from .utils import filter_vocab
     from .combination import CombinatorMixIn
 except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixIn
@@ -160,8 +163,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
             print(len(docs), "documents matched.")
 
         # if self.wmd:
-        #     if self.wmd is True:
-        #         wmd = k
+        #     if self.wmd is True: wmd = k
         #     elif isinstance(self.wmd, int):
         #         wmd = k + self.wmd
         #     elif isinstance(self.wmd, float):
@@ -225,35 +227,56 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
 
 
 class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
-    def __init__(self, embedding, name="WCD", vocab_analyzer=None, **kwargs):
+    def __init__(self, embedding, name="trueWCD", n_jobs=1, normalize=False, verbose=0, **kwargs):
         self.embedding = embedding
-        self._init_params(**kwargs)
-        if vocab_analyzer is not None:
-            self.analyzer = vocab_analyzer
-        else:
-            self.analyzer = self._cv.build_analyzer()
+        self.normalize = normalize
+        self.verbose = verbose
+        self._init_params(**kwargs)  # initializes self._cv
+        self.analyzer = self._cv.build_analyzer()
 
-
-    def _compute_centroid(embedding, words):
-        centroid = np.mean(np.asarray([embedding[word] for word in words]),
+    def _compute_centroid(self, words):
+        E = self.embedding
+        centroid = np.mean(np.asarray([E[word] for word in words]),
                            axis=0)
+        if self.verbose:
+            print("Centroid shape:", centroid.shape)
         return centroid
 
-    def fit(self, X, y=None):
-        E = self.embedding
+    def fit(self, docs, y=None):
         analyze = self.analyzer
-        self._fit(docs, y)
-        centroids = np.asarray([self._compute_centroid(analyze(doc)) for doc in
-                                docs])
+        self._fit(docs, y)  # we actually do not need the matching part
+        centroids = np.asarray([self._compute_centroid(analyze(doc)) for doc in docs])
+        if self.normalize:
+            normalize(centroids, norm='l2', copy=False)
+
+        self.nn = NearestNeighbors(n_jobs=self.n_jobs).fit(centroids)
         return self
 
-    def query(query):
-        ind = self.matching(query)
-        centroids, labels = self.centroids[ind], self._y[ind]
-        q_centroid = self._compute_centroid(self.analyzer(query))
-        sims = [cosine(q_centroid, centroid) for centroid in centroids]
-        ranks = np.argsort(sims)
-        return labels[ranks]
+    def query(self, query, k=None):
+        # note that k is unused to compute recall properly
+        if k is None:
+            k = self.n_docs
+        labels = self._y  # consider all documents
+        # ind = self.matching(query)
+        # centroids, labels = self.centroids[ind], self._y[ind]
+        q_centroid = np.asarray([self._compute_centroid(self.analyzer(query))]).reshape(1, -1)
+        if self.normalize:
+            normalize(q_centroid, norm='l2', copy=False)
+        if self.verbose > 0:
+            print("Centered normalized query shape", q_centroid.shape)
+        # sims = [cosine(q_centroid, centroid) for centroid in centroids]
+        # ranks = np.argsort(sims)
+
+        ind = self.nn.kneighbors(q_centroid, k, return_distance=False)[0]  # single query instance
+        return labels[ind]
+
+
+class WordMoversRetrieval(RetrievalBase, RetriEvalMixIn):
+    """Retrieval based on the Word Mover's Distance"""
+    def __init__(self, embedding, name="neoWMD", n_jobs=1, **kwargs):
+        """initalize parameters"""
+        pass
+
 
 if __name__ == '__main__':
     import doctest

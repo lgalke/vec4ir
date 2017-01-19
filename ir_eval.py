@@ -4,7 +4,7 @@ from timeit import default_timer as timer
 from datetime import timedelta
 from vec4ir.datasets import NTCIR
 from vec4ir.base import TfidfRetrieval
-from vec4ir.word2vec import StringSentence, Word2VecRetrieval
+from vec4ir.word2vec import StringSentence, Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.eqlm import EQLM
 from gensim.models import Word2Vec
@@ -13,13 +13,13 @@ import sys
 import os
 import pprint
 import numpy as np
+import pandas as pd
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg')  # compat on non-gui uis
 import matplotlib.pyplot as plt
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
-import pandas as pd
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm']
 
 
@@ -113,6 +113,8 @@ def _ir_eval_parser():
     parser = ArgumentParser()
     parser.add_argument("--doctest", action='store_true',
                         help="Perform doctest on this module")
+    parser.add_argument("-j", "--jobs", type=int, default=-1,
+                        help="How many jobs to use, default=-1 (one per core)")
     parser.add_argument("-f",
                         "--field",
                         choices=['title', 'content'],
@@ -229,6 +231,10 @@ def main():
                                     oov=args.oov,
                                     verbose=args.verbose,
                                     try_lowercase=args.try_lowercase),
+           "twcd" : WordCentroidRetrieval(model,
+                                          analyzer=analyzer,
+                                          oov=args.oov,
+                                          n_jobs=args.jobs),
            "wmd": Word2VecRetrieval(model, wmd=True,
                                     analyzer=analyzer,
                                     oov=args.oov,

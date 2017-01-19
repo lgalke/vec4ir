@@ -1,5 +1,5 @@
 where is pandas bug | id:09e97860fc655b23af33a747f025f67c406ce600
+pipeline query expansion | id:1434332aeab9ed507a5c54df11f6e91692f3ded8
 doc2vec: extract training params from doc2vec paper | id:15ccc85d498f3b6bd9f7c6ecb4df507503b5602c
 eqlm: scale sigmoid with a and c | id:87bfe63f8bd3d5ff3a1a6707bd0b975e14b49aa8
 update WMD implementation | id:a16c8b81d15311dea2f46a7490b675def26750d6
-update WCD implementation | id:aa5493cd9a6a62780ded5ed1a77bbd1a9884bd43

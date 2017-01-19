@@ -3,7 +3,6 @@
 from sklearn.base import BaseEstimator
 from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
-from scipy.stats import hmean
 from abc import abstractmethod
 from collections import defaultdict
 from timeit import default_timer as timer
@@ -16,6 +15,7 @@ try:
 except (SystemError, ValueError):
     from combination import CombinatorMixIn
     import rank_metrics as rm
+
 
 def f1_score(precision, recall):
     if precision == 0 and recall == 0:
@@ -66,7 +66,7 @@ def harvest(source, query_id, doc_id=None, default=0):
             scores = source[query_id]
 
         try:
-            # scores is numpy array?
+            # scores is numpy array-like?
             scores = np.sort(scores)[::-1]
         except ValueError:
             # probably scores is a dict...
@@ -100,7 +100,6 @@ def pad(r, k, padding=0):
     """ pads relevance scores with zeros to given length """
     r += [padding] * (k - len(r))  # python magic for padding
     return r
-
 
 
 def TermMatch(X, q):
@@ -235,8 +234,8 @@ class RetrievalBase(BaseEstimator):
         # update source
         # self._fit_X = np.hstack([self._fit_X, np.asarray(X)])
         # try to infer viable doc ids
-        next_id = np.amax(self._y) + 1
         if y is None:
+            next_id = np.amax(self._y) + 1
             y = np.arange(next_id, next_id + len(X))
         else:
             y = np.asarray(y)
@@ -302,18 +301,18 @@ class RetriEvalMixIn():
 
             # MRR - compute by hand
             ind = np.asarray(scored_result[:k]).nonzero()[0]
-            mrr = 1. / (ind[0] + 1) if ind.size else 0.
+            mrr = (1. / (ind[0] + 1)) if ind.size else 0.
             values["MRR"].append(mrr)
 
             # R precision
-            R = max(R,k)
-            r_precision = rm.precision_at_k(pad(scored_result, R), R)
-            values["recall"].append(r_precision)
+            R = max(R, k)
+            recall = rm.precision_at_k(pad(scored_result, R), R)
+            values["recall"].append(recall)
 
             precision = rm.precision_at_k(pad(scored_result, k), k)
             values["precision"].append(precision)
 
-            f1 = f1_score(precision, r_precision)
+            f1 = f1_score(precision, recall)
             values["f1_score"].append(f1)
 
             p_at_5 = rm.precision_at_k(pad(scored_result, 5), 5)
@@ -325,7 +324,7 @@ class RetriEvalMixIn():
             rs.append(scored_result)
             if verbose > 0:
                 print("Precision: {:.4f}".format(precision))
-                print("Recall: {:.4f}".format(r_precision))
+                print("Recall: {:.4f}".format(recall))
                 print("F1-Score: {:.4f}".format(f1))
 
         return values
@@ -378,19 +377,19 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
         self._X = sp.vstack([self._X, Xt])
         return self
 
-    def query(self, query):
+    def query(self, query, k=None):
         # matching step
         matching_ind = self._matching(query)
         # print(matching_ind, file=sys.stderr)
         Xm, matched_doc_ids = self._X[matching_ind], self._y[matching_ind]
         # matching_docs, matching_doc_ids = self._matching(query)
         # calculate elements to retrieve
-        n_match = len(matching_ind)
-        if n_match == 0:
+        n_ret = len(matching_ind)
+        if n_ret == 0:
             return []
         if self.verbose > 0:
-            print("Found {} matches:".format(n_match))
-        # n_ret = min(n_match, k) if k > 0 else n_match
+            print("Found {} matches:".format(n_ret))
+        # n_ret = min(n_ret, k) if k > 0 else n_ret
         # model dependent transformation
         xq = self._cv.transform([query])
         q = self.tfidf.transform(xq)
@@ -399,8 +398,11 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
         nn = NearestNeighbors(metric='cosine', algorithm='brute').fit(Xm)
         # abuse kneighbors in this case
         # AS q only contains one element, we only need its results.
+        if k is not None and k < n_ret:
+            n_ret = k
+
         ind = nn.kneighbors(q,  # q contains a single element
-                            n_neighbors=n_match,  # limit to k neighbors
+                            n_neighbors=n_ret,  # limit to k neighbors
                             return_distance=False)[0]  # so we only need 1 res
         # dont forget to convert the indices to document ids of matching
         labels = matched_doc_ids[ind]
