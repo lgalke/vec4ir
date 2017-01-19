@@ -239,12 +239,9 @@ class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
     def _compute_centroid(self, words):
         if len(words) == 0:
             return self.embedding[self.oov]  # no words??!!?
-        print("computing centroid for : ", words)
         E = self.embedding
         embedded_words = np.vstack([E[word] for word in words])
-        print("embedded_words.shape", embedded_words.shape)
         centroid = np.mean(embedded_words, axis=0).reshape(1, -1)
-        print("centroid.shape", centroid.shape)
         return centroid
 
     def fit(self, docs, y=None):
