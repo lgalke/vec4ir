@@ -227,7 +227,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
 
 
 class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
-    def __init__(self, embedding, name="trueWCD", n_jobs=1, normalize=False, verbose=0, **kwargs):
+    def __init__(self, embedding, name="trueWCD", n_jobs=1, normalize=False, verbose=0, oov=None, **kwargs):
         self.embedding = embedding
         self.normalize = normalize
         self.verbose = verbose
@@ -243,9 +243,11 @@ class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
         return centroid
 
     def fit(self, docs, y=None):
-        analyze = self.analyzer
+        E, analyze = self.embedding, self.analyzer
         self._fit(docs, y)  # we actually do not need the matching part
-        centroids = np.asarray([self._compute_centroid(analyze(doc)) for doc in docs])
+        analyzed_docs = (self.analyzer(doc) for doc in docs)
+        X = [filter_vocab(self.model, d, oov=self.oov) for d in analyzed_docs]
+        centroids = np.asarray([self._compute_centroid(doc) for doc in X])
         if self.normalize:
             normalize(centroids, norm='l2', copy=False)
 
@@ -259,7 +261,9 @@ class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
         labels = self._y  # consider all documents
         # ind = self.matching(query)
         # centroids, labels = self.centroids[ind], self._y[ind]
-        q_centroid = np.asarray([self._compute_centroid(self.analyzer(query))]).reshape(1, -1)
+        q = self.analyzer(query)
+        q = filter_vocab(self.model, q, oov=self.oov)
+        q_centroid = np.asarray([self._compute_centroid(q)]).reshape(1, -1)
         if self.normalize:
             normalize(q_centroid, norm='l2', copy=False)
         if self.verbose > 0:
