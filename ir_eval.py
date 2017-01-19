@@ -235,7 +235,7 @@ def main():
            "twcd" : WordCentroidRetrieval(model,
                                           analyzer=analyzer,
                                           oov=args.oov,
-                                          normalize=False,
+                                          normalize=True,
                                           verbose=args.verbose,
                                           n_jobs=args.jobs),
            "wmd": Word2VecRetrieval(model, wmd=True,

@@ -230,19 +230,21 @@ class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
     def __init__(self, embedding, name="trueWCD", n_jobs=1, normalize=False, verbose=0, oov=None, **kwargs):
         self.embedding = embedding
         self.normalize = normalize
-        self.name = name
         self.oov = oov
         self.verbose = verbose
         self.n_jobs = n_jobs
-        self._init_params(**kwargs)  # initializes self._cv
+        self._init_params(name=name, **kwargs)  # initializes self._cv
         self.analyzer = self._cv.build_analyzer()
 
     def _compute_centroid(self, words):
+        if len(words) == 0:
+            return self.embedding[self.oov]  # no words??!!?
+        print("computing centroid for : ", words)
         E = self.embedding
-        embedded_words = np.asarray([E[word] for word in words])
+        embedded_words = np.vstack([E[word] for word in words])
         print("embedded_words.shape", embedded_words.shape)
-        centroid = np.mean(embedded_words, axis=0)
-        print("centroid.shape", embedded_words.shape)
+        centroid = np.mean(embedded_words, axis=0).reshape(1,-1)
+        print("centroid.shape", centroid.shape)
         return centroid
 
 
@@ -269,7 +271,7 @@ class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
         # centroids, labels = self.centroids[ind], self._y[ind]
         q = self.analyzer(query)
         q = filter_vocab(self.embedding, q, oov=self.oov)
-        q_centroid = np.asarray([self._compute_centroid(q)]).reshape(1, -1)
+        q_centroid = self._compute_centroid(q)
         if self.normalize:
             normalize(q_centroid, norm='l2', copy=False)
         if self.verbose > 0:
