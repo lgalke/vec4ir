@@ -1,10 +1,66 @@
 #!/usr/bin/env python3
-
 import pandas as pd
 import os
 from html.parser import HTMLParser
+from abc import abstractmethod, ABC
 
 # NTCIR_ROOT_PATH = # think about this
+
+
+class IRDataSetBase(ABC):
+    # def __subclasshook__(subclass):
+    #     if hasattr(subclass, "docs") and hasattr(subclass, "rels") and hasattr(subclass, "topics"):
+    #         return True
+    #     else:
+    #         return False
+
+    @property
+    @abstractmethod
+    def docs():
+        pass
+
+    @property
+    @abstractmethod
+    def rels():
+        pass
+
+    @property
+    @abstractmethod
+    def topics():
+        pass
+
+
+class Econ62k(IRDataSetBase):
+    """The famous econ62k dataset"""
+    def __init__(self, gold_path, thesaurus_path, fulltext_path, verify_integrity=False):
+        """inits the data set with paths and integrity checks..."""
+        self.__docs = None
+        self.__rels = None
+        self.__topics = None
+
+    @property
+    def docs(self):
+        # in memory cache
+        if self.__docs is not None:
+            return self.__docs
+
+        self.__docs = docs
+        return docs
+
+    @property
+    def rels(self):
+        if self.__rels is not None:
+            return self.__rels
+
+        self.__rels = rels
+        return rels
+
+    @property
+    def topics(self):
+        if self.__topics is not None:
+            return self.__topics
+        self.__topics = topics
+        return topics
 
 
 class NTCIRTopicParser(HTMLParser):
@@ -80,13 +136,30 @@ class NTCIRParser(HTMLParser):
             self.current_record['title'] = data
 
 
-class NTCIR(object):
-    def __init__(self, root_path, cache_dir=None):
+class NTCIR(IRDataSetBase):
+    def __init__(self,
+                 root_path,
+                 kaken=True,
+                 gakkai=True,
+                 rels=2,
+                 topics=["title"],
+                 verify_integrity=False,
+                 cache_dir=None,
+                 verbose=0):
+        self.__kaken = kaken
+        self.__gakkai = gakkai
+        self.__rels = int(rels)
+        self.__topics = topics
+        self.__verify_integrity = verify_integrity
+        self.__verbose = verbose
         self.root_path = root_path
-        try:
-            os.mkdir(cache_dir)
-        except FileExistsError:
-            pass
+        if not cache_dir:
+            print(UserWarning("No cachedir specified"))
+        else:
+            try:
+                os.mkdir(cache_dir)
+            except FileExistsError:
+                pass
         self.cache_dir = cache_dir
 
     def _read_docs(path, title_tag, verify_integrity=False):
@@ -113,9 +186,13 @@ class NTCIR(object):
         df.set_index("qid", inplace=True, verify_integrity=verify_integrity)
         return df
 
-
-    def docs(self, kaken=True, gakkai=True, verify_integrity=False, verbose=0):
+    @property
+    def docs(self):
         """ Method to access NTCIR documents with caching """
+        kaken = self.__kaken
+        gakkai = self.__gakkai
+        verify_integrity = self.__verify_integrity
+        verbose = self.__verbose
         if not kaken and not gakkai:
             raise ValueError("So... you call me and want no documents?")
 
@@ -172,30 +249,32 @@ class NTCIR(object):
         df = NTCIR._read_docs(path, "tite", verify_integrity=verify_integrity)
         return df
 
-    def rels(self, number, verify_integrity=False):
-        number = int(number)
+    @property
+    def rels(self):
+        verify_integrity = self.__verify_integrity
+        number = self.__rels
         path = os.path.join(self.root_path, "rels")
-        path = os.path.join(path, "rel"+str(number)+"_ntc2-e2_0101-0149.nc")
+        path = os.path.join(path, "rel" + str(number) + "_ntc2-e2_0101-0149.nc")
         return NTCIR._read_rels(path, verify_integrity=verify_integrity)
 
-    def topics(self,
-               names=["title"],
-               key="e0101-0149",
-               verify_integrity=False):
+    @property
+    def topics(self):
+        names = self.__topics
+        verify_integrity = self.__verify_integrity
+        key = "e0101-0149"  # could be global
         path = os.path.join(self.root_path, "topics", "topic-" + key)
-        return NTCIR._read_topics(path, names,
-                                  verify_integrity=verify_integrity)
+        return NTCIR._read_topics(path, names, verify_integrity=verify_integrity)
 
 
 if __name__ == '__main__':
-    ntcir2 = NTCIR('/home/lpag/git/vec4ir/data/NTCIR2/')
-    docs = ntcir2.docs(verify_integrity=True)
+    ntcir2 = NTCIR('/home/lpag/git/vec4ir/data/NTCIR2/', verify_integrity=True, rels=2)
+    docs = ntcir2.docs
     print(docs)
     print(docs.columns)
     del docs
-    topics = ntcir2.topics(verify_integrity=True)
+    topics = ntcir2.topics
     print(topics)
     del topics
-    rels = ntcir2.rels(2, verify_integrity=True)
+    rels = ntcir2.rels
     print(rels)
     del rels
