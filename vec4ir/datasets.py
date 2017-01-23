@@ -144,10 +144,10 @@ class NTCIR(IRDataSetBase):
                  rels=2,
                  topics=["title"],
                  verify_integrity=False,
-                 cache_dir=None,
+                 cache_dir="~/.cache/vec4ir/ntcir",
                  verbose=0):
-        self.__kaken = kaken
         self.__gakkai = gakkai
+        self.__kaken = kaken
         self.__rels = int(rels)
         self.__topics = topics
         self.__verify_integrity = verify_integrity
@@ -156,10 +156,8 @@ class NTCIR(IRDataSetBase):
         if not cache_dir:
             print(UserWarning("No cachedir specified"))
         else:
-            try:
-                os.mkdir(cache_dir)
-            except FileExistsError:
-                pass
+            print("Using cache:", cache_dir)
+            os.makedirs(cache_dir, exist_ok=True)
         self.cache_dir = cache_dir
 
     def _read_docs(path, title_tag, verify_integrity=False):
