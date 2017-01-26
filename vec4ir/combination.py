@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 # coding: utf-8
 from sklearn.base import BaseEstimator
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
+from sklearn.preprocessing import maxabs_scale
+from functools import reduce
+from operator import itemgetter
+from numpy import product
+
+
 def aggregate_dicts(dicts, agg_fn=sum):
     """
     Aggregates the contents of two dictionaries by key
@@ -22,25 +28,6 @@ def aggregate_dicts(dicts, agg_fn=sum):
 
     return dict(acc)  # no need to default to list anymore
 
-def product(values):
-    """
-    Computes the product from a list of values
-    >>> product([])
-    1
-    >>> product([2,3,2])
-    12
-    >>> product([0,2,3])
-    0
-    >>> product([42])
-    42
-    """
-    if len(values) == 0:
-        p = 1
-    else:
-        p = reduce(mul, values)
-
-    return p
-
 
 def fuzzy_or(values):
     """
@@ -55,6 +42,8 @@ def fuzzy_or(values):
     if min(values) < 0 or max(values) > 1:
         raise ValueError("fuzzy_or expects values in [0,1]")
     return reduce(lambda x, y: 1 - (1 - x) * (1 - y), values)
+
+
 class CombinatorMixIn(object):
     """ Creates a computational tree with retrieval models as leafs
     """
@@ -92,6 +81,7 @@ class CombinatorMixIn(object):
         self.__weight = scalar
         return self
 
+
 class Combined(BaseEstimator, CombinatorMixIn):
     def __init__(self, retrieval_models, weights=None, aggregation_fn=sum):
         self.retrieval_models = retrieval_models
@@ -119,4 +109,3 @@ class Combined(BaseEstimator, CombinatorMixIn):
             combined = OrderedDict(sorted(combined.items(), key=itemgetter(1),
                                           reverse=True)[:k])
         return combined
-

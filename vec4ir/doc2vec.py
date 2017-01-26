@@ -1,7 +1,10 @@
 from gensim.models import Doc2Vec
-from .base import RetrievalBase, RetriEvalMixIn
+try:
+    from .base import RetrievalBase, RetriEvalMixIn
+except SystemError:
+    from base import RetrievalBase, RetriEvalMixIn
 # from .word2vec import filter_vocab
-from gensim.models.doc2vec import TaggedDocument, Doc2Vec
+from gensim.models.doc2vec import TaggedDocument
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 

@@ -133,9 +133,9 @@ def _ir_eval_parser():
                         choices=MODEL_KEYS, default=None)
     parser.add_argument("-Q", "--filter-queries", action='store_true',
                         help="Filter queries without complete embedding")
-    parser.add_argument("-t", "--topics", type=str, default='title',
+    parser.add_argument("-t", "--topic", type=str, default='title',
                         choices=['title', 'description'],
-                        help="topics' field to use (defaults to 'title')")
+                        help="topic field to use (defaults to 'title')")
     parser.add_argument("-r", "--rels", type=int, default=1, choices=[1, 2],
                         help="relevancies to use (defaults to 1)")
     parser.add_argument("-R", "--replacement-strategy", type=str,
@@ -185,20 +185,20 @@ def main():
         doctest.testmod()
         exit(int(0))
 
-    ntcir2 = NTCIR("../data/NTCIR2/", ".cache")
+    ntcir2 = NTCIR("../data/NTCIR2/", rels=args.rels, topics=[args.topic])
     print("Loading NTCIR2 documents...")
-    docs_df = ntcir2.docs(kaken=True, gakkai=True)
+    docs_df = ntcir2.docs
     print("Loaded {:d} documents.".format(len(docs_df)))
     documents = docs_df[args.field].values
     labels = docs_df.index.values
 
     print("Loading topics...")
-    topics = ntcir2.topics(names=args.topics)[args.topics]  # could be variable
+    topics = ntcir2.topics[args.topic]  # could be variable
     n_queries = len(topics)
     print("Using {:d} queries".format(n_queries))
 
     print("Loading relevances...")
-    rels = ntcir2.rels(args.rels)['relevance']
+    rels = ntcir2.rels['relevance']
     n_rels = len(rels.nonzero()[0])
     print("With {:.1f} relevant docs per query".format(n_rels / n_queries))
     queries = list(zip(topics.index, topics))
