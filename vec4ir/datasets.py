@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
+"""
+File: datasets.py
+Author: Lukas Galke
+Email: github@lpag.de
+Github: https://github.com/lgalke
+Description: Parsing and loading for all the data sets.
+"""
+
 import pandas as pd
 import os
 from html.parser import HTMLParser
 from abc import abstractmethod, ABC
+from collections import defaultdict
+from .thesaurus_reader import ThesaurusReader
+import csv
 
 # NTCIR_ROOT_PATH = # think about this
+DEFAULT_CACHEDIR = os.path.expand("~/.cache")
 
 
 class IRDataSetBase(ABC):
@@ -30,36 +42,102 @@ class IRDataSetBase(ABC):
         pass
 
 
-class Econ62k(IRDataSetBase):
+def mine_gold(path, verify_integrity=False):
+    """ returns a dict of dicts label -> docid -> 1"""
+    gold = defaultdict(defaultdict(int))
+    with open(path, 'r') as f:
+        rd = csv.reader(f, delimiter='\t')
+        for line in rd:
+            doc_id = line[0]
+            labels = line[1:]
+            if verify_integrity and doc_id in gold:
+                raise UserWarning("Duplicate document in gold standard: {}".format(doc_id))
+            for label in labels:
+                gold[label][doc_id] = 1
+            # <++asdf++>
+    return gold
+
+
+def _first_preflabel(node):
+    return node['prefLabel']['0']
+
+
+def synthesize_topics(gold, thesaurus, accessor=_first_preflabel):
+    topics = [accessor(thesaurus[label]) for label in set(gold.keys())]
+    return topics
+
+
+def harvest_docs(path):
+    if os.path.isdir(path):
+        fnames = os.listdir(path)
+        data = dict()
+        for fname in fnames:
+            with open(fname, 'r') as f:
+                data[f.name] = f.read()
+        # fulltext documents
+        docs = pd.DataFrame.from_dict(data, orient='index')
+
+    elif os.path.isfile(path):
+        # title doucments
+        docs = pd.read_csv(path, sep='\t', names=["content"])
+
+    else:
+        raise UserWarning("No symlinks allowed.")
+
+    return docs
+
+
+class Economics(IRDataSetBase):
     """The famous econ62k dataset"""
-    def __init__(self, gold_path, thesaurus_path, fulltext_path, verify_integrity=False):
-        """inits the data set with paths and integrity checks..."""
+    def __init__(self,
+                 gold_path=None,
+                 thesaurus_path=None,
+                 doc_path=None,
+                 verify_integrity=False,
+                 verbose=0):
         self.__docs = None
         self.__rels = None
         self.__topics = None
+        self.gold_path = gold_path
+        self.thesaurus_reader = ThesaurusReader(thesaurus_path)
+        self.doc_path = doc_path
+        self.verify_integrity = verify_integrity
 
     @property
     def docs(self):
         # in memory cache
         if self.__docs is not None:
             return self.__docs
-
+        path, verbose = self.doc_path, self.verbose
+        docs = harvest_docs(path)
         self.__docs = docs
+        if verbose > 0:
+            print("First 3 documents:", docs[:3], sep='\n')
         return docs
 
     @property
     def rels(self):
         if self.__rels is not None:
             return self.__rels
-
+        # acquire rels
+        path = self.gold_path
+        rels = mine_gold(path)
         self.__rels = rels
+        if self.verbose > 0:
+            print("First 3 rels:", rels[:3], sep='\n')
         return rels
 
     @property
     def topics(self):
+        """ Synthesizes the topics for the dataset, rels will be computed first."""
         if self.__topics is not None:
             return self.__topics
+        rels, thesaurus, verbose = self.rels, self.thesaurus_reader.thesaurus, self.verbose
+        # acquire topics
+        topics = synthesize_topics(rels, thesaurus)
         self.__topics = topics
+        if verbose > 0:
+            print("First 3 topics:", topics[:2], sep='\n')
         return topics
 
 
@@ -144,7 +222,7 @@ class NTCIR(IRDataSetBase):
                  rels=2,
                  topics=["title"],
                  verify_integrity=False,
-                 cache_dir="~/.cache/vec4ir/ntcir",
+                 cache_dir=os.path.join(DEFAULT_CACHEDIR, "vec4ir", "ntcir"),
                  verbose=0):
         self.__gakkai = gakkai
         self.__kaken = kaken
