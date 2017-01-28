@@ -6,7 +6,7 @@ from warnings import warn
 import networkx as nx
 import rdflib as rdf
 
-from utils.nltk_normalization import NltkNormalizer
+from .nltk_normalization import NltkNormalizer
 
 _alphabet = set(string.ascii_lowercase + string.digits + ' ')
 
