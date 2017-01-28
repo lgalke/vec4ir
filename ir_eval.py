@@ -143,7 +143,7 @@ def _ir_eval_parser():
     parser.add_argument("-t", "--topic", type=str, default='title',
                         choices=['title', 'description'],
                         help="topic field to use (defaults to 'title')")
-    parser.add_argument("-r", "--rels", type=int, default=1, choices=[1, 2],
+    parser.add_argument("-r", "--rels", type=int, default=2, choices=[1, 2],
                         help="relevancies to use (defaults to 1)")
     parser.add_argument("-R", "--replacement-strategy", type=str,
                         dest='repstrat', default="zero",
