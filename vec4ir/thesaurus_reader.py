@@ -32,7 +32,7 @@ class ThesaurusReader:
             Path to thesaurus nt or json file.
     """
 
-    def __init__(self, resource_path):
+    def __init__(self, resource_path, normalize=True):
         self._nx_root = None
         self.resource_path = resource_path
         self._thesaurus = None
@@ -40,7 +40,7 @@ class ThesaurusReader:
         self._vocabulary = None
         self._nodename_index = None
         self._index_nodename = None
-        self.normalizer = NltkNormalizer()
+        self.normalizer = NltkNormalizer() if normalize else None
         self._query_prefix = 'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> ' \
                              'PREFIX skos: <http://www.w3.org/2004/02/skos/core#> ' \
                              'PREFIX zbwext: <zbw.eu/namespaces/zbw-extensions/> ' \
@@ -51,7 +51,8 @@ class ThesaurusReader:
     @property
     def thesaurus(self):
         """
-        Calling the property for the first time parses the nt graph or json file.
+        Calling the property for the first time parses the nt graph or json
+        file.
 
         Returns
         -------
@@ -74,7 +75,8 @@ class ThesaurusReader:
     @property
     def nx_graph(self):
         """
-        Calling the property for the first time parses the nt graph or json file and creates the nx_graph.
+        Calling the property for the first time parses the nt graph or json
+        file and creates the nx_graph.
 
         Returns
         -------
@@ -89,7 +91,8 @@ class ThesaurusReader:
     @property
     def nx_root(self):
         """
-        Calling the property for the first time parses the nt graph or json file and creates the nx_graph.
+        Calling the property for the first time
+        parses the nt graph or json file and creates the nx_graph.
 
         Returns
         -------
@@ -103,7 +106,8 @@ class ThesaurusReader:
     @property
     def vocabulary(self):
         """
-        Calling the property for the first time parses the nt graph or json file and creates the mappings.
+        Calling the property for the first time
+        parses the nt graph or json file and creates the mappings.
 
         Returns
         -------
@@ -117,7 +121,8 @@ class ThesaurusReader:
     @property
     def index_nodename(self):
         """
-        Calling the property for the first time parses the nt graph or json file and creates the mappings.
+        Calling the property for the first time parses
+        the nt graph or json file and creates the mappings.
 
         Returns
         -------
@@ -131,7 +136,8 @@ class ThesaurusReader:
     @property
     def nodename_index(self):
         """
-        Calling the property for the first time parses the nt graph or json file and creates the mappings.
+        Calling the property for the first time
+        parses the nt graph or json file and creates the mappings.
 
         Returns
         -------
@@ -156,9 +162,9 @@ class ThesaurusReader:
             json.dump(self.thesaurus, f)
 
     def normalize_thesaurus(self):
-        """Normalizes the thesaurus entries using nltk lemmatizer, lower casing, stop word removal
-        and reduces the characters to set(string.ascii_lowercase + string.digits + ' ')
-        """
+        """Normalizes the thesaurus entries using nltk lemmatizer, lower
+        casing, stop word removal and reduces the characters to
+        set(string.ascii_lowercase + string.digits + ' ') """
         for entry in self._thesaurus.values():
             entry['prefLabel'] = self._normalize_labels(entry['prefLabel'])
             if 'altLabel' in entry:
@@ -192,17 +198,23 @@ class ThesaurusReader:
     def _read_json(self, resource_path):
         with open(resource_path) as f:
             self._thesaurus = json.load(f)
-        self.normalize_thesaurus()
+        if self.normalizer:
+            self.normalize_thesaurus()
 
     def _read_nt(self, resource_path):
         self._graph = rdf.Graph()
         self._graph.parse(resource_path, format="nt")
         self._build_thesaurus_dict()
-        self.normalize_thesaurus()
+        if self.normalizer:
+            self.normalize_thesaurus()
 
     def _build_thesaurus_dict(self):
         top_concepts = self._get_top_concepts()
-        self._thesaurus = defaultdict(lambda: {'prefLabel': [], 'broader': [], 'narrower': [], 'altLabel': []})
+        self._thesaurus = defaultdict(
+            lambda: {'prefLabel': [],
+                     'broader': [],
+                     'narrower': [],
+                     'altLabel': []})
         if top_concepts:
             # Use R00T for virtual root so as not to be found as concept.
             self.thesaurus['root']['prefLabel'] = ['root']
@@ -217,7 +229,8 @@ class ThesaurusReader:
                 entries = self._get_relation(self._normalize_uri(c), key)
                 if key in {'broader', 'narrower'}:
                     entries = [entry.split('/')[-1] for entry in entries]
-                # In the case of self loops at broader relation: Add relation to virtual root node.
+                # In the case of self loops at broader relation:
+                # Add relation to virtual root node.
                 if label in entries and key == 'broader':
                     self.thesaurus[label]['broader'].append('root')
                     self.thesaurus['root']['narrower'].append(label)
@@ -233,7 +246,8 @@ class ThesaurusReader:
         return [r[0].split('/')[-1] for r in results]
 
     def _get_nodes(self):
-        results = self._query_rdf("SELECT DISTINCT ?s WHERE {?s skos:prefLabel ?a. }")
+        results = self._query_rdf(
+            "SELECT DISTINCT ?s WHERE {?s skos:prefLabel ?a. }")
         nodes = [r[0] for r in results]
         return nodes
 
@@ -244,7 +258,8 @@ class ThesaurusReader:
         return [str(result[0]) for result in results]
 
     def _get_label(self, uri):
-        quer = "SELECT ?o WHERE {" + uri + " rdfs:label ?o. FILTER (lang(?o) = 'en').}"
+        quer = "SELECT ?o WHERE {" + uri
+        + " rdfs:label ?o. FILTER (lang(?o) = 'en').}"
         return str(self._query_rdf(quer)[0][0])
 
     @staticmethod
@@ -277,11 +292,13 @@ class ThesaurusReader:
         # TODO error on two nodes
         roots = self._get_roots()
         if len(roots) > 1:
-            warn('More than one root, namely: ' + str([self.index_nodename[r] for r in roots]))
+            warn('More than one root, namely: '
+                 + str([self.index_nodename[r] for r in roots]))
         self._nx_root = roots[0]
 
     def _get_roots(self):
-        return [n for n in self.nx_graph.nodes() if not self.nx_graph.predecessors(n)]
+        return [n for n in self.nx_graph.nodes()
+                if not self.nx_graph.predecessors(n)]
 
     def fix_multiple_roots(self, root):
         roots = self._get_roots()
@@ -293,14 +310,16 @@ class ThesaurusReader:
             self.thesaurus[r_label]['broader'].append(root)
             self.thesaurus[root]['narrower'].append(r_label)
         self._create_nx_graph()
-        assert len(self._get_roots()) == 1, "Still " + str(self._get_roots()) + " roots."
+        assert len(self._get_roots()) == 1,\
+            "Still " + str(self._get_roots()) + " roots."
 
     def _get_nt_root(self):
         print('Searching for root')
         q = 'select distinct ?s where {?s skos:hasTopConcept ?o .}'
         results = self._query_rdf(q)
         if not results:
-            q = 'select ?s where  {?s skos:prefLabel ?l. filter not exists {?s skos:broader ?o .} ' \
+            q = 'select ?s where  {?s skos:prefLabel ?l. \
+                filter not exists {?s skos:broader ?o .} ' \
                 'filter not exists {?s owl:deprecated true .}}'
             results = self._query_rdf(q)
         print('Roots found: ')
