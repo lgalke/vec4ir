@@ -3,6 +3,13 @@
 import numpy as np
 
 
+def flatten(l):
+    """
+    flattens a list of list structure... nothing else.
+    """
+    return [item for sublist in l for item in sublist]
+
+
 def filter_vocab(model, words, oov=None):
     """ if analyze is given, analyze words first (split string) """
     filtered = []
@@ -12,6 +19,7 @@ def filter_vocab(model, words, oov=None):
         elif oov is not None:
             filtered.append(oov)
     return filtered
+
 
 def argtopk(A, k, axis=-1, sort=True):
     """

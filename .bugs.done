@@ -1,9 +1,11 @@
-ask henrik to install python3-tk | id:e68816aded1230ef247eb4c90c5b1aba2c3838ae
 where is pandas bug | id:09e97860fc655b23af33a747f025f67c406ce600
 uptraining? | id:398e763205e2f391a3ca65f6fbbad64bdc140945
 assert that recall and precision are computed correctly | id:5af6712e026da441f3ba34aeb2a7e23b7da8e578
+CACHE FOR NTCIR IS NOTOK | id:71fdf4232ecb1fa68499cbbdc326c7860e4c16f7
 make centroid shape 1 300 | id:8a8a6c89a189a1592117f6a9575bfa2954cf8d9b
 restrict queries to embedded ones | id:93c38bd0b054533883e007cb4333886d5556349a
+read fulltext and title at the same time? | id:93f9b1fd38005fb9e85008c51bfc3a2d4d0bde88
+use economics with hand-known annotations as relevancy | id:9d9778206a2e150fbe37255af9ed89ec376b4358
 update WCD implementation | id:aa5493cd9a6a62780ded5ed1a77bbd1a9884bd43
 ask henrik to install python3-tk | id:e68816aded1230ef247eb4c90c5b1aba2c3838ae
 move averaging in ir_eval and print precision recall curves | id:fb5831e3c328205d89282e60a0f99602201a67d9

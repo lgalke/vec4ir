@@ -50,6 +50,10 @@ def plot_precision_recall_curves(path, results, plot_f1=False):
     plt.savefig(path)
 
 
+def load_dataset(key):
+    raise NotImplemented("Sorry you were too lazy to implement this")
+
+
 def is_embedded(sentence, embedding, analyzer):
     """
     >>> embedding = ["a", "b", "c"]
@@ -122,6 +126,9 @@ def _ir_eval_parser():
     parser = ArgumentParser()
     parser.add_argument("--doctest", action='store_true',
                         help="Perform doctest on this module")
+    parser.add_argument("-D", "--dataset", type=str, default="ntcir",
+                        choices=["ntcir", "economics"],
+                        help="Specify dataset to use")
     parser.add_argument("-j", "--jobs", type=int, default=-1,
                         help="How many jobs to use, default=-1 (one per core)")
     parser.add_argument("-f",
