@@ -59,33 +59,29 @@ def harvest(source, query_id, doc_id=None, default=0):
     if doc_id is None:
         # Return sorted list of relevance scores for that query
         try:
-            # source is pandas df
-            scores = source.get(query_id).values
+            # source is pandas df or dict
+            scores = source.get(query_id)
         except AttributeError:
-            # source is ndarray or dict
+            # source is ndarray or list
             scores = source[query_id]
 
         try:
             # scores is numpy array-like?
             scores = np.sort(scores)[::-1]
         except ValueError:
-            # probably scores is a dict...
+            # probably scores is a dict itself...
             scores = np.asarray(list(scores.values()))
             scores = np.sort(scores)[::-1]
         return scores
     else:
         # Return relevance score for the respective (query, document) pair
-        try:
+        try:  # pandas multi index df
             score = source.get((query_id, doc_id), default)
-        except AttributeError:
+        except AttributeError:  # array or dict of (default) dicts
             scores = source[query_id]
             # no special treatment for ndarray since we want to raise exception
             # when query id is out of bounds
-            try:
-                score = scores[doc_id]
-            except (IndexError, KeyError):
-                score = default
-
+            score = scores.get(doc_id, default)
         return score
 
 

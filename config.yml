@@ -6,6 +6,7 @@ econ62k:
     title_path: "/data3/kd-mp/kd-mp/Resources/Goldstandard/formatted_econbiz-annotation-62k-titles.csv"
     gold_path: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
     thesaurus_path: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json" 
+    verbose: 1
 
 ntcir2:
     base-path: "../data/NTCIR2/"

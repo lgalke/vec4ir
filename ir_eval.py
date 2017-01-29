@@ -206,7 +206,8 @@ def load_econ62k(cfg):
     dataset = Economics(gold_path=cfg['gold_path'],
                         thesaurus_path=cfg['thesaurus_path'],
                         doc_path=cfg['fulltext_path'] if cfg['use_fulltext'] else cfg['title_path'],
-                        verify_integrity=cfg['verify_integrity'])
+                        verify_integrity=cfg['verify_integrity'],
+                        verbose=cfg['verbose'])
     print("Loading econ62k documents...")
     docs_df = dataset.docs
     print("Loaded {:d} documents.".format(len(docs_df)))
