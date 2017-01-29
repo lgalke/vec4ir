@@ -205,9 +205,8 @@ def load_ntcir2(config):
 def load_econ62k(cfg):
     dataset = Economics(gold_path=cfg['gold_path'],
                         thesaurus_path=cfg['thesaurus_path'],
-                        doc_path=cfg['fulltext_path'] if cfg['use_fulltext']
-                        else cfg['title_path'],
-                        verify_integrity=cfg['verify_integrity']),
+                        doc_path=cfg['fulltext_path'] if cfg['use_fulltext'] else cfg['title_path'],
+                        verify_integrity=cfg['verify_integrity'])
     print("Loading econ62k documents...")
     docs_df = dataset.docs
     print("Loaded {:d} documents.".format(len(docs_df)))
@@ -239,11 +238,10 @@ def main():
         doctest.testmod()
         exit(int(0))
     config = yaml.load(args.config)
-    print(config)
 
     # load concrete data
     dsc = config[args.dataset]
-    print(dsc)
+    dsc['verify_integrity'] = config['verify_integrity']
     loader = {'econ62k' : load_econ62k,
               'ntcir2' : load_ntcir2}[args.dataset]
 

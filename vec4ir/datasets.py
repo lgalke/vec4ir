@@ -44,22 +44,21 @@ class IRDataSetBase(ABC):
 
 def mine_gold(path, verify_integrity=False):
     """ returns a dict of dicts label -> docid -> 1"""
-    gold = defaultdict(defaultdict(int))
+    def zero_default():
+        return defaultdict(int)
+    gold = defaultdict(zero_default)
     with open(path, 'r') as f:
         rd = csv.reader(f, delimiter='\t')
         for line in rd:
             doc_id = line[0]
             labels = line[1:]
-            if verify_integrity and doc_id in gold:
-                raise UserWarning("Duplicate document in gold standard: {}".format(doc_id))
             for label in labels:
                 gold[label][doc_id] = 1
-            # <++asdf++>
     return gold
 
 
 def _first_preflabel(node):
-    return node['prefLabel']['0']
+    return node['prefLabel'][0]
 
 
 def synthesize_topics(gold, thesaurus, accessor=_first_preflabel):
@@ -84,7 +83,7 @@ def harvest_docs(path):
     else:
         raise UserWarning("No symlinks allowed.")
 
-    return docs['content']
+    return docs
 
 
 class Economics(IRDataSetBase):
@@ -102,6 +101,7 @@ class Economics(IRDataSetBase):
         self.thesaurus_reader = ThesaurusReader(thesaurus_path)
         self.doc_path = doc_path
         self.verify_integrity = verify_integrity
+        self.verbose = verbose
 
     @property
     def docs(self):
