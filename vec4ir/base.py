@@ -70,6 +70,7 @@ def harvest(source, query_id, doc_id=None, default=0):
             scores = np.sort(scores)[::-1]
         except ValueError:
             # probably scores is a dict...
+# values do not work <++todo++>
             scores = np.asarray(list(scores.values()))
             scores = np.sort(scores)[::-1]
         return scores
