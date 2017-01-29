@@ -16,7 +16,7 @@ from .thesaurus_reader import ThesaurusReader
 import csv
 
 # NTCIR_ROOT_PATH = # think about this
-DEFAULT_CACHEDIR = os.path.expand("~/.cache")
+DEFAULT_CACHEDIR = os.path.expanduser("~/.cache")
 
 
 class IRDataSetBase(ABC):

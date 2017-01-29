@@ -125,7 +125,7 @@ def _ir_eval_parser():
     parser = ArgumentParser()
     parser.add_argument("--doctest", action='store_true',
                         help="Perform doctest on this module")
-    parser.add_argument("-d", "--dataset", type=str, default="ntcir",
+    parser.add_argument("-d", "--dataset", type=str, default="ntcir2",
                         choices=["ntcir2", "econ62k"],
                         help="Specify dataset to use")
     parser.add_argument("-j", "--jobs", type=int, default=-1,
@@ -182,15 +182,15 @@ def _ir_eval_parser():
 
 
 def load_ntcir2(config):
-    ntcir2 = NTCIR("../data/NTCIR2/", rels=config.rels, topics=[config.topic])
+    ntcir2 = NTCIR("../data/NTCIR2/", rels=config['rels'], topics=[config['topic']])
     print("Loading NTCIR2 documents...")
     docs_df = ntcir2.docs
     print("Loaded {:d} documents.".format(len(docs_df)))
-    documents = docs_df[config.field].values
+    documents = docs_df[config["field"]].values
     labels = docs_df.index.values
 
     print("Loading topics...")
-    topics = ntcir2.topics[config.topic]  # could be variable
+    topics = ntcir2.topics[config['topic']]  # could be variable
     n_queries = len(topics)
     print("Using {:d} queries".format(n_queries))
 
@@ -239,16 +239,18 @@ def main():
         doctest.testmod()
         exit(int(0))
     config = yaml.load(args.config)
+    print(config)
 
     # load concrete data
     dsc = config[args.dataset]
+    print(dsc)
     loader = {'econ62k' : load_econ62k,
               'ntcir2' : load_ntcir2}[args.dataset]
 
     documents, labels, queries, rels = loader(dsc)
 
     analyzer = CountVectorizer(stop_words='english',
-                               lowercase=args.lowercase).build_analyzer()
+                               lowercase=config['lowercase']).build_analyzer()
     focus = set([f.lower() for f in args.focus]) if args.focus else None
     repl = {"drop": None, "zero": 0}[args.repstrat]
 
@@ -284,8 +286,7 @@ def main():
            "wcd": Word2VecRetrieval(model, wmd=False,
                                     analyzer=analyzer,
                                     oov=args.oov,
-                                    verbose=args.verbose,
-                                    try_lowercase=args.try_lowercase),
+                                    verbose=args.verbose),
            "twcd" : WordCentroidRetrieval(model,
                                           analyzer=analyzer,
                                           oov=args.oov,
@@ -295,8 +296,7 @@ def main():
            "wmd": Word2VecRetrieval(model, wmd=True,
                                     analyzer=analyzer,
                                     oov=args.oov,
-                                    verbose=args.verbose,
-                                    try_lowercase=args.try_lowercase),
+                                    verbose=args.verbose),
            "pvdm": Doc2VecRetrieval(analyzer=analyzer,
                                     verbose=args.verbose),
            "eqlm": EQLM(tfidf, model, m=10, eqe=1, analyzer=analyzer,

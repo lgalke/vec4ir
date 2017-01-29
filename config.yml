@@ -1,14 +1,15 @@
 verify_integrity: False
+lowercase: True
 econ62k:
-        use_fulltext: False
-        fulltext_path: "/data3/kd-mp/data/ZBW62k/Text"
-        title_path: "/data3/kd-mp/kd-mp/Resources/Goldstandard/formatted_econbiz-annotation-62k-titles.csv"
-        gold_path: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
-        thesaurus_path: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json" 
+    use_fulltext: False
+    fulltext_path: "/data3/kd-mp/data/ZBW62k/Text"
+    title_path: "/data3/kd-mp/kd-mp/Resources/Goldstandard/formatted_econbiz-annotation-62k-titles.csv"
+    gold_path: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
+    thesaurus_path: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json" 
 
 ntcir2:
-        base-path: "../data/NTCIR2/"
-        field: "title"
-        topic: "title"
-        rels: 2
+    base-path: "../data/NTCIR2/"
+    field: "title"
+    topic: "title"
+    rels: 2
         
