@@ -63,7 +63,7 @@ def _first_preflabel(node):
 
 
 def synthesize_topics(gold, thesaurus, accessor=_first_preflabel):
-    topics = [accessor(thesaurus[label]) for label in set(gold.keys())]
+    topics = [(label, accessor(thesaurus[label])) for label in set(gold.keys())]
     return topics
 
 
@@ -84,7 +84,7 @@ def harvest_docs(path):
     else:
         raise UserWarning("No symlinks allowed.")
 
-    return docs
+    return docs['content']
 
 
 class Economics(IRDataSetBase):

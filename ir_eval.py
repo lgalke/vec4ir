@@ -182,44 +182,70 @@ def _ir_eval_parser():
 
 
 def load_ntcir2(config):
-        ntcir2 = NTCIR("../data/NTCIR2/", rels=config.rels, topics=[config.topic])
-        print("Loading NTCIR2 documents...")
-        docs_df = ntcir2.docs
-        print("Loaded {:d} documents.".format(len(docs_df)))
-        documents = docs_df[config.field].values
-        labels = docs_df.index.values
+    ntcir2 = NTCIR("../data/NTCIR2/", rels=config.rels, topics=[config.topic])
+    print("Loading NTCIR2 documents...")
+    docs_df = ntcir2.docs
+    print("Loaded {:d} documents.".format(len(docs_df)))
+    documents = docs_df[config.field].values
+    labels = docs_df.index.values
 
-        print("Loading topics...")
-        topics = ntcir2.topics[config.topic]  # could be variable
-        n_queries = len(topics)
-        print("Using {:d} queries".format(n_queries))
+    print("Loading topics...")
+    topics = ntcir2.topics[config.topic]  # could be variable
+    n_queries = len(topics)
+    print("Using {:d} queries".format(n_queries))
 
-        print("Loading relevances...")
-        rels = ntcir2.rels['relevance']
-        n_rels = len(rels.nonzero()[0])
-        print("With {:.1f} relevant docs per query".format(n_rels / n_queries))
-        queries = list(zip(topics.index, topics))
-    raise NotImplemented("Sorry you were too lazy to implement this")
+    print("Loading relevances...")
+    rels = ntcir2.rels['relevance']
+    n_rels = len(rels.nonzero()[0])
+    print("With {:.1f} relevant docs per query".format(n_rels / n_queries))
+    queries = list(zip(topics.index, topics))
+    return documents, labels, queries, rels
 
-    return documents, topics, rels
 
-def load_econ62k(config):
-    econ62k = Economics(f
+def load_econ62k(cfg):
+    dataset = Economics(gold_path=cfg['gold_path'],
+                        thesaurus_path=cfg['thesaurus_path'],
+                        doc_path=cfg['fulltext_path'] if cfg['use_fulltext']
+                        else cfg['title_path'],
+                        verify_integrity=cfg['verify_integrity']),
+    print("Loading econ62k documents...")
+    docs_df = dataset.docs
+    print("Loaded {:d} documents.".format(len(docs_df)))
+    documents = docs_df['content'].values
+    labels = docs_df.index.values
+
+    print("Loading topics...")
+    queries = dataset.topics
+    n_queries = len(queries)
+    print("Using {:d} queries".format(n_queries))
+
+    print("Loading relevances...")
+    rels = dataset.rels
+    n_rels = len(rels)
+    print("with {:.1f} relevant docs per query".format(n_rels / n_queries))
+    return documents, labels, queries, rels
 
 
 def main():
     """TODO: Docstring for main.
     :returns: TODO
     """
+    # parse command line arguments and read config file
     parser = _ir_eval_parser()
     args = parser.parse_args()
-    config = yaml.load(args.config)
-                        
     print(args)
     if args.doctest:
         import doctest
         doctest.testmod()
         exit(int(0))
+    config = yaml.load(args.config)
+
+    # load concrete data
+    dsc = config[args.dataset]
+    loader = {'econ62k' : load_econ62k,
+              'ntcir2' : load_ntcir2}[args.dataset]
+
+    documents, labels, queries, rels = loader(dsc)
 
     analyzer = CountVectorizer(stop_words='english',
                                lowercase=args.lowercase).build_analyzer()
