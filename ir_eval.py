@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from timeit import default_timer as timer
 from datetime import timedelta
-from vec4ir.datasets import NTCIR
+from vec4ir.datasets import NTCIR, Economics
 from vec4ir.base import TfidfRetrieval
 from vec4ir.word2vec import StringSentence, Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
@@ -18,6 +18,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')  # compat on non-gui uis
 import matplotlib.pyplot as plt
+import yaml
 # import matplotlib.patches as mpatches
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
@@ -50,8 +51,6 @@ def plot_precision_recall_curves(path, results, plot_f1=False):
     plt.savefig(path)
 
 
-def load_dataset(key):
-    raise NotImplemented("Sorry you were too lazy to implement this")
 
 
 def is_embedded(sentence, embedding, analyzer):
@@ -126,8 +125,8 @@ def _ir_eval_parser():
     parser = ArgumentParser()
     parser.add_argument("--doctest", action='store_true',
                         help="Perform doctest on this module")
-    parser.add_argument("-D", "--dataset", type=str, default="ntcir",
-                        choices=["ntcir", "economics"],
+    parser.add_argument("-d", "--dataset", type=str, default="ntcir",
+                        choices=["ntcir2", "econ62k"],
                         help="Specify dataset to use")
     parser.add_argument("-j", "--jobs", type=int, default=-1,
                         help="How many jobs to use, default=-1 (one per core)")
@@ -161,16 +160,18 @@ def _ir_eval_parser():
     parser.add_argument("-p", "--plot", default=None, type=str,
                         metavar="PLOTFILE",
                         help="Save precision-recall curves in PLOTFILE")
+    parser.add_argument('-c', '--config', type=FileType('r'), default='config.yml',
+                        help="Specify configuration file")
 
     # FIXME this will be model specific soon
-    parser.add_argument("-c", "--lowercase", default=False,
-                        action='store_true',
-                        help="Case insensitive matching analysis \
-                        (also relevant for baseline tfidf)")
-    parser.add_argument("-l", "--try-lowercase", default=False,
-                        action='store_true',
-                        help="For embedding-based models, try lowercasing \
-                        when there is no initial vocabulary match!")
+    # parser.add_argument("-c", "--lowercase", default=False,
+    #                     action='store_true',
+    #                     help="Case insensitive matching analysis \
+    #                     (also relevant for baseline tfidf)")
+    # parser.add_argument("-l", "--try-lowercase", default=False,
+    #                     action='store_true',
+    #                     help="For embedding-based models, try lowercasing \
+    #                     when there is no initial vocabulary match!")
     # FIXME this will be model specific soon END
     parser.add_argument("-M", "--oov", default=None, type=str,
                         help="token for out-of-vocabulary words, \
@@ -180,35 +181,46 @@ def _ir_eval_parser():
     return parser
 
 
+def load_ntcir2(config):
+        ntcir2 = NTCIR("../data/NTCIR2/", rels=config.rels, topics=[config.topic])
+        print("Loading NTCIR2 documents...")
+        docs_df = ntcir2.docs
+        print("Loaded {:d} documents.".format(len(docs_df)))
+        documents = docs_df[config.field].values
+        labels = docs_df.index.values
+
+        print("Loading topics...")
+        topics = ntcir2.topics[config.topic]  # could be variable
+        n_queries = len(topics)
+        print("Using {:d} queries".format(n_queries))
+
+        print("Loading relevances...")
+        rels = ntcir2.rels['relevance']
+        n_rels = len(rels.nonzero()[0])
+        print("With {:.1f} relevant docs per query".format(n_rels / n_queries))
+        queries = list(zip(topics.index, topics))
+    raise NotImplemented("Sorry you were too lazy to implement this")
+
+    return documents, topics, rels
+
+def load_econ62k(config):
+    econ62k = Economics(f
+
+
 def main():
     """TODO: Docstring for main.
     :returns: TODO
     """
     parser = _ir_eval_parser()
     args = parser.parse_args()
+    config = yaml.load(args.config)
+                        
     print(args)
     if args.doctest:
         import doctest
         doctest.testmod()
         exit(int(0))
 
-    ntcir2 = NTCIR("../data/NTCIR2/", rels=args.rels, topics=[args.topic])
-    print("Loading NTCIR2 documents...")
-    docs_df = ntcir2.docs
-    print("Loaded {:d} documents.".format(len(docs_df)))
-    documents = docs_df[args.field].values
-    labels = docs_df.index.values
-
-    print("Loading topics...")
-    topics = ntcir2.topics[args.topic]  # could be variable
-    n_queries = len(topics)
-    print("Using {:d} queries".format(n_queries))
-
-    print("Loading relevances...")
-    rels = ntcir2.rels['relevance']
-    n_rels = len(rels.nonzero()[0])
-    print("With {:.1f} relevant docs per query".format(n_rels / n_queries))
-    queries = list(zip(topics.index, topics))
     analyzer = CountVectorizer(stop_words='english',
                                lowercase=args.lowercase).build_analyzer()
     focus = set([f.lower() for f in args.focus]) if args.focus else None

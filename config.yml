@@ -1,8 +1,13 @@
 economics:
-        fulltext-path:
-        title-path:
-        thesaurus-path:
-        gold-path:
+        use_fulltext: False
+        fulltext-path: "/data3/kd-mp/data/ZBW62k/Text"
+        title-path: "/data3/kd-mp/kd-mp/Resources/Goldstandard/formatted_econbiz-annotation-62k-titles.csv"
+        gold-path: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
+        thesaurus-path: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json" 
 
 ntcir2:
-        base-path:
+        base-path: "../data/NTCIR2/"
+        field: "title"
+        topic: "title"
+        rels: 2
+        

@@ -7,3 +7,6 @@ cython
 pyemd
 smart_open
 matplotlib
+PyYAML
+rdflib
+nltk
