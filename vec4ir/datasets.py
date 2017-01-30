@@ -13,6 +13,7 @@ from html.parser import HTMLParser
 from abc import abstractmethod, ABC
 from collections import defaultdict
 from .thesaurus_reader import ThesaurusReader
+import pprint
 import csv
 
 # NTCIR_ROOT_PATH = # think about this
@@ -50,7 +51,7 @@ def mine_gold(path, verify_integrity=False):
     with open(path, 'r') as f:
         rd = csv.reader(f, delimiter='\t')
         for line in rd:
-            doc_id = line[0]
+            doc_id = int(line[0])
             labels = line[1:]
             for label in labels:
                 gold[label][doc_id] = 1
@@ -62,6 +63,7 @@ def _first_preflabel(node):
 
 
 def synthesize_topics(gold, thesaurus, accessor=_first_preflabel):
+    """ Returns a list of (query_id, querystring) pairs"""
     topics = [(label, accessor(thesaurus[label])) for label in set(gold.keys())]
     return topics
 
@@ -71,17 +73,19 @@ def harvest_docs(path):
         fnames = os.listdir(path)
         data = dict()
         for fname in fnames:
-            with open(fname, 'r') as f:
+            with open(os.path.join(path, fname), 'r') as f:
                 data[f.name] = f.read()
         # fulltext documents
         docs = pd.DataFrame.from_dict(data, orient='index')
+        print(docs)
 
     elif os.path.isfile(path):
         # title doucments
-        docs = pd.read_csv(path, sep='\t', names=["content"])
+        docs = pd.read_csv(path, sep='\t')
 
     else:
         raise UserWarning("No symlinks allowed.")
+    print("columns", docs.columns, "index", docs.index.dtype, sep='\n')
 
     return docs
 
@@ -123,8 +127,6 @@ class Economics(IRDataSetBase):
         path = self.gold_path
         rels = mine_gold(path)
         self.__rels = rels
-        if self.verbose > 0:
-            print("First 3 rels:", rels[:3], sep='\n')
         return rels
 
     @property
