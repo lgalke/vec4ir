@@ -68,7 +68,7 @@ def synthesize_topics(gold, thesaurus, accessor=_first_preflabel):
     return topics
 
 
-def harvest_docs(path):
+def harvest_docs(path, verify_integrity):
     if os.path.isdir(path):
         fnames = os.listdir(path)
         data = dict()
@@ -81,13 +81,14 @@ def harvest_docs(path):
 
     elif os.path.isfile(path):
         # title doucments
-        docs = pd.read_csv(path, sep='\t')
+        docs = pd.read_csv(path, sep='\t', names=["docid", "title"])
+        docs.set_index("docid", verify_integrity=verify_integrity)
+        labels, docs = docs.index.values, docs["title"].values
 
     else:
         raise UserWarning("No symlinks allowed.")
-    print("columns", docs.columns, "index", docs.index.dtype, sep='\n')
 
-    return docs
+    return labels, docs
 
 
 class Economics(IRDataSetBase):
@@ -113,11 +114,11 @@ class Economics(IRDataSetBase):
         if self.__docs is not None:
             return self.__docs
         path, verbose = self.doc_path, self.verbose
-        docs = harvest_docs(path)
+        labels, docs = harvest_docs(path, verify_integrity=self.verify_integrity)
         self.__docs = docs
         if verbose > 0:
-            print("First 3 documents:", docs[:3], sep='\n')
-        return docs
+            print("First 3 documents:", list(zip(labels[:3], docs[:3])), sep='\n')
+        return labels, docs
 
     @property
     def rels(self):

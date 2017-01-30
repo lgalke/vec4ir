@@ -276,15 +276,18 @@ class RetriEvalMixIn():
             t0 = timer()
             result = self.query(query)
             values["time_per_query"].append(timer() - t0)
+            print(result[:k])
             # result = result[:k]  # TRIM HERE
             # soak the generator
             scored_result = [harvest(Y, qid, docid, replacement)
                              for docid in result]
+            print(scored_result[:k])
             if replacement is None:
                 scored_result, notfound = filterNone(scored_result)
                 values["gold_not_found"].append(notfound)
 
             gold = harvest(Y, qid)
+            print(gold[:k])
             R = np.count_nonzero(gold)
 
             # real ndcg

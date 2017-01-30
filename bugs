@@ -3,3 +3,4 @@ doc2vec: extract training params from doc2vec paper | id:15ccc85d498f3b6bd9f7c6e
 eqlm: scale sigmoid with a and c | id:87bfe63f8bd3d5ff3a1a6707bd0b975e14b49aa8
 update WMD implementation | id:a16c8b81d15311dea2f46a7490b675def26750d6
 improve eqlm performance by not computing priors but caching them | id:c37574067354199c8f07379c53dca1427d633d5c
+why is economics so bad | id:f6961206efbb7c0528075601086f87e0faa4f1c9

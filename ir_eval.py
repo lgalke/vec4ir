@@ -209,10 +209,8 @@ def load_econ62k(cfg):
                         verify_integrity=cfg['verify_integrity'],
                         verbose=cfg['verbose'])
     print("Loading econ62k documents...")
-    docs_df = dataset.docs
-    print("Loaded {:d} documents.".format(len(docs_df)))
-    documents = docs_df['content'].values
-    labels = docs_df.index.values
+    labels, docs = dataset.docs
+    print("Loaded {:d} documents.".format(len(docs)))
 
     print("Loading topics...")
     queries = dataset.topics
@@ -223,7 +221,7 @@ def load_econ62k(cfg):
     rels = dataset.rels
     n_rels = len(rels)
     print("with {:.1f} relevant docs per query".format(n_rels / n_queries))
-    return documents, labels, queries, rels
+    return docs, labels, queries, rels
 
 
 def main():
