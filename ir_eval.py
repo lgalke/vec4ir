@@ -233,7 +233,7 @@ def main():
         exit(int(0))
     config = yaml.load(args.config)
     train = config.get('train', False)
-    model_path = config.get('model', None)
+    model_path = config.get('embedding', None)
 
     # load concrete data
     dsc = config[args.dataset]
@@ -248,7 +248,7 @@ def main():
     focus = set([f.lower() for f in args.focus]) if args.focus else None
     repl = {"drop": None, "zero": 0}[args.repstrat]
 
-    model = smart_load_word2vec(None)
+    model = smart_load_word2vec(model_path)
     if not model and train:
         print("Training word2vec model on all available data...")
         sentences = StringSentence(documents, analyzer)
