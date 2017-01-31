@@ -77,16 +77,15 @@ def harvest_docs(path, verify_integrity):
                 data[f.name] = f.read()
         # fulltext documents
         docs = pd.DataFrame.from_dict(data, orient='index')
-        print(docs)
 
     elif os.path.isfile(path):
         # title doucments
-        docs = pd.read_csv(path, sep='\t', names=["docid", "title"])
-        docs.set_index("docid", verify_integrity=verify_integrity)
+        docs = pd.read_csv(path, sep='\t', names=["title"], index_col=0)
         labels, docs = docs.index.values, docs["title"].values
 
     else:
         raise UserWarning("No symlinks allowed.")
+    print("labels of type {}, docs of type {}".format(labels.dtype, docs.dtype)) 
 
     return labels, docs
 
@@ -118,6 +117,7 @@ class Economics(IRDataSetBase):
         self.__docs = docs
         if verbose > 0:
             print("First 3 documents:", list(zip(labels[:3], docs[:3])), sep='\n')
+            print("", list(zip(labels[:3], docs[:3])), sep='\n')
         return labels, docs
 
     @property
@@ -216,23 +216,24 @@ class NTCIRParser(HTMLParser):
         elif self.current_tag == self.title_tag:
             self.current_record['title'] = data
 
-
 class NTCIR(IRDataSetBase):
     def __init__(self,
                  root_path,
                  kaken=True,
                  gakkai=True,
                  rels=2,
-                 topics=["title"],
+                 topic="title",
+                 field="title",
                  verify_integrity=False,
                  cache_dir=os.path.join(DEFAULT_CACHEDIR, "vec4ir", "ntcir"),
                  verbose=0):
         self.__gakkai = gakkai
         self.__kaken = kaken
         self.__rels = int(rels)
-        self.__topics = topics
+        self.__topic = topic
         self.__verify_integrity = verify_integrity
         self.__verbose = verbose
+        self.__field = field
         self.root_path = root_path
         if not cache_dir:
             print(UserWarning("No cachedir specified"))
@@ -272,6 +273,7 @@ class NTCIR(IRDataSetBase):
         gakkai = self.__gakkai
         verify_integrity = self.__verify_integrity
         verbose = self.__verbose
+        field = self.__field
         if not kaken and not gakkai:
             raise ValueError("So... you call me and want no documents?")
 
@@ -290,7 +292,7 @@ class NTCIR(IRDataSetBase):
                 if verbose > 0:
                     print("Cache hit:", cache)
                 df = pd.read_pickle(cache)
-                return df
+                return df.index.values, df[field].values
             except FileNotFoundError:
                 if verbose > 0:
                     print("Cache miss.")
@@ -312,7 +314,9 @@ class NTCIR(IRDataSetBase):
             if verbose > 0:
                 print("Writing cache: ", self.cache)
             df.to_pickle(cache)
-        return df
+
+        labels, documents = df.index.values, df[field].values
+        return labels, documents
 
     def kaken(self, verify_integrity=False, verbose=0):
         path = os.path.join(self.root_path, "e-docs", "ntc2-e1k")
@@ -334,16 +338,19 @@ class NTCIR(IRDataSetBase):
         number = self.__rels
         path = os.path.join(self.root_path, "rels")
         path = os.path.join(path, "rel" + str(number) + "_ntc2-e2_0101-0149.nc")
-        return NTCIR._read_rels(path, verify_integrity=verify_integrity)
+        rels_df = NTCIR._read_rels(path, verify_integrity=verify_integrity)
+        return rels_df['relevance']
 
     @property
     def topics(self):
-        names = self.__topics
+        desired_topic_field = self.__topic
+        names = [desired_topic_field]
         verify_integrity = self.__verify_integrity
         key = "e0101-0149"  # could be global
         path = os.path.join(self.root_path, "topics", "topic-" + key)
-        return NTCIR._read_topics(path, names, verify_integrity=verify_integrity)
-
+        topics_df = NTCIR._read_topics(path, names, verify_integrity=verify_integrity)
+        topics = topics_df[desired_topic_field]
+        return list(zip(topics.index, topics))
 
 if __name__ == '__main__':
     ntcir2 = NTCIR('/home/lpag/git/vec4ir/data/NTCIR2/', verify_integrity=True, rels=2)

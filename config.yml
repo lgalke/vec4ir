@@ -1,5 +1,7 @@
 verify_integrity: False
 lowercase: True
+embedding: "/data3/lgalke/GoogleNews-vectors-negative300.bin.gz"
+
 econ62k:
     use_fulltext: False
     fulltext_path: "/data3/kd-mp/data/ZBW62k/Text"

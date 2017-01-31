@@ -8,6 +8,7 @@ from collections import defaultdict
 from timeit import default_timer as timer
 import scipy.sparse as sp
 import numpy as np
+import pandas as pd
 
 try:
     from . import rank_metrics as rm
@@ -56,12 +57,14 @@ def harvest(source, query_id, doc_id=None, default=0):
     >>> harvest(ld, 0)
     array([5, 4, 3, 2])
     """
+    is_pd = isinstance(source, pd.Series)
+    is_dict = isinstance(source, dict)
     if doc_id is None:
         # Return sorted list of relevance scores for that query
-        try:
-            # source is pandas df or dict
+        if is_pd or is_dict:
+            # source is pandas series or dict
             scores = source.get(query_id)
-        except AttributeError:
+        else:
             # source is ndarray or list
             scores = source[query_id]
 
@@ -75,13 +78,17 @@ def harvest(source, query_id, doc_id=None, default=0):
         return scores
     else:
         # Return relevance score for the respective (query, document) pair
-        try:  # pandas multi index df
+        # try:  # pandas multi index df
+        if is_pd:
             score = source.get((query_id, doc_id), default)
-        except AttributeError:  # array or dict of (default) dicts
+        else:
+            # default dict or ndarray
             scores = source[query_id]
             # no special treatment for ndarray since we want to raise exception
             # when query id is out of bounds
+            # FIXME this wont work if scores are a numpy array
             score = scores.get(doc_id, default)
+
         return score
 
 
@@ -276,18 +283,20 @@ class RetriEvalMixIn():
             t0 = timer()
             result = self.query(query)
             values["time_per_query"].append(timer() - t0)
-            print(result[:k])
+            # if verbose > 0:
+            #     print(result[:k])
             # result = result[:k]  # TRIM HERE
             # soak the generator
             scored_result = [harvest(Y, qid, docid, replacement)
                              for docid in result]
-            print(scored_result[:k])
+            if verbose > 0:
+                print(scored_result[:k])
             if replacement is None:
                 scored_result, notfound = filterNone(scored_result)
                 values["gold_not_found"].append(notfound)
 
             gold = harvest(Y, qid)
-            print(gold[:k])
+            # print(gold[:k])
             R = np.count_nonzero(gold)
 
             # real ndcg

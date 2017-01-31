@@ -153,8 +153,6 @@ def _ir_eval_parser():
                         type=FileType('a'))
     parser.add_argument("-k", dest='k', default=20, type=int,
                         help="number of documents to retrieve")
-    parser.add_argument("-m", "--model", default=None, type=str,
-                        help="use precomputed embedding model")
     parser.add_argument("-v", "--verbose", default=2, type=int,
                         help="verbosity level")
     parser.add_argument("-p", "--plot", default=None, type=str,
@@ -182,23 +180,20 @@ def _ir_eval_parser():
 
 
 def load_ntcir2(config):
-    ntcir2 = NTCIR("../data/NTCIR2/", rels=config['rels'], topics=[config['topic']])
+    ntcir2 = NTCIR("../data/NTCIR2/", rels=config['rels'], topic=config['topic'], field=config['field'])
     print("Loading NTCIR2 documents...")
-    docs_df = ntcir2.docs
-    print("Loaded {:d} documents.".format(len(docs_df)))
-    documents = docs_df[config["field"]].values
-    labels = docs_df.index.values
+    labels, documents = ntcir2.docs
+    print("Loaded {:d} documents.".format(len(documents)))
 
     print("Loading topics...")
-    topics = ntcir2.topics[config['topic']]  # could be variable
-    n_queries = len(topics)
+    queries = ntcir2.topics
+    n_queries = len(queries)
     print("Using {:d} queries".format(n_queries))
 
     print("Loading relevances...")
-    rels = ntcir2.rels['relevance']
-    n_rels = len(rels.nonzero()[0])
+    rels = ntcir2.rels
+    n_rels = len(rels)
     print("With {:.1f} relevant docs per query".format(n_rels / n_queries))
-    queries = list(zip(topics.index, topics))
     return documents, labels, queries, rels
 
 
@@ -219,7 +214,7 @@ def load_econ62k(cfg):
 
     print("Loading relevances...")
     rels = dataset.rels
-    n_rels = len(rels)
+    n_rels = sum(len(acc) for acc in rels.values())
     print("with {:.1f} relevant docs per query".format(n_rels / n_queries))
     return docs, labels, queries, rels
 
@@ -237,6 +232,8 @@ def main():
         doctest.testmod()
         exit(int(0))
     config = yaml.load(args.config)
+    train = config.get('train', False)
+    model_path = config.get('model', None)
 
     # load concrete data
     dsc = config[args.dataset]
@@ -251,8 +248,8 @@ def main():
     focus = set([f.lower() for f in args.focus]) if args.focus else None
     repl = {"drop": None, "zero": 0}[args.repstrat]
 
-    model = smart_load_word2vec(args.model)
-    if not model and args.train:
+    model = smart_load_word2vec(None)
+    if not model and train:
         print("Training word2vec model on all available data...")
         sentences = StringSentence(documents, analyzer)
         model = Word2Vec(sentences,
@@ -318,7 +315,8 @@ def main():
     results = {name: {metric: mean_std(values) for metric, values in
                scores.items()} for name, scores in results.items()}
 
-    print("% {}".format(args), file=args.outfile)
+    pprint.pprint(args, stream=args.outfile)
+    pprint.pprint(config, stream=args.outfile)
     pd.DataFrame(results).to_latex(args.outfile)
     print("Done.")
 
