@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from timeit import default_timer as timer
 from datetime import timedelta
-from vec4ir.datasets import NTCIR, Economics
+from vec4ir.datasets import NTCIR, QuadflorLike
 from vec4ir.base import TfidfRetrieval
 from vec4ir.word2vec import StringSentence, Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
@@ -198,11 +198,10 @@ def load_ntcir2(config):
 
 
 def load_econ62k(cfg):
-    dataset = Economics(gold_path=cfg['gold_path'],
-                        thesaurus_path=cfg['thesaurus_path'],
-                        doc_path=cfg['fulltext_path'] if cfg['use_fulltext'] else cfg['title_path'],
-                        verify_integrity=cfg['verify_integrity'],
-                        verbose=cfg['verbose'])
+    dataset = QuadflorLike(y=cfg['y'],
+                           thes=cfg['thes'],
+                           X=cfg['X'],
+                           verify_integrity=cfg['verify_integrity'])
     print("Loading econ62k documents...")
     labels, docs = dataset.docs
     print("Loaded {:d} documents.".format(len(docs)))
@@ -217,6 +216,25 @@ def load_econ62k(cfg):
     n_rels = sum(len(acc) for acc in rels.values())
     print("with {:.1f} relevant docs per query".format(n_rels / n_queries))
     return docs, labels, queries, rels
+
+
+CONSTRUCTORS = {
+    "quadflorlike" : QuadflorLike,
+    "ntcir" : NTCIR
+}
+
+
+def init_dataset(data_config, default='quadflorlike'):
+    """
+    Given some dataset configuguration ("type" and **kwargs for the
+    initializer), return the initialized data set object.  The returned object
+    provides the properties `docs`, `rels`, and `topics`.
+    """
+    kwargs = dict(data_config)  # we assume dict
+    T = kwargs.pop('type', default).lower()  # special type value to determine constructor
+    constructor = CONSTRUCTORS[T]
+    dataset = constructor(**kwargs)  # expand dict to kwargs
+    return dataset
 
 
 def main():
@@ -235,13 +253,18 @@ def main():
     train = config.get('train', False)
     model_path = config.get('embedding', None)
 
-    # load concrete data
-    dsc = config[args.dataset]
-    dsc['verify_integrity'] = config['verify_integrity']
-    loader = {'econ62k' : load_econ62k,
-              'ntcir2' : load_ntcir2}[args.dataset]
+    # load concrete data (old way)
+    # dsc = config['data'][args.dataset]
+    # dsc['verify_integrity'] = config.pop('verify_integrity', False)
+    # loader = {'econ62k' : load_econ62k,
+    #           'ntcir2' : load_ntcir2}[args.dataset]
 
-    documents, labels, queries, rels = loader(dsc)
+    # documents, labels, queries, rels = loader(dsc)
+
+    dataset = init_dataset(config['data'][args.dataset])
+    documents, label, queries, rels = dataset.load()
+
+
 
     analyzer = CountVectorizer(stop_words='english',
                                lowercase=config['lowercase']).build_analyzer()
