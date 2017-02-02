@@ -162,14 +162,13 @@ def _ir_eval_parser(config):
     parser.add_argument("-p", "--plot", default=None, type=str,
                         metavar="PLOTFILE",
                         help="Save precision-recall curves in PLOTFILE")
-    parser.add_argument('-c', '--config', type=FileType('r'), default='config.yml',
-                        help="Specify configuration file")
+    # parser.add_argument('-c', '--config', type=FileType('r'), default='config.yml',
+    #                     help="Specify configuration file")
 
-    # FIXME this will be model specific soon
-    # parser.add_argument("-c", "--lowercase", default=False,
-    #                     action='store_true',
-    #                     help="Case insensitive matching analysis \
-    #                     (also relevant for baseline tfidf)")
+    parser.add_argument("-C", "--cased", dest="lowercase", default=True,
+                        action='store_false',
+                        help="Case sensitive matching analysis \
+                        (also relevant for baseline tfidf)")
     # parser.add_argument("-l", "--try-lowercase", default=False,
     #                     action='store_true',
     #                     help="For embedding-based models, try lowercasing \
