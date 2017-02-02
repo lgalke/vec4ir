@@ -7,7 +7,7 @@ Email: vim@lpag.de
 Github: https://github.com/lgalke
 Description: Embedding-based retrieval techniques.
 """
-from sklearn.base import EstimatorBase
+from sklearn.base import BaseEstimator
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import normalize
@@ -235,7 +235,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
         return result
 
 
-class WordCentroidRetrieval(EstimatorBase, RetriEvalMixin):
+class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
     """
     Retrieval Model based on Word Centroid Distance
     """

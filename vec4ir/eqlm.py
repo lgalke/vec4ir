@@ -69,7 +69,78 @@ def expand(posterior, vocabulary, m=10):
     return list(expansions)
 
 
-RetriEvalMixin
+class EQLM(RetrievalBase, RetriEvalMixin):
+
+    def __init__(self,
+                 retrieval_model,
+                 embedding,
+                 analyzer=None,
+                 name=None,
+                 m=10,
+                 eqe=1,
+                 erm=False,
+                 verbose=0,
+                 **kwargs):
+        if eqe not in [1, 2]:
+            raise ValueError("eqe parameter must be either 1 or 2")
+        self.eqe = eqe
+        self.erm = erm
+        self.embedding = embedding
+        self.m = m
+        if name is not None:
+            self.name = name
+        else:
+            self.name = "eqe{:d}+{}".format(eqe, retrieval_model.name)
+        self.verbose = verbose
+        self.retrieval_model = retrieval_model
+        self._init_params(**kwargs)
+        self.analyzer = analyzer
+
+    def fit(self, docs, labels):
+        E, RM = self.embedding, self.retrieval_model
+        # analyze = self.analyzer
+        # self._fit(docs, labels)
+        RM.fit(docs, labels)
+        dirty_vocab = set(RM._cv.vocabulary_)
+        V = dirty_vocab.intersection(set(E.index2word))
+        N = len(V)
+
+        if self.verbose > 0:
+            print("Computing {} priors".format(N))
+
+        priors = []
+        for i, w in enumerate(V):
+            priors.append(sum(delta(E[w], E[v]) for v in V))
+            if self.verbose > 0:
+                progress = 100 * (i+1) / N
+                print('\r[{0:10}] {1:3.0f}%'.format("#" * int(progress//10),
+                                                    progress),
+                      flush=True,
+                      end='')
+        print()
+
+        # priors = np.asarray([sum(delta(E[w], E[v]) for v in V) for w in V])
+        if self.verbose > 0:
+            print("Done. (priors.shape: {})".format(priors.shape))
+
+        self.priors = np.asarray(priors)
+        self.vocabulary = V
+
+    def query(self, query):
+        E, m = self.embedding, self.m
+        V = self.vocabulary
+        priors = self.priors
+
+        q = self.analyzer(query)
+        posterior = eqe1(E, q, priors)
+        expansion = V[argtopk(posterior, m)]
+
+        expanded_query = " ".join(q + expansion)
+        if self.verbose > 0:
+            print("[eqlm] Expanded query: '{}'".format(expanded_query))
+
+        # employ retrieval model
+        return self.retrieval_model.query(expanded_query)
 
 if __name__ == "__main__":
     import doctest

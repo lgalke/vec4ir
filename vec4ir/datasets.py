@@ -147,7 +147,7 @@ class QuadflorLike(IRDataSetBase):
             n_queries = len(queries)
             print(len(queries), "queries.")
 
-        rels = self.rels dataset.load() dataset.load()
+        rels = self.rels
         if verbose:
             n_rels = sum(len(rels[qid]) for qid, _querystring in queries)
             print("{.2f}".format(n_rels / n_queries))

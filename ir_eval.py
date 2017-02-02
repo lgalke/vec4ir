@@ -120,7 +120,7 @@ def smart_load_word2vec(model_path):
 
 
 def _ir_eval_parser(config):
-    valid_embedding_keys = config["embedding"].keys()  # TODO document it
+    valid_embedding_keys = config["embeddings"].keys()  # TODO document it
     valid_data_keys = config["data"].keys()
     from argparse import ArgumentParser, FileType
     parser = ArgumentParser()
@@ -248,14 +248,15 @@ def main():
     :returns: TODO
     """
     # parse command line arguments and read config file
-    parser = _ir_eval_parser()
+    with open("config.yml", 'r') as configfile:
+        config = yaml.load(configfile)  # we need meta parser
+    parser = _ir_eval_parser(config)
     args = parser.parse_args()
     print(args)
     if args.doctest:
         import doctest
         doctest.testmod()
         exit(int(0))
-    config = yaml.load(args.config)
 
     # load concrete data (old way)
     # dsc = config['data'][args.dataset]
