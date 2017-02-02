@@ -1,15 +1,15 @@
 from gensim.models import Doc2Vec
 try:
-    from .base import RetrievalBase, RetriEvalMixIn
+    from .base import RetrievalBase, RetriEvalMixin
 except SystemError:
-    from base import RetrievalBase, RetriEvalMixIn
+    from base import RetrievalBase, RetriEvalMixin
 # from .word2vec import filter_vocab
 from gensim.models.doc2vec import TaggedDocument
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
 
-class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
+class Doc2VecRetrieval(RetrievalBase, RetriEvalMixin):
     def __init__(self,
                  intersect=None,
                  vocab_analyzer=None,

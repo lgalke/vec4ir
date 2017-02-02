@@ -90,34 +90,29 @@ def harvest_docs(path, verify_integrity):
     return labels, docs
 
 
-class Economics(IRDataSetBase):
+class QuadflorLike(IRDataSetBase):
     """The famous econ62k dataset"""
     def __init__(self,
-                 gold_path=None,
-                 thesaurus_path=None,
-                 doc_path=None,
-                 verify_integrity=False,
-                 verbose=0):
+                 y=None,
+                 thes=None,
+                 X=None,
+                 verify_integrity=False):
         self.__docs = None
         self.__rels = None
         self.__topics = None
-        self.gold_path = gold_path
-        self.thesaurus_reader = ThesaurusReader(thesaurus_path)
-        self.doc_path = doc_path
+        self.gold_path = y
+        self.thesaurus_reader = ThesaurusReader(thes, normalize=False)
+        self.doc_path = X
         self.verify_integrity = verify_integrity
-        self.verbose = verbose
 
     @property
     def docs(self):
         # in memory cache
         if self.__docs is not None:
             return self.__docs
-        path, verbose = self.doc_path, self.verbose
+        path = self.doc_path
         labels, docs = harvest_docs(path, verify_integrity=self.verify_integrity)
         self.__docs = docs
-        if verbose > 0:
-            print("First 3 documents:", list(zip(labels[:3], docs[:3])), sep='\n')
-            print("", list(zip(labels[:3], docs[:3])), sep='\n')
         return labels, docs
 
     @property
@@ -135,13 +130,33 @@ class Economics(IRDataSetBase):
         """ Synthesizes the topics for the dataset, rels will be computed first."""
         if self.__topics is not None:
             return self.__topics
-        rels, thesaurus, verbose = self.rels, self.thesaurus_reader.thesaurus, self.verbose
+        rels, thesaurus = self.rels, self.thesaurus_reader.thesaurus
         # acquire topics
         topics = synthesize_topics(rels, thesaurus)
         self.__topics = topics
-        if verbose > 0:
-            print("First 3 topics:", topics[:2], sep='\n')
         return topics
+
+    def load(self, verbose=False):
+
+        labels, docs = self.docs
+        if verbose:
+            print(len(docs), "documents.")
+
+        queries = self.topics
+        if verbose:
+            n_queries = len(queries)
+            print(len(queries), "queries.")
+
+        rels = self.rels dataset.load() dataset.load()
+        if verbose:
+            n_rels = sum(len(rels[qid]) for qid, _querystring in queries)
+            print("{.2f}".format(n_rels / n_queries))
+
+        return docs, labels, queries, rels
+
+
+
+
 
 
 class NTCIRTopicParser(HTMLParser):

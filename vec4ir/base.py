@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
+"""
+File: base.py
+Author: Lukas Galke
+Email: vim@lpag.de
+Github: https://github.com/lgalke
+Description: Base classed for (embedding-based) retrieval.
+"""
+
 from sklearn.base import BaseEstimator
 from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
@@ -12,9 +20,9 @@ import pandas as pd
 
 try:
     from . import rank_metrics as rm
-    from .combination import CombinatorMixIn
+    from .combination import CombinatorMixin
 except (SystemError, ValueError):
-    from combination import CombinatorMixIn
+    from combination import CombinatorMixin
     import rank_metrics as rm
 
 
@@ -142,28 +150,63 @@ def TermMatch(X, q):
     return matching_doc_indices
 
 
-def cosine_similarity(X, query, n_retrieve):
-    """
-    Computes the `n_retrieve` nearest neighbors using cosine similarity
-    Xmatched : The documents that have matching terms (if matching='terms')
-    q : the query
-    n_retrieve : The number of indices to return.
-    >>> X = np.array([[10,1,0], [1,10,0], [0,0,10]])
-    >>> cosine_similarity(X, np.array([[0,23,0]]), 2)
-    array([1, 0])
-    >>> cosine_similarity(X, np.array([[1,0,0]]), 2)
-    array([0, 1])
-    >>> cosine_similarity(X, np.array([[1,0,10]]), 3)
-    array([2, 0, 1])
-    """
-    nn = NearestNeighbors(metric='cosine', algorithm='brute').fit(X)
-    ind = nn.kneighbors(query, n_neighbors=n_retrieve, return_distance=False)
-    return ind.ravel()  # we want a plain list of indices
+# def cosine_similarity(X, query, n_retrieve):
+#     """
+#     Computes the `n_retrieve` nearest neighbors using cosine similarity
+#     Xmatched : The documents that have matching terms (if matching='terms')
+#     q : the query
+#     n_retrieve : The number of indices to return.
+#     >>> X = np.array([[10,1,0], [1,10,0], [0,0,10]])
+#     >>> cosine_similarity(X, np.array([[0,23,0]]), 2)
+#     array([1, 0])
+#     >>> cosine_similarity(X, np.array([[1,0,0]]), 2)
+#     array([0, 1])
+#     >>> cosine_similarity(X, np.array([[1,0,10]]), 3)
+#     array([2, 0, 1])
+#     """
+#     nn = NearestNeighbors(metric='cosine', algorithm='brute').fit(X)
+#     ind = nn.kneighbors(query, n_neighbors=n_retrieve, return_distance=False)
+#     return ind.ravel()  # we want a plain list of indices
 
 
 def _checkXy(X, y):
     if y is not None and len(X) != len(y):
         raise ValueError("Shapes of X and y do not match.")
+
+
+class Matching(BaseEstimator):
+
+    """Typical Matching Operation of Retrieval Systems"""
+
+    def __init__(self, match_fn=TermMatch, binary=True, dtype=np.bool_, **cv_params):
+        """initializes a Matching object
+
+        :match_fn: A matching function of signature `docs, query` -> indices of matching docs
+        :binary: Store only binary term occurrences.
+        :dtype: Data type of internal feature matrix
+        :cv_params: Parameter for the count vectorizer such as lowercase=True
+
+        """
+        # RetrievalBase.__init__(self)
+
+        self._match_fn = match_fn
+        self._countvectorizer = CountVectorizer(binary=binary, dtype=dtype, **cv_params)
+
+    def fit(self, X, y=None):
+        _checkXy(X, y)
+
+        cv = self._countvectorizer
+
+        self._fit_X = cv.fit_transform(X)  # fit internal countvectorizer
+
+        return self
+
+    def predict(self, query):
+        cv, match_fn, fit_X = self._countvectorizer, self._match_fn, self._fit_X
+        # q = cv.transform(np.asarray([query]))
+        q = cv.transform(([query]))
+        ind = match_fn(fit_X, q)
+        return ind
 
 
 class RetrievalBase(BaseEstimator):
@@ -201,7 +244,6 @@ class RetrievalBase(BaseEstimator):
     @abstractmethod
     def __init__(self, **kwargs):
         self._init_params(**kwargs)
-        pass
 
     def _init_params(self,
                      name=None,
@@ -259,7 +301,7 @@ class RetrievalBase(BaseEstimator):
         return ind
 
 
-class RetriEvalMixIn():
+class RetriEvalMixin():
 
     @abstractmethod
     def __init__(self, **kwargs):
@@ -338,7 +380,7 @@ class RetriEvalMixIn():
         return values
 
 
-class TfidfRetrieval(RetrievalBase, CombinatorMixIn, RetriEvalMixIn):
+class TfidfRetrieval(RetrievalBase, CombinatorMixin, RetriEvalMixin):
     """
     Class for tfidf based retrieval
     >>> tfidf = TfidfRetrieval(input='content')

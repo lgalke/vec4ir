@@ -2,14 +2,15 @@
 # -*- coding: utf-8 -*-
 from timeit import default_timer as timer
 from datetime import timedelta
-from vec4ir.datasets import NTCIR, Economics
+from vec4ir.datasets import NTCIR, QuadflorLike
 from vec4ir.base import TfidfRetrieval
-from vec4ir.word2vec import StringSentence, Word2VecRetrieval, WordCentroidRetrieval
+from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.eqlm import EQLM
 from gensim.models import Word2Vec
 from sklearn.feature_extraction.text import CountVectorizer
 from operator import itemgetter
+from textwrap import indent
 import sys
 import os
 import pprint
@@ -23,7 +24,7 @@ import yaml
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
-MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'twcd']
+MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'swcd']
 
 
 def mean_std(array_like):
@@ -49,8 +50,6 @@ def plot_precision_recall_curves(path, results, plot_f1=False):
     # plt.legend(handles=patches)
     plt.legend(keys)
     plt.savefig(path)
-
-
 
 
 def is_embedded(sentence, embedding, analyzer):
@@ -120,21 +119,26 @@ def smart_load_word2vec(model_path):
     return model
 
 
-def _ir_eval_parser():
+def _ir_eval_parser(config):
+    valid_embedding_keys = config["embedding"].keys()  # TODO document it
+    valid_data_keys = config["data"].keys()
     from argparse import ArgumentParser, FileType
     parser = ArgumentParser()
     parser.add_argument("--doctest", action='store_true',
                         help="Perform doctest on this module")
-    parser.add_argument("-d", "--dataset", type=str, default="ntcir2",
-                        choices=["ntcir2", "econ62k"],
-                        help="Specify dataset to use")
+    parser.add_argument("-d", "--dataset", type=str, default="ntcir2",  # FIXME ugly constant
+                        choices=valid_data_keys,
+                        help="Specify dataset to use (as defined in config file)")
+    parser.add_argument("-e", "--embedding", type=str, default=None,
+                        choices=valid_embedding_keys,
+                        help="Specify embedding to use (as defined in config file)")
     parser.add_argument("-j", "--jobs", type=int, default=-1,
                         help="How many jobs to use, default=-1 (one per core)")
-    parser.add_argument("-f",
-                        "--field",
-                        choices=['title', 'content'],
-                        default='title',
-                        help="field to use (defaults to 'title')")
+    # parser.add_argument("-f",
+    #                     "--field",
+    #                     choices=['title', 'content'],
+    #                     default='title',
+    #                     help="field to use (defaults to 'title')")
     parser.add_argument("-F", "--focus", nargs='+',
                         choices=MODEL_KEYS, default=None)
     parser.add_argument("-Q", "--filter-queries", action='store_true',
@@ -180,6 +184,7 @@ def _ir_eval_parser():
 
 
 def load_ntcir2(config):
+    raise DeprecationWarning
     ntcir2 = NTCIR("../data/NTCIR2/", rels=config['rels'], topic=config['topic'], field=config['field'])
     print("Loading NTCIR2 documents...")
     labels, documents = ntcir2.docs
@@ -198,11 +203,11 @@ def load_ntcir2(config):
 
 
 def load_econ62k(cfg):
-    dataset = Economics(gold_path=cfg['gold_path'],
-                        thesaurus_path=cfg['thesaurus_path'],
-                        doc_path=cfg['fulltext_path'] if cfg['use_fulltext'] else cfg['title_path'],
-                        verify_integrity=cfg['verify_integrity'],
-                        verbose=cfg['verbose'])
+    raise DeprecationWarning
+    dataset = QuadflorLike(y=cfg['y'],
+                           thes=cfg['thes'],
+                           X=cfg['X'],
+                           verify_integrity=cfg['verify_integrity'])
     print("Loading econ62k documents...")
     labels, docs = dataset.docs
     print("Loaded {:d} documents.".format(len(docs)))
@@ -219,6 +224,25 @@ def load_econ62k(cfg):
     return docs, labels, queries, rels
 
 
+CONSTRUCTORS = {
+    "quadflorlike" : QuadflorLike,
+    "ntcir" : NTCIR
+}
+
+
+def init_dataset(data_config, default='quadflorlike'):
+    """
+    Given some dataset configuguration ("type" and **kwargs for the
+    initializer), return the initialized data set object.  The returned object
+    provides the properties `docs`, `rels`, and `topics`.
+    """
+    kwargs = dict(data_config)  # we assume dict
+    T = kwargs.pop('type', default).lower()  # special type value to determine constructor
+    constructor = CONSTRUCTORS[T]
+    dataset = constructor(**kwargs)  # expand dict to kwargs
+    return dataset
+
+
 def main():
     """TODO: Docstring for main.
     :returns: TODO
@@ -232,35 +256,39 @@ def main():
         doctest.testmod()
         exit(int(0))
     config = yaml.load(args.config)
-    train = config.get('train', False)
-    model_path = config.get('embedding', None)
 
-    # load concrete data
-    dsc = config[args.dataset]
-    dsc['verify_integrity'] = config['verify_integrity']
-    loader = {'econ62k' : load_econ62k,
-              'ntcir2' : load_ntcir2}[args.dataset]
+    # load concrete data (old way)
+    # dsc = config['data'][args.dataset]
+    # dsc['verify_integrity'] = config.pop('verify_integrity', False)
+    # loader = {'econ62k' : load_econ62k,
+    #           'ntcir2' : load_ntcir2}[args.dataset]
 
-    documents, labels, queries, rels = loader(dsc)
+    # documents, labels, queries, rels = loader(dsc)
+    lowercase_matching = args.lowercase
+
+    dataset = init_dataset(config['data'][args.dataset])
+    documents, labels, queries, rels = dataset.load()
 
     analyzer = CountVectorizer(stop_words='english',
-                               lowercase=config['lowercase']).build_analyzer()
+                               lowercase=lowercase_matching).build_analyzer()
     focus = set([f.lower() for f in args.focus]) if args.focus else None
     repl = {"drop": None, "zero": 0}[args.repstrat]
 
-    model = smart_load_word2vec(model_path)
-    if not model and train:
-        print("Training word2vec model on all available data...")
-        sentences = StringSentence(documents, analyzer)
-        model = Word2Vec(sentences,
-                         min_count=1,
-                         iter=20)
-        model.init_sims(replace=True)  # model becomes read-only
+    embedding_config = config["embeddings"][args.embedding]
+    embedding = smart_load_word2vec(embedding_config["path"])
+    # TODO we do not train at all at the moment
+    # if not embedding:
+    #     print("Training word2vec model on all available data...")
+    #     sentences = StringSentence(documents, analyzer)
+    #     embedding = Word2Vec(sentences,
+    #                          min_count=1,
+    #                          iter=20)
+    #     embedding.init_sims(replace=True)  # embedding becomes read-only
 
     if args.filter_queries is True:
         old = len(queries)
         queries = [(nb, query) for nb, query in queries if
-                   is_embedded(query, model, analyzer)]
+                   is_embedded(query, embedding, analyzer)]
         print("Retained {} (of {}) queries".format(len(queries), old))
 
     def evaluation(m):
@@ -277,23 +305,24 @@ def main():
     tfidf = TfidfRetrieval(analyzer=analyzer)
 
     RMs = {"tfidf": tfidf,
-           "wcd": Word2VecRetrieval(model, wmd=False,
+           "wcd": Word2VecRetrieval(embedding, wmd=False,
                                     analyzer=analyzer,
                                     oov=args.oov,
                                     verbose=args.verbose),
-           "twcd" : WordCentroidRetrieval(model,
-                                          analyzer=analyzer,
+           "swcd" : WordCentroidRetrieval(embedding, name="SWCD",
+                                          matching={"lowercase": args.lowercase},
+                                          lowercase=embedding_config['lowercase'],
                                           oov=args.oov,
-                                          normalize=False,
+                                          normalize=True,
                                           verbose=args.verbose,
                                           n_jobs=args.jobs),
-           "wmd": Word2VecRetrieval(model, wmd=True,
+           "wmd": Word2VecRetrieval(embedding, wmd=True,
                                     analyzer=analyzer,
                                     oov=args.oov,
                                     verbose=args.verbose),
            "pvdm": Doc2VecRetrieval(analyzer=analyzer,
                                     verbose=args.verbose),
-           "eqlm": EQLM(tfidf, model, m=10, eqe=1, analyzer=analyzer,
+           "eqlm": EQLM(tfidf, embedding, m=10, eqe=1, analyzer=analyzer,
                         verbose=args.verbose)
            }
 
@@ -302,11 +331,11 @@ def main():
         for f in focus:
             RM = RMs[f]
             results[RM.name] = evaluation(RMs[f])
-            del RM, RMs[f]
+            del RM, RMs[f]  # clean up
     else:
         for key, RM in RMs.items():
             results[RM.name] = evaluation(RM)
-            del RM, RMs[key]
+            del RM, RMs[key]  # clean up
 
     if args.plot:
         plot_precision_recall_curves(args.plot, results)
@@ -315,8 +344,16 @@ def main():
     results = {name: {metric: mean_std(values) for metric, values in
                scores.items()} for name, scores in results.items()}
 
-    pprint.pprint(args, stream=args.outfile)
-    pprint.pprint(config, stream=args.outfile)
+    def print_dict(d, header=None, stream=sys.stdout, commentstring="% "):
+        if header:
+            print(indent(header, commentstring), file=stream)
+        s = pprint.pformat(d, 2, 80 - len(commentstring))
+        print(indent(s, commentstring), file=stream)
+        return
+
+    print_dict(config, "CONFIG")
+    print_dict(args, "ARGS")
+
     pd.DataFrame(results).to_latex(args.outfile)
     print("Done.")
 

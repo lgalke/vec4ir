@@ -44,68 +44,7 @@ def fuzzy_or(values):
     return reduce(lambda x, y: 1 - (1 - x) * (1 - y), values)
 
 
-class CombinatorMixIn(object):
-    """ Creates a computational tree with retrieval models as leafs
-    """
-    def __get_weights(self, other):
-        if not isinstance(other, CombinatorMixIn):
-            raise ValueError("other is not Combinable")
-
-        if hasattr(self, '__weight'):
-            weight = self.__weight
-        else:
-            weight = 1.0
-
-        if hasattr(other, '__weight'):
-            otherweight = other.__weight
-        else:
-            otherweight = 1.0
-
-        return weight, otherweight
-
-    # This is evil since it can exceed [0,1], rescaling at the end would be not
-    # that beautiful
-    # def __add__(self, other):
-    #     weights = self.__get_weights(other)
-    #     return Combined([self, other], weights=weights, agg_fn=sum)
-
-    def __and__(self, other):
-        weights = self.__get_weights(other)
-        return Combined([self, other], weights=weights, agg_fn=product)
-
-    def __or__(self, other):
-        weights = self.__get_weights(other)
-        return Combined([self, other], weights=weights, agg_fn=fuzzy_or)
-
-    def __mul__(self, scalar):
-        self.__weight = scalar
-        return self
+CombinCombinatorMixin
 
 
-class Combined(BaseEstimator, CombinatorMixIn):
-    def __init__(self, retrieval_models, weights=None, aggregation_fn=sum):
-        self.retrieval_models = retrieval_models
-        self.aggregation_fn = aggregation_fn
-        if weights is not None:
-            self.weights = weights
-        else:
-            self.weights = [1.0] * len(retrieval_models)
-
-    def query(self, query, k=1, sort=True):
-        models = self.retrieval_models
-        weights = maxabs_scale(self.weights)  # max 1 does not crash [0,1]
-        agg_fn = self.aggregation_fn
-        # we only need to sort in the final run
-        combined = [m.query(query, k=k, sort=False) for m in models]
-
-        if weights is not None:
-            combined = [{k: v * w for k, v in r.items()} for r, w in
-                        zip(combined, weights)]
-
-        combined = aggregate_dicts(combined, agg_fn=agg_fn, sort=True)
-
-        if sort:
-            # only cut-off at k if this is the final (sorted) output
-            combined = OrderedDict(sorted(combined.items(), key=itemgetter(1),
-                                          reverse=True)[:k])
-        return combined
+CombinatorMixin
