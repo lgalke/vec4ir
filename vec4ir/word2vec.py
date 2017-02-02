@@ -239,7 +239,7 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
     """
     Retrieval Model based on Word Centroid Distance
     """
-    def __init__(self, embedding, name="WCD", n_jobs=1, normalize=True, verbose=0, oov=None, matching=True, tokenizer='stanford', **kwargs):
+    def __init__(self, embedding, name="WCD", n_jobs=1, normalize=True, verbose=0, oov=None, matching=True, tokenizer='stanford', lowercase=False, **kwargs):
         self.name = name
         self._embedding = embedding
         self._normalize = normalize
@@ -271,8 +271,12 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
     def fit(self, docs, labels):
         E, tokenizer = self._embedding, self._tokenizer
+        if self.lowercase:
+            docs = (d.lower() for d in docs)
+
         analyzed_docs = tokenizer.tokenize_sents(docs)
         # out of vocabulary words do not have to contribute to the centroid
+
         filtered_docs = (filter_vocab(E, d) for d in analyzed_docs)
         centroids = np.vstack([self._compute_centroid(doc) for doc in filtered_docs])  # can we generate?
         if self.verbose > 0:
@@ -293,6 +297,8 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
     def query(self, query, k=None):
         E, nn = self._embedding, self._neighbors
+        if self.lowercase:
+            query = query.lower()
         tokens = self._tokenizer.tokenize(query)
         words = filter_vocab(E, tokens, self.oov)
         query_centroid = self._compute_centroid(words)
