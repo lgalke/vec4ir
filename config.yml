@@ -27,7 +27,7 @@ data:
 
     ntcir2:
         type: "ntcir"
-        base-path: "../data/NTCIR2/"
+        root_path: "../data/NTCIR2/"
         field: "title"
         topic: "title"
         rels: 2

@@ -42,6 +42,24 @@ class IRDataSetBase(ABC):
     def topics():
         pass
 
+    def load(self, verbose=False):
+
+        labels, docs = self.docs
+        if verbose:
+            print(len(docs), "documents.")
+
+        queries = self.topics
+        if verbose:
+            n_queries = len(queries)
+            print(len(queries), "queries.")
+
+        rels = self.rels
+        if verbose:
+            n_rels = sum(len(rels[qid]) for qid, _querystring in queries)
+            print("{.2f}".format(n_rels / n_queries))
+
+        return docs, labels, queries, rels
+
 
 def mine_gold(path, verify_integrity=False):
     """ returns a dict of dicts label -> docid -> 1"""
@@ -135,24 +153,6 @@ class QuadflorLike(IRDataSetBase):
         topics = synthesize_topics(rels, thesaurus)
         self.__topics = topics
         return topics
-
-    def load(self, verbose=False):
-
-        labels, docs = self.docs
-        if verbose:
-            print(len(docs), "documents.")
-
-        queries = self.topics
-        if verbose:
-            n_queries = len(queries)
-            print(len(queries), "queries.")
-
-        rels = self.rels
-        if verbose:
-            n_rels = sum(len(rels[qid]) for qid, _querystring in queries)
-            print("{.2f}".format(n_rels / n_queries))
-
-        return docs, labels, queries, rels
 
 
 
