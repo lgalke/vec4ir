@@ -4,7 +4,7 @@ from timeit import default_timer as timer
 from datetime import timedelta
 from vec4ir.datasets import NTCIR, QuadflorLike
 from vec4ir.base import TfidfRetrieval
-from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
+from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval, EmbeddedRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.eqlm import EQLM
 from gensim.models import Word2Vec
@@ -309,13 +309,13 @@ def main():
                                     analyzer=analyzer,
                                     oov=args.oov,
                                     verbose=args.verbose),
-           "swcd" : WordCentroidRetrieval(embedding, name="SWCD",
-                                          matching={"lowercase": args.lowercase},
-                                          lowercase=embedding_config['lowercase'],
-                                          oov=args.oov,
-                                          normalize=True,
-                                          verbose=args.verbose,
-                                          n_jobs=args.jobs),
+           "swcd" : EmbeddedRetrieval(embedding, name="SWCD",
+                                      matching={"lowercase": args.lowercase},
+                                      lowercase=embedding_config['lowercase'],
+                                      oov=args.oov,
+                                      normalize=True,
+                                      verbose=args.verbose,
+                                      n_jobs=args.jobs),
            "wmd": Word2VecRetrieval(embedding, wmd=True,
                                     analyzer=analyzer,
                                     oov=args.oov,
