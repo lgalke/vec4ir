@@ -1,6 +1,16 @@
-verify_integrity: False
-lowercase: True
-embedding: "/data3/lgalke/GoogleNews-vectors-negative300.bin.gz"
+embeddings:
+    glove:
+        path: <++FILL ME IN++>
+        oov_token: "."  # wild guess
+        lowercase: <++True++>
+
+
+    word2vec:
+        path: "/data3/lgalke/GoogleNews-vectors-negative300.bin.gz"
+        oov_token: "UNK"  # not so wild guess
+        lowercase: False
+
+
 data:
     econ62k:
         type: "QuadflorLike"

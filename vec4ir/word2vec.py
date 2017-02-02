@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 # coding: utf-8
+"""
+File: word2vec.py
+Author: Lukas Galke
+Email: vim@lpag.de
+Github: https://github.com/lgalke
+Description: Embedding-based retrieval techniques.
+"""
+from sklearn.base import EstimatorBase
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import normalize
 # from scipy.spatial.distance import cosine
 import numpy as np
+from nltk.tokenize.stanford import StanfordTokenizer
 try:
-    from .base import RetrievalBase, RetriEvalMixIn
+    from .base import RetrievalBase, RetriEvalMixin, Matching
     # from .utils import argtopk
     from .utils import filter_vocab
-    from .combination import CombinatorMixIn
+    from .combination import CombinatorMixin
 except (ValueError, SystemError):
-    from base import RetrievalBase, RetriEvalMixIn
-    from combination import CombinatorMixIn
+    from base import RetrievalBase, RetriEvalMixin, Matching
+    from combination import CombinatorMixin
 
 default_analyzer = CountVectorizer().build_analyzer()
 
@@ -60,7 +69,7 @@ class StringSentence(object):
                 i += self.max_sentence_length
 
 
-class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
+class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
     """ Kwargs are passed down to RetrievalBase's countvectorizer,
     whose analyzer is then used to decompose the documents into tokens
     model - the Word Embedding model to use
@@ -226,60 +235,84 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixIn, CombinatorMixIn):
         return result
 
 
-class WordCentroidRetrieval(RetrievalBase, RetriEvalMixIn):
-    def __init__(self, embedding, name="trueWCD", n_jobs=1, normalize=False, verbose=0, oov=None, **kwargs):
-        self.embedding = embedding
-        self.normalize = normalize
-        self.oov = oov
+class WordCentroidRetrieval(EstimatorBase, RetriEvalMixin):
+    """
+    Retrieval Model based on Word Centroid Distance
+    """
+    def __init__(self, embedding, name="WCD", n_jobs=1, normalize=True, verbose=0, oov=None, matching=True, tokenizer='stanford', **kwargs):
+        self.name = name
+        self._embedding = embedding
+        self._normalize = normalize
+        self._oov = oov
         self.verbose = verbose
         self.n_jobs = n_jobs
-        self._init_params(name=name, **kwargs)  # initializes self._cv
-        self.analyzer = self._cv.build_analyzer()
+
+        self._neighbors = NearestNeighbors(**kwargs)
+
+        if callable(tokenizer):
+            self._tokenizer = tokenizer
+        elif tokenizer == 'stanford':
+            self._tokenizer = StanfordTokenizer(options={"americanize" : True})
+
+        if matching is True:
+            self._matching = Matching()
+        elif matching is False:
+            self._matching = None
+        else:
+            self._matching = Matching(**dict(matching))
 
     def _compute_centroid(self, words):
         if len(words) == 0:
-            return self.embedding[self.oov]  # no words??!!?
-        E = self.embedding
+            return self._embedding[self._oov]  # no words left at all??!!? could also return zeros
+        E = self._embedding
         embedded_words = np.vstack([E[word] for word in words])
         centroid = np.mean(embedded_words, axis=0).reshape(1, -1)
         return centroid
 
-    def fit(self, docs, y=None):
-        E, analyze = self.embedding, self.analyzer
-        self._fit(docs, y)  # we actually do not need the matching part
-        analyzed_docs = (analyze(doc) for doc in docs)
-        filtered_docs = (filter_vocab(E, d, oov=self.oov) for d in analyzed_docs)
-        centroids = np.vstack([self._compute_centroid(doc) for doc in filtered_docs])
-        if self.verbose:
+    def fit(self, docs, labels):
+        E, tokenizer = self._embedding, self._tokenizer
+        analyzed_docs = tokenizer.tokenize_sents(docs)
+        # out of vocabulary words do not have to contribute to the centroid
+        filtered_docs = (filter_vocab(E, d) for d in analyzed_docs)
+        centroids = np.vstack([self._compute_centroid(doc) for doc in filtered_docs])  # can we generate?
+        if self.verbose > 0:
             print("Centroids shape:", centroids.shape)
-        if self.normalize:
+        if self._normalize:
             normalize(centroids, norm='l2', copy=False)
 
-        self.nn = NearestNeighbors(n_jobs=self.n_jobs).fit(centroids)
+        self._y = np.asarray(labels)
+
+        if self._matching:
+            self._matching.fit(docs)
+            self._centroids = centroids
+        else:
+            # if we dont do matching, its enough to fit a nearest neighbors on
+            # all centroids before query time
+            self._neighbors.fit(centroids)
         return self
 
     def query(self, query, k=None):
-        # note that k is unused to compute recall properly
-        if k is None:
-            k = self.n_docs
-        labels = self._y  # consider all documents
-        # ind = self.matching(query)
-        # centroids, labels = self.centroids[ind], self._y[ind]
-        q = self.analyzer(query)
-        q = filter_vocab(self.embedding, q, oov=self.oov)
-        q_centroid = self._compute_centroid(q)
-        if self.normalize:
-            normalize(q_centroid, norm='l2', copy=False)
+        E, nn = self._embedding, self._neighbors
+        tokens = self._tokenizer.tokenize(query)
+        words = filter_vocab(E, tokens, self.oov)
+        query_centroid = self._compute_centroid(words)
+        if self._normalize:
+            normalize(query_centroid, norm='l2', copy=False)
         if self.verbose > 0:
-            print("Centered normalized query shape", q_centroid.shape)
-        # sims = [cosine(q_centroid, centroid) for centroid in centroids]
-        # ranks = np.argsort(sims)
+            print("Centered ( normalized ) query shape", query_centroid.shape)
 
-        ind = self.nn.kneighbors(q_centroid, k, return_distance=False)[0]  # single query instance
-        return labels[ind]
+        if self._matching:
+            matched = self._matching.predict(query)
+            centroids, labels = self._centroids[matched], self._y[matched]
+            nn.fit(centroids)
+
+        # either fit nn on the fly or precomputed in own fit method
+        pred = nn.kneighbors(query_centroid, n_neighbors=k, return_distance=False)[0]
+
+        return labels[pred]
 
 
-class WordMoversRetrieval(RetrievalBase, RetriEvalMixIn):
+class WordMoversRetrieval(RetrievalBase, RetriEvalMixin):
     """Retrieval based on the Word Mover's Distance"""
     def __init__(self, embedding, name="neoWMD", n_jobs=1, **kwargs):
         """initalize parameters"""
