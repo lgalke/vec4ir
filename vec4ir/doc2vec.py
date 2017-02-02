@@ -90,7 +90,7 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixIn):
         # similarities = [model.docvecs.similarity(model.docvecs[d],qv) for d in iter(labels)]
         similarities = []
         for d in labels:
-            dv = model.docvecs[str(d)].reshape(1, -1)
+            dv = model.docvecs[d].reshape(1, -1)
             # sim = model.similarity(qv, dv)
             sim = cosine_similarity(qv, dv)[0]
             similarities.append(sim)
