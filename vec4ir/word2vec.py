@@ -13,7 +13,9 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import normalize
 # from scipy.spatial.distance import cosine
 import numpy as np
-from nltk.tokenize.stanford import StanfordTokenizer
+# from nltk.tokenize.stanford import StanfordTokenizer
+from nltk.tokenize import word_tokenize
+
 try:
     from .base import RetrievalBase, RetriEvalMixin, Matching
     # from .utils import argtopk
@@ -239,7 +241,7 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
     """
     Retrieval Model based on Word Centroid Distance
     """
-    def __init__(self, embedding, name="WCD", n_jobs=1, normalize=True, verbose=0, oov=None, matching=True, tokenizer='stanford', lowercase=False, **kwargs):
+    def __init__(self, embedding, name="WCD", n_jobs=1, normalize=True, verbose=0, oov=None, matching=True, tokenizer=word_tokenize, lowercase=False, **kwargs):
         self.name = name
         self._embedding = embedding
         self._normalize = normalize
@@ -249,10 +251,7 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
         self._neighbors = NearestNeighbors(**kwargs)
 
-        if callable(tokenizer):
-            self._tokenizer = tokenizer
-        elif tokenizer == 'stanford':
-            self._tokenizer = StanfordTokenizer(options={"americanize" : True})
+        self._tokenizer = tokenizer
 
         if matching is True:
             self._matching = Matching()
@@ -270,11 +269,11 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         return centroid
 
     def fit(self, docs, labels):
-        E, tokenizer = self._embedding, self._tokenizer
+        E, tokenize = self._embedding, self._tokenizer
         if self.lowercase:
-            docs = (d.lower() for d in docs)
+            docs = (doc.lower() for doc in docs)
 
-        analyzed_docs = tokenizer.tokenize_sents(docs)
+        analyzed_docs = (tokenize(doc for doc in docs))
         # out of vocabulary words do not have to contribute to the centroid
 
         filtered_docs = (filter_vocab(E, d) for d in analyzed_docs)

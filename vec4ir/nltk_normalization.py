@@ -7,6 +7,7 @@ import re
 _alphabet = set(string.ascii_lowercase + string.digits + ' ')
 word_regexp = r"(?u)\b[a-zA-Z_][a-zA-Z_]+\b"
 
+
 class NltkNormalizer:
     def __init__(self):
         self.install_nltk_corpora('stopwords', 'wordnet', 'punkt')
@@ -15,8 +16,7 @@ class NltkNormalizer:
         self.tokenizer = self.make_tokenizer()
         self.stopwords = nltk.corpus.stopwords.words('english')
         self.sent_tokenizer = None
-
-    @staticmethod
+@staticmethod
     def make_tokenizer():
         token_pattern = re.compile(word_regexp)
         return lambda doc: token_pattern.findall(doc)
