@@ -303,10 +303,12 @@ def main():
 
     # documents, labels, queries, rels = loader(dsc)
 
+    print("Selecting dataset {} from data config".format(args.dataset))
     dataset = init_dataset(config['data'][args.dataset])
-    documents, labels, queries, rels = dataset.load()
+    documents, labels, queries, rels = dataset.load(verbose=args.verbose)
 
     # Set up embedding specific analyzer
+    print("Selecting embedding {} from embeddings config".format(args.embedding))
     embedding_config = config["embeddings"][args.embedding]
     embedding = smart_load_word2vec(embedding_config["path"])
     embedding_analyzer = build_analyzer(**embedding_config["analyzer"])
