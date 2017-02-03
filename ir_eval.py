@@ -3,14 +3,17 @@
 from timeit import default_timer as timer
 from datetime import timedelta
 from vec4ir.datasets import NTCIR, QuadflorLike
+from argparse import ArgumentParser, FileType
 from vec4ir.base import TfidfRetrieval
 from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.eqlm import EQLM
+from vec4ir.utils import collection_statistics
 from gensim.models import Word2Vec
 from sklearn.feature_extraction.text import CountVectorizer
 from operator import itemgetter
 from textwrap import indent
+from nltk.tokenize import word_tokenize
 import sys
 import os
 import pprint
@@ -113,16 +116,12 @@ def smart_load_word2vec(model_path):
         binary = ".bin" in model_path
         print("Loading embeddings in word2vec format: {}".format(model_path))
         model = Word2Vec.load_word2vec_format(model_path, binary=binary)
-
-    # FIXME catch the occasional exception?
-
     return model
 
 
 def _ir_eval_parser(config):
     valid_embedding_keys = config["embeddings"].keys()  # TODO document it
     valid_data_keys = config["data"].keys()
-    from argparse import ArgumentParser, FileType
     parser = ArgumentParser()
     parser.add_argument("--doctest", action='store_true',
                         help="Perform doctest on this module")
@@ -132,52 +131,47 @@ def _ir_eval_parser(config):
     parser.add_argument("-e", "--embedding", type=str, default=None,
                         choices=valid_embedding_keys,
                         help="Specify embedding to use (as defined in config file)")
+    parser.add_argument("-f", "--focus", nargs='+',
+                        choices=MODEL_KEYS, default=None)
     parser.add_argument("-j", "--jobs", type=int, default=-1,
                         help="How many jobs to use, default=-1 (one per core)")
-    # parser.add_argument("-f",
-    #                     "--field",
-    #                     choices=['title', 'content'],
-    #                     default='title',
-    #                     help="field to use (defaults to 'title')")
-    parser.add_argument("-F", "--focus", nargs='+',
-                        choices=MODEL_KEYS, default=None)
-    parser.add_argument("-Q", "--filter-queries", action='store_true',
-                        help="Filter queries without complete embedding")
-    parser.add_argument("-t", "--topic", type=str, default='title',
-                        choices=['title', 'description'],
-                        help="topic field to use (defaults to 'title')")
-    parser.add_argument("-r", "--rels", type=int, default=2, choices=[1, 2],
-                        help="relevancies to use (defaults to 1)")
-    parser.add_argument("-R", "--replacement-strategy", type=str,
-                        dest='repstrat', default="zero",
-                        choices=['drop', 'zero'],
-                        help="Out of relevancy file document ids,\
-                        default is to use zero relevancy")
     parser.add_argument("-o", "--outfile", default=sys.stdout,
                         type=FileType('a'))
-    parser.add_argument("-k", dest='k', default=20, type=int,
-                        help="number of documents to retrieve")
     parser.add_argument("-v", "--verbose", default=2, type=int,
                         help="verbosity level")
+
+    parser.add_argument('-s', '--stats', default=False, action='store_true',
+                        help="Print statistics for corpus and embedding")
     parser.add_argument("-p", "--plot", default=None, type=str,
                         metavar="PLOTFILE",
                         help="Save precision-recall curves in PLOTFILE")
-    # parser.add_argument('-c', '--config', type=FileType('r'), default='config.yml',
-    #                     help="Specify configuration file")
 
-    parser.add_argument("-C", "--cased", dest="lowercase", default=True,
-                        action='store_false',
-                        help="Case sensitive matching analysis \
-                        (also relevant for baseline tfidf)")
-    # parser.add_argument("-l", "--try-lowercase", default=False,
-    #                     action='store_true',
-    #                     help="For embedding-based models, try lowercasing \
-    #                     when there is no initial vocabulary match!")
-    # FIXME this will be model specific soon END
-    parser.add_argument("-M", "--oov", default=None, type=str,
-                        help="token for out-of-vocabulary words, \
-                        default is ignoreing out-of-vocabulary words")
-    parser.add_argument("-T", "--train", default=False, action='store_true',
+    evaluation_group = parser.add_argument_group("Evaluation options")
+    evaluation_group.add_argument("-k", dest='k', default=20, type=int,
+                                  help="number of documents to retrieve")
+    evaluation_group.add_argument("-Q", "--filter-queries", action='store_true',
+                                  help="Filter queries without complete embedding")
+
+    evaluation_group.add_argument("-R", "--replacement-strategy", type=str,
+                                  dest='repstrat', default="zero",
+                                  choices=['drop', 'zero'],
+                                  help="Out of relevancy file document ids,\
+                                  default is to use zero relevancy")
+
+    matching_group = parser.add_argument_group('Matching options')
+    matching_group.add_argument("-C",
+                                "--cased",
+                                dest="lowercase",
+                                default=True,
+                                action='store_false',
+                                help="Case sensitive analysis (also relevant for baseline tfidf)")
+    matching_group.add_argument("-T", "--tokenizer", default=None, type=str,
+                                help="Specify tokenizer for the matching operation",
+                                choices=['sklearn', 'nltk'])
+    matching_group.add_argument("-S", "--dont-stop", dest='stop_words', default=True,
+                                action='store_true',
+                                help="Do NOT use stopwords in matching analysis")
+    parser.add_argument("-u", "--train", default=False, action='store_true',
                         help="Train a whole new word2vec model")
     return parser
 
@@ -223,12 +217,6 @@ def load_econ62k(cfg):
     return docs, labels, queries, rels
 
 
-CONSTRUCTORS = {
-    "quadflorlike" : QuadflorLike,
-    "ntcir" : NTCIR
-}
-
-
 def init_dataset(data_config, default='quadflorlike'):
     """
     Given some dataset configuguration ("type" and **kwargs for the
@@ -237,9 +225,53 @@ def init_dataset(data_config, default='quadflorlike'):
     """
     kwargs = dict(data_config)  # we assume dict
     T = kwargs.pop('type', default).lower()  # special type value to determine constructor
-    constructor = CONSTRUCTORS[T]
+    constructor = {"quadflorlike" : QuadflorLike, "ntcir" : NTCIR}[T]
     dataset = constructor(**kwargs)  # expand dict to kwargs
     return dataset
+
+
+def build_analyzer(tokenizer=None, stop_words=None, lowercase=True):
+    """
+    A wrapper around sklearns CountVectorizers build_analyzer, providing an
+    additional keyword for nltk tokenization.
+
+    :tokenizer:
+        None or 'sklearn' for default sklearn word tokenization,
+        'sword' is similar to sklearn but also considers single character words,
+        'nltk' for nltk's word_tokenize function,
+        or callable.
+    :stop_words:
+        will be passed to CountVectorizer of sklearn. List of words or 'english'
+    :lowercase:
+        Lowercase or case-sensitive analysis.
+    """
+    # some default options for tokenization
+    if not callable(tokenizer):
+        tokenizer, token_pattern = {
+            'sklearn': (None, r"(?u)\b\w\w+\b"),
+            'sword': (None, r"(?u)\b\w+\b"),
+            'nltk': (word_tokenize, None)
+        }[tokenizer]
+
+    # allow binary decision for stopwords
+    sw_rules = {True : 'english', False: None}
+    if stop_words in sw_rules:
+        stop_words = sw_rules[stop_words]
+
+    # employ the cv to actually build the analyzer from the components
+    analyzer = CountVectorizer(analyzer='word',
+                               tokenizer=tokenizer,
+                               lowercase=lowercase,
+                               stop_words=stop_words).build_analyzer()
+    return analyzer
+
+
+def print_dict(d, header=None, stream=sys.stdout, commentstring="% "):
+    if header:
+        print(indent(header, commentstring), file=stream)
+    s = pprint.pformat(d, 2, 80 - len(commentstring))
+    print(indent(s, commentstring), file=stream)
+    return
 
 
 def main():
@@ -247,10 +279,16 @@ def main():
     :returns: TODO
     """
     # parse command line arguments and read config file
-    with open("config.yml", 'r') as configfile:
-        config = yaml.load(configfile)  # we need meta parser
+    meta_parser = ArgumentParser(add_help=False)
+    meta_parser.add_argument('-c',
+                             '--config',
+                             type=FileType('r'),
+                             default='config.yml',
+                             help="Specify configuration file")
+    meta_args, remaining_args = meta_parser.parse_known_args()
+    config = yaml.load(meta_args.config)  # we need meta parser
     parser = _ir_eval_parser(config)
-    args = parser.parse_args()
+    args = parser.parse_args(remaining_args)
     print(args)
     if args.doctest:
         import doctest
@@ -264,18 +302,27 @@ def main():
     #           'ntcir2' : load_ntcir2}[args.dataset]
 
     # documents, labels, queries, rels = loader(dsc)
-    lowercase_matching = args.lowercase
 
     dataset = init_dataset(config['data'][args.dataset])
     documents, labels, queries, rels = dataset.load()
 
-    analyzer = CountVectorizer(stop_words='english',
-                               lowercase=lowercase_matching).build_analyzer()
+    # Set up embedding specific analyzer
+    embedding_config = config["embeddings"][args.embedding]
+    embedding = smart_load_word2vec(embedding_config["path"])
+    embedding_analyzer = build_analyzer(**embedding_config["analyzer"])
+    if args.stats:
+        stats = collection_statistics(embedding=embedding, analyzer=embedding_analyzer, documents=documents)
+        header = "Statistics: {} x {}".format(args.dataset, args.embedding)
+        print_dict(stats, header=header, stream=args.outfile)
+
+    # Set up matching analyzer
+    matching_analyzer = build_analyzer(tokenizer=args.tokenizer,
+                                       stop_words=args.stop_words,
+                                       lowercase=args.lowercase)
+
     focus = set([f.lower() for f in args.focus]) if args.focus else None
     repl = {"drop": None, "zero": 0}[args.repstrat]
 
-    embedding_config = config["embeddings"][args.embedding]
-    embedding = smart_load_word2vec(embedding_config["path"])
     # TODO we do not train at all at the moment
     # if not embedding:
     #     print("Training word2vec model on all available data...")
@@ -288,7 +335,7 @@ def main():
     if args.filter_queries is True:
         old = len(queries)
         queries = [(nb, query) for nb, query in queries if
-                   is_embedded(query, embedding, analyzer)]
+                   is_embedded(query, embedding, embedding_analyzer)]
         print("Retained {} (of {}) queries".format(len(queries), old))
 
     def evaluation(m):
@@ -302,27 +349,27 @@ def main():
                        replacement=repl)
 
     results = dict()
-    tfidf = TfidfRetrieval(analyzer=analyzer)
+    tfidf = TfidfRetrieval(analyzer=matching_analyzer)
 
     RMs = {"tfidf": tfidf,
            "wcd": Word2VecRetrieval(embedding, wmd=False,
-                                    analyzer=analyzer,
+                                    analyzer=embedding_analyzer,
                                     oov=args.oov,
                                     verbose=args.verbose),
            "swcd" : WordCentroidRetrieval(embedding, name="SWCD",
-                                      matching={"lowercase": args.lowercase},
-                                      lowercase=embedding_config['lowercase'],
-                                      oov=args.oov,
-                                      normalize=True,
-                                      verbose=args.verbose,
-                                      n_jobs=args.jobs),
+                                          matching={"analyzer": embedding_analyzer},
+                                          lowercase=embedding_config['lowercase'],
+                                          oov=args.oov,
+                                          normalize=True,
+                                          verbose=args.verbose,
+                                          n_jobs=args.jobs),
            "wmd": Word2VecRetrieval(embedding, wmd=True,
-                                    analyzer=analyzer,
+                                    analyzer=embedding_analyzer,
                                     oov=args.oov,
                                     verbose=args.verbose),
-           "pvdm": Doc2VecRetrieval(analyzer=analyzer,
+           "pvdm": Doc2VecRetrieval(analyzer=embedding_analyzer,
                                     verbose=args.verbose),
-           "eqlm": EQLM(tfidf, embedding, m=10, eqe=1, analyzer=analyzer,
+           "eqlm": EQLM(tfidf, embedding, m=10, eqe=1, analyzer=embedding_analyzer,
                         verbose=args.verbose)
            }
 
@@ -340,19 +387,10 @@ def main():
     if args.plot:
         plot_precision_recall_curves(args.plot, results)
 
-    # reduce to (mean, std) AFTER plotting precision and recall
     results = {name: {metric: mean_std(values) for metric, values in
                scores.items()} for name, scores in results.items()}
-
-    def print_dict(d, header=None, stream=sys.stdout, commentstring="% "):
-        if header:
-            print(indent(header, commentstring), file=stream)
-        s = pprint.pformat(d, 2, 80 - len(commentstring))
-        print(indent(s, commentstring), file=stream)
-        return
-
-    print_dict(config, "CONFIG")
-    print_dict(args, "ARGS")
+    print_dict(config, header="CONFIG")
+    print_dict(args, header="ARGS")
 
     pd.DataFrame(results).to_latex(args.outfile)
     print("Done.")

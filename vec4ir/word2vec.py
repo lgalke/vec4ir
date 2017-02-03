@@ -14,7 +14,6 @@ from sklearn.preprocessing import normalize
 # from scipy.spatial.distance import cosine
 import numpy as np
 # from nltk.tokenize.stanford import StanfordTokenizer
-from nltk.tokenize import word_tokenize
 
 try:
     from .base import RetrievalBase, RetriEvalMixin, Matching
@@ -241,17 +240,17 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
     """
     Retrieval Model based on Word Centroid Distance
     """
-    def __init__(self, embedding, name="WCD", n_jobs=1, normalize=True, verbose=0, oov=None, matching=True, tokenizer=word_tokenize, lowercase=False, **kwargs):
+    def __init__(self, embedding, analyzer, name="WCD", n_jobs=1, normalize_centroids=True, verbose=0, oov=None, matching=True, lowercase=False, **kwargs):
         self.name = name
         self._embedding = embedding
-        self._normalize = normalize
+        self._normalize = normalize_centroids
         self._oov = oov
         self.verbose = verbose
         self.n_jobs = n_jobs
 
         self._neighbors = NearestNeighbors(**kwargs)
 
-        self._tokenizer = tokenizer
+        self._analyzer = analyzer
 
         if matching is True:
             self._matching = Matching()
@@ -269,11 +268,11 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         return centroid
 
     def fit(self, docs, labels):
-        E, tokenize = self._embedding, self._tokenizer
+        E, analyze = self._embedding, self._analyzer
         if self.lowercase:
             docs = (doc.lower() for doc in docs)
 
-        analyzed_docs = (tokenize(doc for doc in docs))
+        analyzed_docs = (analyze(doc for doc in docs))
         # out of vocabulary words do not have to contribute to the centroid
 
         filtered_docs = (filter_vocab(E, d) for d in analyzed_docs)

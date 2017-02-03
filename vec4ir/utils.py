@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import numpy as np
+from collections import Counter
 
 
 def flatten(l):
@@ -11,7 +12,6 @@ def flatten(l):
 
 
 def filter_vocab(model, words, oov=None):
-    """ if analyze is given, analyze words first (split string) """
     filtered = []
     for word in words:
         if word in model:
@@ -53,6 +53,22 @@ def argtopk(A, k, axis=-1, sort=True):
             ind = ind[::-1]
 
     return ind
+
+
+def collection_statistics(embedding, analyzer, documents):
+    c = Counter(n_tokens=0, n_embedded=0, n_oov=0)
+    for document in documents:
+        words = analyzer(documents)
+        for word in words:
+            c['n_tokens'] += 1
+            if word in embedding:
+                c['n_embedded'] += 1
+            else:
+                c['n_oov'] += 1
+
+    d = dict(c)
+    d['oov_ratio'] = c['n_oov'] / ['n_tokens']
+    return d
 
 if __name__ == "__main__":
     import doctest

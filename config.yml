@@ -2,14 +2,17 @@ embeddings:
     glove:
         path: <++FILL ME IN++>
         oov_token: "."  # wild guess
-        lowercase: <++True++>
+        analyzer:
+            lowercase: False
+            tokenizer: "nltk"
 
 
     word2vec:
         path: "/data3/lgalke/GoogleNews-vectors-negative300.bin.gz"
         oov_token: "UNK"  # not so wild guess
-        lowercase: False
-
+        analyzer:
+            lowercase: False
+            tokenizer: "sword"
 
 data:
     econ62k:
@@ -24,11 +27,19 @@ data:
         X: "/data3/kd-mp/data/ZBW62k/Text"
         Y: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
         thes: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json" 
+        verbose: 1
 
     ntcir2:
         type: "ntcir"
         root_path: "../data/NTCIR2/"
         field: "title"
+        topic: "title"
+        rels: 2
+
+    ntcir2abstract:
+        type: "ntcir"
+        root_path: "../data/NTCIR2/"
+        field: "content"
         topic: "title"
         rels: 2
             

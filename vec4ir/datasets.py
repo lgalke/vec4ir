@@ -231,6 +231,7 @@ class NTCIRParser(HTMLParser):
         elif self.current_tag == self.title_tag:
             self.current_record['title'] = data
 
+
 class NTCIR(IRDataSetBase):
     def __init__(self,
                  root_path,
