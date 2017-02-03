@@ -16,7 +16,9 @@ class NltkNormalizer:
         self.tokenizer = self.make_tokenizer()
         self.stopwords = nltk.corpus.stopwords.words('english')
         self.sent_tokenizer = None
-@staticmethod
+
+
+    @staticmethod
     def make_tokenizer():
         token_pattern = re.compile(word_regexp)
         return lambda doc: token_pattern.findall(doc)
