@@ -323,7 +323,8 @@ class RetriEvalMixin():
             if verbose > 0:
                 print(qid, ":", query)
             t0 = timer()
-            result = self.query(query)
+            # if replacement is None, we need to drop after querying
+            result = self.query(query, k=(None if replacement is None else k))
             values["time_per_query"].append(timer() - t0)
             # if verbose > 0:
             #     print(result[:k])
