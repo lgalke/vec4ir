@@ -35,7 +35,15 @@ def mean_std(array_like):
     return array_like.mean(), array_like.std()
 
 
-def plot_precision_recall_curves(path, results, plot_f1=False):
+def plot_precision_recall_curves(results, path=None, plot_f1=False):
+    """
+    Plots a precision recall curve to `path`.
+    :results:
+        dict of dicts containing strategies as first-level keys and
+        'precision', 'recall' as second level keys.
+    :path:
+        Write plot to this file.
+    """
     colors = "b g r c m y k".split()
     keys = sorted(results.keys())
     # patches = []
@@ -44,15 +52,20 @@ def plot_precision_recall_curves(path, results, plot_f1=False):
         # patches.append(mpatches.Patch(color=c, label=name))
         precision_recall = zip(values["precision"], values["recall"])
         precision, recall = zip(*list(sorted(precision_recall, key=itemgetter(1))))
-        plt.xlabel('Recall')
-        plt.ylabel('Precision')
-        plt.ylim([0.0, 1.05])
-        plt.xlim([0.0, 1.0])
-        plt.plot(list(recall), list(precision), color=c)
+        plt.plot([0., *list(recall), 1.],
+                 [0., *list(precision), 1.],
+                 color=c,
+                 label=name)
 
-    # plt.legend(handles=patches)
-    plt.legend(keys)
-    plt.savefig(path)
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.ylim([0.0, 1.05])
+    plt.xlim([0.0, 1.0])
+    plt.legend(loc='lower left')
+    if path is None:
+        plt.show()
+    else:
+        plt.savefig(path)
 
 
 def is_embedded(sentence, embedding, analyzer):
@@ -326,10 +339,11 @@ def main():
     embedding_analyzer = build_analyzer(**embedding_analyzer_config)
     if args.stats:
         stats = collection_statistics(embedding=embedding, analyzer=embedding_analyzer, documents=documents)
-        
-        header = "Statistics: {} x {} x {tokenizer} x lower: {lowercase} x stop_words: {stop_words}".format(args.dataset,
-                                                   args.embedding,
-                                                   **embedding_analyzer_config)
+        header = ("Statistics: {} x {}"
+                  " x {tokenizer} x lower: {lowercase}"
+                  " x stop_words: {stop_words}").format(args.dataset,
+                                                        args.embedding,
+                                                        **embedding_analyzer_config)
         print_dict(stats, header=header)
     embedding_oov_token = embedding_config["oov_token"]
 
