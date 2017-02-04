@@ -344,7 +344,7 @@ def main():
                   " x stop_words: {stop_words}").format(args.dataset,
                                                         args.embedding,
                                                         **embedding_analyzer_config)
-        print_dict(stats, header=header)
+        print_dict(stats, header=header, stream=args.outfile)
     embedding_oov_token = embedding_config["oov_token"]
 
     # Set up matching analyzer
@@ -416,15 +416,16 @@ def main():
             results[RM.name] = evaluation(RM)
             del RM, RMs[key]  # clean up
 
-    if args.plot:
-        plot_precision_recall_curves(args.plot, results)
 
+    if args.plot:
+        plot_precision_recall_curves(results, path=args.plot)
     results = {name: {metric: mean_std(values) for metric, values in
                scores.items()} for name, scores in results.items()}
-    print_dict(config, header="CONFIG")
-    print_dict(args, header="ARGS")
+    print_dict(config, header="CONFIG", stream=args.outfile)
+    print_dict(args, header="ARGS", stream=args.outfile)
 
     pd.DataFrame(results).to_latex(args.outfile)
+
     print("Done.")
 
 if __name__ == "__main__":

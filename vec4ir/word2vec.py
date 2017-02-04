@@ -13,12 +13,11 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import normalize
 # from scipy.spatial.distance import cosine
 import numpy as np
-# from nltk.tokenize.stanford import StanfordTokenizer
 
 try:
     from .base import RetrievalBase, RetriEvalMixin, Matching
     # from .utils import argtopk
-    from .utils import filter_vocab
+    from .utils import filter_vocab, argtopk
     from .combination import CombinatorMixin
 except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixin, Matching
@@ -209,7 +208,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
 
         # ind = np.argsort(cosine_similarities)[::-1]
         if verbose > 0:
-            print(cosine_similarities[ind])
+            print(cosine_similarities[topk])
 
         if not wmd:
             # no wmd, were done
@@ -322,7 +321,10 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
             matched = self._matching.predict(query)
             centroids, labels = self._centroids[matched], self._y[matched]
             nn.fit(centroids)
-            n_ret = max(k, len(matched))
+            # k `leq` n_matched
+            n_ret = min(k, len(matched))
+        else:
+            labels = self._y
 
         # either fit nn on the fly or precomputed in own fit method
         pred = nn.kneighbors(query_centroid, n_neighbors=n_ret, return_distance=False)[0]
