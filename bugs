@@ -1,6 +1,7 @@
 pipeline query expansion | id:1434332aeab9ed507a5c54df11f6e91692f3ded8
 doc2vec: extract training params from doc2vec paper | id:15ccc85d498f3b6bd9f7c6ecb4df507503b5602c
 fix rels amount | id:29fe92785bc2f4dd5b0216e27e88be2ca3c577eb
+add more datasets to cfg | id:80045786409bc32abe5bd118098bf424817cc049
 eqlm: scale sigmoid with a and c | id:87bfe63f8bd3d5ff3a1a6707bd0b975e14b49aa8
 casewitch | id:a10dbbc821dd5067a755930911f0e91fb36903f8
 update WMD implementation | id:a16c8b81d15311dea2f46a7490b675def26750d6
