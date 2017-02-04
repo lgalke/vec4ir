@@ -51,7 +51,7 @@ def plot_precision_recall_curves(results, path=None, plot_f1=False):
         values = results[name]
         # patches.append(mpatches.Patch(color=c, label=name))
         precision_recall = zip(values["precision"], values["recall"])
-        precision, recall = zip(*list(sorted(precision_recall, key=itemgetter(1), reverse=True)))
+        precision, recall = zip(*list(sorted(precision_recall, key=itemgetter(0), reverse=True)))
         plt.plot([0., *list(recall), 1.],
                  [0., *list(precision), 1.],
                  color=c,
@@ -389,7 +389,7 @@ def main():
                                     oov=embedding_oov_token,
                                     verbose=args.verbose),
            "swcd" : WordCentroidRetrieval(embedding, name="SWCD",
-                                          matching={"analyzer": matching_analyzer},
+                                          matching={"analyzer": embedding_analyzer},
                                           analyzer=embedding_analyzer,
                                           oov=embedding_oov_token,
                                           verbose=args.verbose,
