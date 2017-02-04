@@ -51,9 +51,9 @@ def plot_precision_recall_curves(results, path=None, plot_f1=False):
         values = results[name]
         # patches.append(mpatches.Patch(color=c, label=name))
         precision_recall = zip(values["precision"], values["recall"])
-        precision, recall = zip(*list(sorted(precision_recall, key=itemgetter(0), reverse=True)))
+        precision, recall = zip(*list(sorted(precision_recall, key=itemgetter(1))))
         plt.plot([0., *list(recall), 1.],
-                 [0., *list(precision), 1.],
+                 [1., *list(precision), 0.],
                  color=c,
                  label=name)
 
@@ -385,11 +385,12 @@ def main():
 
     RMs = {"tfidf": tfidf,
            "wcd": Word2VecRetrieval(embedding, wmd=False,
-                                    analyzer=embedding_analyzer,
+                                    analyzer=matching_analyzer,
+                                    vocab_analyzer=embedding_analyzer,
                                     oov=embedding_oov_token,
                                     verbose=args.verbose),
            "swcd" : WordCentroidRetrieval(embedding, name="SWCD",
-                                          matching={"analyzer": embedding_analyzer},
+                                          matching={"analyzer": matching_analyzer},
                                           analyzer=embedding_analyzer,
                                           oov=embedding_oov_token,
                                           verbose=args.verbose,
@@ -398,7 +399,8 @@ def main():
                                           metric='cosine',
                                           n_jobs=args.jobs),
            "wmd": Word2VecRetrieval(embedding, wmd=True,
-                                    analyzer=embedding_analyzer,
+                                    analyzer=matching_analyzer,
+                                    vocab_analyzer=embedding_analyzer,
                                     oov=embedding_oov_token,
                                     verbose=args.verbose),
            "pvdm": Doc2VecRetrieval(analyzer=embedding_analyzer,
