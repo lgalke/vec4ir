@@ -20,16 +20,14 @@ data:
     econ62k:
         type: "QuadflorLike"
         X: "/data3/kd-mp/kd-mp/Resources/Goldstandard/formatted_econbiz-annotation-62k-titles.csv"
-        Y: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
+        y: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
         thes: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json" 
-        verbose: 1
 
     econfull:
         type: "QuadflorLike"
         X: "/data3/kd-mp/data/ZBW62k/Text"
-        Y: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
+        y: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
         thes: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json" 
-        verbose: 1
 
     ntcir2:
         type: "ntcir"
