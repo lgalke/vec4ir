@@ -56,7 +56,7 @@ class IRDataSetBase(ABC):
         rels = self.rels
         if verbose:
             n_rels = sum(len(rels[qid]) for qid, _querystring in queries)
-            print("{.2f}".format(n_rels / n_queries))
+            print("{:2f}".format(n_rels / n_queries))
 
         return docs, labels, queries, rels
 

@@ -5,6 +5,7 @@ embeddings:
         analyzer:
             lowercase: False
             tokenizer: "nltk"
+            stop_words: False
 
 
     word2vec:
@@ -13,6 +14,7 @@ embeddings:
         analyzer:
             lowercase: False
             tokenizer: "sword"
+            stop_words: True
 
 data:
     econ62k:

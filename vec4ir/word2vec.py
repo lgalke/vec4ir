@@ -240,10 +240,20 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
     """
     Retrieval Model based on Word Centroid Distance
     """
-    def __init__(self, embedding, analyzer, name="WCD", n_jobs=1, normalize_centroids=True, verbose=0, oov=None, matching=True, lowercase=False, **kwargs):
+    def __init__(self,
+                 embedding,
+                 analyzer,
+                 name="WCD",
+                 n_jobs=1,
+                 normalize=True,
+                 verbose=0,
+                 oov=None,
+                 matching=True,
+                 lowercase=False,
+                 **kwargs):
         self.name = name
         self._embedding = embedding
-        self._normalize = normalize_centroids
+        self._normalize = normalize
         self._oov = oov
         self.verbose = verbose
         self.n_jobs = n_jobs
@@ -269,10 +279,8 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
     def fit(self, docs, labels):
         E, analyze = self._embedding, self._analyzer
-        if self.lowercase:
-            docs = (doc.lower() for doc in docs)
 
-        analyzed_docs = (analyze(doc for doc in docs))
+        analyzed_docs = (analyze(doc) for doc in docs)
         # out of vocabulary words do not have to contribute to the centroid
 
         filtered_docs = (filter_vocab(E, d) for d in analyzed_docs)
@@ -294,24 +302,26 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         return self
 
     def query(self, query, k=None):
-        E, nn = self._embedding, self._neighbors
-        if self.lowercase:
-            query = query.lower()
-        tokens = self._tokenizer.tokenize(query)
-        words = filter_vocab(E, tokens, self.oov)
+        if k is None:
+            k = len(self._centroids)
+        E, analyze, nn = self._embedding, self._analyzer, self._neighbors
+        tokens = analyze(query)
+        words = filter_vocab(E, tokens, self._oov)
         query_centroid = self._compute_centroid(words)
         if self._normalize:
             normalize(query_centroid, norm='l2', copy=False)
         if self.verbose > 0:
-            print("Centered ( normalized ) query shape", query_centroid.shape)
+            print("Analyzed query", words)
+            # print("Centered ( normalized ) query shape", query_centroid.shape)
 
         if self._matching:
             matched = self._matching.predict(query)
             centroids, labels = self._centroids[matched], self._y[matched]
             nn.fit(centroids)
+            n_ret = max(k, len(matched))
 
         # either fit nn on the fly or precomputed in own fit method
-        pred = nn.kneighbors(query_centroid, n_neighbors=k, return_distance=False)[0]
+        pred = nn.kneighbors(query_centroid, n_neighbors=n_ret, return_distance=False)[0]
 
         return labels[pred]
 

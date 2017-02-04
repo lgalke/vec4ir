@@ -56,9 +56,10 @@ def argtopk(A, k, axis=-1, sort=True):
 
 
 def collection_statistics(embedding, analyzer, documents):
+    # print(embedding, analyzer, documents, sep='\n')
     c = Counter(n_tokens=0, n_embedded=0, n_oov=0)
     for document in documents:
-        words = analyzer(documents)
+        words = analyzer(document)
         for word in words:
             c['n_tokens'] += 1
             if word in embedding:
@@ -67,7 +68,7 @@ def collection_statistics(embedding, analyzer, documents):
                 c['n_oov'] += 1
 
     d = dict(c)
-    d['oov_ratio'] = c['n_oov'] / ['n_tokens']
+    d['oov_ratio'] = c['n_oov'] / c['n_tokens']
     return d
 
 if __name__ == "__main__":

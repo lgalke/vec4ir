@@ -135,42 +135,52 @@ def _ir_eval_parser(config):
                         choices=MODEL_KEYS, default=None)
     parser.add_argument("-j", "--jobs", type=int, default=-1,
                         help="How many jobs to use, default=-1 (one per core)")
-    parser.add_argument("-o", "--outfile", default=sys.stdout,
-                        type=FileType('a'))
-    parser.add_argument("-v", "--verbose", default=2, type=int,
-                        help="verbosity level")
 
-    parser.add_argument('-s', '--stats', default=False, action='store_true',
-                        help="Print statistics for corpus and embedding")
-    parser.add_argument("-p", "--plot", default=None, type=str,
-                        metavar="PLOTFILE",
-                        help="Save precision-recall curves in PLOTFILE")
+    # OPTIONS FOR OUTPUT
+    output_options = parser.add_argument_group("Output options")
+    output_options.add_argument("-o", "--outfile", default=sys.stdout,
+                                type=FileType('a'))
+    output_options.add_argument("-v", "--verbose", default=2, type=int,
+                                help="verbosity level")
+    output_options.add_argument('-s', '--stats', default=False, action='store_true',
+                                help="Print statistics for corpus and embedding")
+    output_options.add_argument("-p",
+                                "--plot",
+                                default=None,
+                                type=str,
+                                metavar="PLOTFILE",
+                                help="Save precision-recall curves in PLOTFILE")
 
-    evaluation_group = parser.add_argument_group("Evaluation options")
-    evaluation_group.add_argument("-k", dest='k', default=20, type=int,
+    # OPTIONS FOR EVALUATION
+    evaluation_options = parser.add_argument_group("Evaluation options")
+    evaluation_options.add_argument("-k", dest='k', default=20, type=int,
                                   help="number of documents to retrieve")
-    evaluation_group.add_argument("-Q", "--filter-queries", action='store_true',
+    evaluation_options.add_argument("-Q", "--filter-queries", action='store_true',
                                   help="Filter queries without complete embedding")
-
-    evaluation_group.add_argument("-R", "--replacement-strategy", type=str,
+    evaluation_options.add_argument("-R", "--replacement",
                                   dest='repstrat', default="zero",
                                   choices=['drop', 'zero'],
                                   help="Out of relevancy file document ids,\
                                   default is to use zero relevancy")
 
-    matching_group = parser.add_argument_group('Matching options')
-    matching_group.add_argument("-C",
+    # OPTIONS FOR THE MATCHING OPERATION
+    matching_options = parser.add_argument_group('Matching options')
+    matching_options.add_argument("-C",
                                 "--cased",
                                 dest="lowercase",
                                 default=True,
                                 action='store_false',
                                 help="Case sensitive analysis (also relevant for baseline tfidf)")
-    matching_group.add_argument("-T", "--tokenizer", default=None, type=str,
-                                help="Specify tokenizer for the matching operation",
-                                choices=['sklearn', 'nltk'])
-    matching_group.add_argument("-S", "--dont-stop", dest='stop_words', default=True,
+    matching_options.add_argument("-T", "--tokenizer", default='sword', type=str,
+                                help=("Specify tokenizer for the matching operation\n"
+                                "defaults to 'sword' which removes punctuation but keeps single character words.\n"
+                                "'sklearn' is similar but requires at least 2 characters for a word\n" 
+                                "'nltk' retains punctuation as seperate tokens (use 'nltk' for glove models)"),
+                                choices=['sklearn', 'sword', 'nltk'])
+    matching_options.add_argument("-S", "--dont-stop", dest='stop_words', default=True,
                                 action='store_true',
                                 help="Do NOT use stopwords in matching analysis")
+
     parser.add_argument("-u", "--train", default=False, action='store_true',
                         help="Train a whole new word2vec model")
     return parser
@@ -261,6 +271,7 @@ def build_analyzer(tokenizer=None, stop_words=None, lowercase=True):
     # employ the cv to actually build the analyzer from the components
     analyzer = CountVectorizer(analyzer='word',
                                tokenizer=tokenizer,
+                               token_pattern=token_pattern,
                                lowercase=lowercase,
                                stop_words=stop_words).build_analyzer()
     return analyzer
@@ -311,18 +322,23 @@ def main():
     print("Selecting embedding {} from embeddings config".format(args.embedding))
     embedding_config = config["embeddings"][args.embedding]
     embedding = smart_load_word2vec(embedding_config["path"])
-    embedding_analyzer = build_analyzer(**embedding_config["analyzer"])
+    embedding_analyzer_config = embedding_config["analyzer"]
+    embedding_analyzer = build_analyzer(**embedding_analyzer_config)
     if args.stats:
         stats = collection_statistics(embedding=embedding, analyzer=embedding_analyzer, documents=documents)
-        header = "Statistics: {} x {}".format(args.dataset, args.embedding)
-        print_dict(stats, header=header, stream=args.outfile)
+        
+        header = "Statistics: {} x {} x {tokenizer} x lower: {lowercase} x stop_words: {stop_words}".format(args.dataset,
+                                                   args.embedding,
+                                                   **embedding_analyzer_config)
+        print_dict(stats, header=header)
+    embedding_oov_token = embedding_config["oov_token"]
 
     # Set up matching analyzer
     matching_analyzer = build_analyzer(tokenizer=args.tokenizer,
                                        stop_words=args.stop_words,
                                        lowercase=args.lowercase)
 
-    focus = set([f.lower() for f in args.focus]) if args.focus else None
+    focus = [f.lower() for f in args.focus] if args.focus else None
     repl = {"drop": None, "zero": 0}[args.repstrat]
 
     # TODO we do not train at all at the moment
@@ -356,18 +372,18 @@ def main():
     RMs = {"tfidf": tfidf,
            "wcd": Word2VecRetrieval(embedding, wmd=False,
                                     analyzer=embedding_analyzer,
-                                    oov=args.oov,
+                                    oov=embedding_oov_token,
                                     verbose=args.verbose),
            "swcd" : WordCentroidRetrieval(embedding, name="SWCD",
-                                          matching={"analyzer": embedding_analyzer},
-                                          lowercase=embedding_config['lowercase'],
-                                          oov=args.oov,
+                                          matching={"analyzer": matching_analyzer},
+                                          analyzer=embedding_analyzer,
+                                          oov=embedding_oov_token,
                                           normalize=True,
                                           verbose=args.verbose,
                                           n_jobs=args.jobs),
            "wmd": Word2VecRetrieval(embedding, wmd=True,
                                     analyzer=embedding_analyzer,
-                                    oov=args.oov,
+                                    oov=embedding_oov_token,
                                     verbose=args.verbose),
            "pvdm": Doc2VecRetrieval(analyzer=embedding_analyzer,
                                     verbose=args.verbose),
