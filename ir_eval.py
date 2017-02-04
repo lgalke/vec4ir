@@ -51,7 +51,7 @@ def plot_precision_recall_curves(results, path=None, plot_f1=False):
         values = results[name]
         # patches.append(mpatches.Patch(color=c, label=name))
         precision_recall = zip(values["precision"], values["recall"])
-        precision, recall = zip(*list(sorted(precision_recall, key=itemgetter(1))))
+        precision, recall = zip(*list(sorted(precision_recall, key=itemgetter(1), reverse=True)))
         plt.plot([0., *list(recall), 1.],
                  [0., *list(precision), 1.],
                  color=c,
@@ -392,8 +392,10 @@ def main():
                                           matching={"analyzer": matching_analyzer},
                                           analyzer=embedding_analyzer,
                                           oov=embedding_oov_token,
-                                          normalize=True,
                                           verbose=args.verbose,
+                                          normalize=False,
+                                          algorithm='brute',
+                                          metric='cosine',
                                           n_jobs=args.jobs),
            "wmd": Word2VecRetrieval(embedding, wmd=True,
                                     analyzer=embedding_analyzer,
