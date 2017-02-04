@@ -163,7 +163,10 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
         )
         self._X = np.hstack([self._X, Xprep])
 
-    def query(self, query):
+    def query(self, query, k=None):
+        if k is None:
+            k = len(self._X)
+
         model = self.model
         verbose = self.verbose
         indices = self._matching(query)
@@ -171,6 +174,8 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
         docs, labels = self._X[indices], self._y[indices]
         if verbose > 0:
             print(len(docs), "documents matched.")
+
+        n_ret = max(k, len(docs))
 
         # if self.wmd:
         #     if self.wmd is True: wmd = k
@@ -197,23 +202,22 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
         )
 
         # nav
-        # topk = argtopk(cosine_similarities, 1000, sort=not wmd)  # sort when wcd
+        topk = argtopk(cosine_similarities, k, sort=not wmd)  # sort when wcd
         # # # It is important to also clip the labels #
-        # docs, labels = docs[topk], labels[topk]
+        docs, labels = docs[topk], labels[topk]
         # may be fewer than k
 
-        ind = np.argsort(cosine_similarities)[::-1]
+        # ind = np.argsort(cosine_similarities)[::-1]
         if verbose > 0:
             print(cosine_similarities[ind])
 
         if not wmd:
             # no wmd, were done
-            result = labels[ind]
+            return labels
         else:  # wmd TODO prefetch and prune
             # scores = np.asarray([model.wmdistance(self._filter_oov_token(q),
             #                                       self._filter_oov_token(doc))
-            scores = np.asarray([model.wmdistance(q, doc)
-                                 for doc in docs])
+            scores = np.asarray([model.wmdistance(q, doc) for doc in docs])
             ind = np.argsort(scores)
             if verbose > 0:
                 print(scores[ind])
