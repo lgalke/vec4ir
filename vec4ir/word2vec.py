@@ -320,11 +320,14 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         if self._matching:
             matched = self._matching.predict(query)
             centroids, labels = self._centroids[matched], self._y[matched]
+            if len(centroids) == 0:
+                return []  # nothing to fit here
             nn.fit(centroids)
             # k `leq` n_matched
             n_ret = min(k, len(matched))
         else:
             labels = self._y
+            n_ret = k
 
         # either fit nn on the fly or precomputed in own fit method
         pred = nn.kneighbors(query_centroid, n_neighbors=n_ret, return_distance=False)[0]
