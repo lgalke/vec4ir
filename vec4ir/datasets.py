@@ -155,10 +155,6 @@ class QuadflorLike(IRDataSetBase):
         return topics
 
 
-
-
-
-
 class NTCIRTopicParser(HTMLParser):
     def __init__(self, *args, record_tag="topic", tags=["title"], **kwargs):
         self.tags = tags
