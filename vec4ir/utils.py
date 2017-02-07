@@ -71,6 +71,7 @@ def collection_statistics(embedding, analyzer, documents):
     d['oov_ratio'] = c['n_oov'] / c['n_tokens']
     return d
 
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

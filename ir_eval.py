@@ -19,10 +19,10 @@ import os
 import pprint
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use('Agg')  # compat on non-gui uis
-import matplotlib.pyplot as plt
 import yaml
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.use('Agg')  # compat on non-gui uis
 # import matplotlib.patches as mpatches
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
@@ -45,17 +45,18 @@ def plot_precision_recall_curves(results, path=None, plot_f1=False):
         Write plot to this file.
     """
     colors = "b g r c m y k".split()
+
     keys = sorted(results.keys())
     # patches = []
     for name, c in zip(keys, colors):
         values = results[name]
         # patches.append(mpatches.Patch(color=c, label=name))
         precision_recall = zip(values["precision"], values["recall"])
-        precision, recall = zip(*list(sorted(precision_recall, key=itemgetter(0), reverse=True)))
-        plt.plot([0., *list(recall), 1.],
-                 [1., *list(precision), 0.],
-                 color=c,
-                 label=name)
+        precision, recall = zip(*list(sorted(precision_recall,
+                                             key=itemgetter(0), reverse=True)))
+        recall = [0.] + list(recall) + [1.]
+        precision = [1.] + list(precision) + [0.]
+        plt.plot(recall, precision, color=c, label=name)
 
     plt.xlabel('Recall')
     plt.ylabel('Precision')
@@ -138,12 +139,12 @@ def _ir_eval_parser(config):
     parser = ArgumentParser()
     parser.add_argument("--doctest", action='store_true',
                         help="Perform doctest on this module")
-    parser.add_argument("-d", "--dataset", type=str, default="ntcir2",  # FIXME ugly constant
+    parser.add_argument("-d", "--dataset", type=str, default="ntcir2",
                         choices=valid_data_keys,
-                        help="Specify dataset to use (as defined in config file)")
+                        help="Specify dataset to use (as in config file)")
     parser.add_argument("-e", "--embedding", type=str, default=None,
                         choices=valid_embedding_keys,
-                        help="Specify embedding to use (as defined in config file)")
+                        help="Specify embedding to use (as in config file)")
     parser.add_argument("-f", "--focus", nargs='+',
                         choices=MODEL_KEYS, default=None)
     parser.add_argument("-j", "--jobs", type=int, default=-1,
@@ -155,44 +156,58 @@ def _ir_eval_parser(config):
                                 type=FileType('a'))
     output_options.add_argument("-v", "--verbose", default=2, type=int,
                                 help="verbosity level")
-    output_options.add_argument('-s', '--stats', default=False, action='store_true',
-                                help="Print statistics for corpus and embedding")
+    output_options.add_argument('-s',
+                                '--stats',
+                                default=False,
+                                action='store_true',
+                                help="Print statistics for analyzed tokens")
     output_options.add_argument("-p",
                                 "--plot",
                                 default=None,
                                 type=str,
                                 metavar="PLOTFILE",
-                                help="Save precision-recall curves in PLOTFILE")
+                                help="Save P-R curves in PLOTFILE")
 
     # OPTIONS FOR EVALUATION
     evaluation_options = parser.add_argument_group("Evaluation options")
     evaluation_options.add_argument("-k", dest='k', default=20, type=int,
-                                  help="number of documents to retrieve")
-    evaluation_options.add_argument("-Q", "--filter-queries", action='store_true',
-                                  help="Filter queries without complete embedding")
+                                    help="number of documents to retrieve")
+    evaluation_options.add_argument("-Q",
+                                    "--filter-queries",
+                                    action='store_true',
+                                    help="Filter queries w/o compl. embedding")
     evaluation_options.add_argument("-R", "--replacement",
-                                  dest='repstrat', default="zero",
-                                  choices=['drop', 'zero'],
-                                  help="Out of relevancy file document ids,\
-                                  default is to use zero relevancy")
+                                    dest='repstrat', default="zero",
+                                    choices=['drop', 'zero'],
+                                    help=("Out of relevancy file document ids"
+                                          "default is to use zero relevancy"))
 
     # OPTIONS FOR THE MATCHING OPERATION
     matching_options = parser.add_argument_group('Matching options')
     matching_options.add_argument("-C",
-                                "--cased",
-                                dest="lowercase",
-                                default=True,
-                                action='store_false',
-                                help="Case sensitive analysis (also relevant for baseline tfidf)")
-    matching_options.add_argument("-T", "--tokenizer", default='sword', type=str,
-                                help=("Specify tokenizer for the matching operation\n"
-                                "defaults to 'sword' which removes punctuation but keeps single character words.\n"
-                                "'sklearn' is similar but requires at least 2 characters for a word\n" 
-                                "'nltk' retains punctuation as seperate tokens (use 'nltk' for glove models)"),
-                                choices=['sklearn', 'sword', 'nltk'])
-    matching_options.add_argument("-S", "--dont-stop", dest='stop_words', default=True,
-                                action='store_true',
-                                help="Do NOT use stopwords in matching analysis")
+                                  "--cased",
+                                  dest="lowercase",
+                                  default=True,
+                                  action='store_false',
+                                  help="Case sensitive analysis")
+    matching_options.add_argument("-T",
+                                  "--tokenizer",
+                                  default='sword',
+                                  type=str,
+                                  help=("Specify tokenizer for the matching"
+                                        "operation" "defaults to 'sword'"
+                                        "which removes"
+                                        "punctuation but keeps single"
+                                        "characterwords."
+                                        "'sklearn' is similar but requires"
+                                        "at" "least 2 characters for a word"
+                                        "'nltk' retains punctuation as"
+                                        "seperate" "tokens (use 'nltk' for"
+                                        "glove models)"),
+                                  choices=['sklearn', 'sword', 'nltk'])
+    matching_options.add_argument("-S", "--dont-stop", dest='stop_words',
+                                  default=True, action='store_true',
+                                  help="Do NOT use stopwords")
 
     parser.add_argument("-u", "--train", default=False, action='store_true',
                         help="Train a whole new word2vec model")
@@ -200,8 +215,11 @@ def _ir_eval_parser(config):
 
 
 def load_ntcir2(config):
-    raise DeprecationWarning
-    ntcir2 = NTCIR("../data/NTCIR2/", rels=config['rels'], topic=config['topic'], field=config['field'])
+    raise DeprecationWarning("Use data sets load method instead")
+    ntcir2 = NTCIR("../data/NTCIR2/",
+                   rels=config['rels'],
+                   topic=config['topic'],
+                   field=config['field'])
     print("Loading NTCIR2 documents...")
     labels, documents = ntcir2.docs
     print("Loaded {:d} documents.".format(len(documents)))
@@ -247,8 +265,9 @@ def init_dataset(data_config, default='quadflorlike'):
     provides the properties `docs`, `rels`, and `topics`.
     """
     kwargs = dict(data_config)  # we assume dict
-    T = kwargs.pop('type', default).lower()  # special type value to determine constructor
-    constructor = {"quadflorlike" : QuadflorLike, "ntcir" : NTCIR}[T]
+    # special type value to determine constructor
+    T = kwargs.pop('type', default).lower()
+    constructor = {"quadflorlike": QuadflorLike, "ntcir": NTCIR}[T]
     dataset = constructor(**kwargs)  # expand dict to kwargs
     return dataset
 
@@ -260,24 +279,24 @@ def build_analyzer(tokenizer=None, stop_words=None, lowercase=True):
 
     :tokenizer:
         None or 'sklearn' for default sklearn word tokenization,
-        'sword' is similar to sklearn but also considers single character words,
+        'sword' is similar to sklearn but also considers single character words
         'nltk' for nltk's word_tokenize function,
         or callable.
     :stop_words:
-        will be passed to CountVectorizer of sklearn. List of words or 'english'
+         False, None for no stopword removal, or list of words, 'english'/True
     :lowercase:
         Lowercase or case-sensitive analysis.
     """
     # some default options for tokenization
     if not callable(tokenizer):
         tokenizer, token_pattern = {
-            'sklearn': (None, r"(?u)\b\w\w+\b"),
-            'sword': (None, r"(?u)\b\w+\b"),
-            'nltk': (word_tokenize, None)
+            'sklearn': (None, r"(?u)\b\w\w+\b"),  # mimics default
+            'sword': (None, r"(?u)\b\w+\b"),   # specifically for GoogleNews
+            'nltk': (word_tokenize, None)  # uses punctuation for GloVe models
         }[tokenizer]
 
     # allow binary decision for stopwords
-    sw_rules = {True : 'english', False: None}
+    sw_rules = {True: 'english', False: None}
     if stop_words in sw_rules:
         stop_words = sw_rules[stop_words]
 
@@ -327,23 +346,28 @@ def main():
 
     # documents, labels, queries, rels = loader(dsc)
 
-    print("Selecting dataset {} from data config".format(args.dataset))
+    print("Selecting data set: {}".format(args.dataset))
     dataset = init_dataset(config['data'][args.dataset])
+    print("Loading Data...", end="")
     documents, labels, queries, rels = dataset.load(verbose=args.verbose)
+    print("Done")
 
     # Set up embedding specific analyzer
-    print("Selecting embedding {} from embeddings config".format(args.embedding))
+    print("Selecting embedding: {}".format(args.embedding))
     embedding_config = config["embeddings"][args.embedding]
     embedding = smart_load_word2vec(embedding_config["path"])
     embedding_analyzer_config = embedding_config["analyzer"]
     embedding_analyzer = build_analyzer(**embedding_analyzer_config)
     if args.stats:
-        stats = collection_statistics(embedding=embedding, analyzer=embedding_analyzer, documents=documents)
+        print("Computing collection statistics...")
+        stats = collection_statistics(embedding=embedding,
+                                      analyzer=embedding_analyzer,
+                                      documents=documents)
         header = ("Statistics: {} x {}"
                   " x {tokenizer} x lower: {lowercase}"
-                  " x stop_words: {stop_words}").format(args.dataset,
-                                                        args.embedding,
-                                                        **embedding_analyzer_config)
+                  " x stop_words: {stop_words}")
+        header = header.format(args.dataset, args.embedding,
+                               **embedding_analyzer_config)
         print_dict(stats, header=header, stream=args.outfile)
     embedding_oov_token = embedding_config["oov_token"]
 
@@ -389,15 +413,16 @@ def main():
                                     vocab_analyzer=embedding_analyzer,
                                     oov=embedding_oov_token,
                                     verbose=args.verbose),
-           "swcd" : WordCentroidRetrieval(embedding, name="SWCD",
-                                          matching={"analyzer": matching_analyzer},
-                                          analyzer=embedding_analyzer,
-                                          oov=embedding_oov_token,
-                                          verbose=args.verbose,
-                                          normalize=False,
-                                          algorithm='brute',
-                                          metric='cosine',
-                                          n_jobs=args.jobs),
+           "swcd": WordCentroidRetrieval(embedding, name="SWCD",
+                                         matching={"analyzer":
+                                                   matching_analyzer},
+                                         analyzer=embedding_analyzer,
+                                         oov=embedding_oov_token,
+                                         verbose=args.verbose,
+                                         normalize=False,
+                                         algorithm='brute',
+                                         metric='cosine',
+                                         n_jobs=args.jobs),
            "wmd": Word2VecRetrieval(embedding, wmd=True,
                                     analyzer=matching_analyzer,
                                     vocab_analyzer=embedding_analyzer,
@@ -405,8 +430,8 @@ def main():
                                     verbose=args.verbose),
            "pvdm": Doc2VecRetrieval(analyzer=embedding_analyzer,
                                     verbose=args.verbose),
-           "eqlm": EQLM(tfidf, embedding, m=10, eqe=1, analyzer=embedding_analyzer,
-                        verbose=args.verbose)
+           "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
+                        analyzer=embedding_analyzer, verbose=args.verbose)
            }
 
     if focus:
@@ -420,7 +445,6 @@ def main():
             results[RM.name] = evaluation(RM)
             del RM, RMs[key]  # clean up
 
-
     if args.plot:
         plot_precision_recall_curves(results, path=args.plot)
     results = {name: {metric: mean_std(values) for metric, values in
@@ -431,6 +455,7 @@ def main():
     pd.DataFrame(results).to_latex(args.outfile)
 
     print("Done.")
+
 
 if __name__ == "__main__":
     main()
