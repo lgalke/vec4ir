@@ -214,50 +214,6 @@ def _ir_eval_parser(config):
     return parser
 
 
-def load_ntcir2(config):
-    raise DeprecationWarning("Use data sets load method instead")
-    ntcir2 = NTCIR("../data/NTCIR2/",
-                   rels=config['rels'],
-                   topic=config['topic'],
-                   field=config['field'])
-    print("Loading NTCIR2 documents...")
-    labels, documents = ntcir2.docs
-    print("Loaded {:d} documents.".format(len(documents)))
-
-    print("Loading topics...")
-    queries = ntcir2.topics
-    n_queries = len(queries)
-    print("Using {:d} queries".format(n_queries))
-
-    print("Loading relevances...")
-    rels = ntcir2.rels
-    n_rels = len(rels)
-    print("With {:.1f} relevant docs per query".format(n_rels / n_queries))
-    return documents, labels, queries, rels
-
-
-def load_econ62k(cfg):
-    raise DeprecationWarning
-    dataset = QuadflorLike(y=cfg['y'],
-                           thes=cfg['thes'],
-                           X=cfg['X'],
-                           verify_integrity=cfg['verify_integrity'])
-    print("Loading econ62k documents...")
-    labels, docs = dataset.docs
-    print("Loaded {:d} documents.".format(len(docs)))
-
-    print("Loading topics...")
-    queries = dataset.topics
-    n_queries = len(queries)
-    print("Using {:d} queries".format(n_queries))
-
-    print("Loading relevances...")
-    rels = dataset.rels
-    n_rels = sum(len(acc) for acc in rels.values())
-    print("with {:.1f} relevant docs per query".format(n_rels / n_queries))
-    return docs, labels, queries, rels
-
-
 def init_dataset(data_config, default='quadflorlike'):
     """
     Given some dataset configuguration ("type" and **kwargs for the
@@ -369,6 +325,7 @@ def main():
         header = header.format(args.dataset, args.embedding,
                                **embedding_analyzer_config)
         print_dict(stats, header=header, stream=args.outfile)
+        exit(0)
     embedding_oov_token = embedding_config["oov_token"]
 
     # Set up matching analyzer

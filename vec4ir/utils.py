@@ -16,7 +16,7 @@ def filter_vocab(model, words, oov=None):
     for word in words:
         if word in model:
             filtered.append(word)
-        elif oov is not None:
+        elif oov:
             filtered.append(oov)
     return filtered
 

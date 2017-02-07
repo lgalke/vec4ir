@@ -92,9 +92,12 @@ def harvest_docs(path, verify_integrity):
         data = dict()
         for fname in fnames:
             with open(os.path.join(path, fname), 'r') as f:
-                data[f.name] = f.read()
+                label, __ = os.path.splitext(fname)
+                data[int(label)] = f.read()
         # fulltext documents
         docs = pd.DataFrame.from_dict(data, orient='index')
+        print(docs.columns)
+        labels, docs = docs.index.values, docs.iloc[:, 0].values
 
     elif os.path.isfile(path):
         # title doucments

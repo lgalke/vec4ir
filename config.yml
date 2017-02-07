@@ -1,6 +1,6 @@
 embeddings:
     glove:
-        path: <++FILL ME IN++>
+        path: "/data3/lgalke/glove.gnsm"
         oov_token: "."  # wild guess
         analyzer:
             lowercase: False
