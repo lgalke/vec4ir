@@ -406,6 +406,7 @@ def main():
 
     results = dict()
     tfidf = TfidfRetrieval(analyzer=matching_analyzer)
+    matching = {"analyzer": matching_analyzer} if args.matching else None
 
     RMs = {"tfidf": tfidf,
            "wcd": Word2VecRetrieval(embedding, wmd=False,
@@ -414,8 +415,7 @@ def main():
                                     oov=embedding_oov_token,
                                     verbose=args.verbose),
            "swcd": WordCentroidRetrieval(embedding, name="SWCD",
-                                         matching={"analyzer":
-                                                   matching_analyzer},
+                                         matching=matching,
                                          analyzer=embedding_analyzer,
                                          oov=embedding_oov_token,
                                          verbose=args.verbose,
@@ -429,6 +429,12 @@ def main():
                                     oov=embedding_oov_token,
                                     verbose=args.verbose),
            "pvdm": Doc2VecRetrieval(analyzer=embedding_analyzer,
+                                    matching=matching,
+                                    n_jobs=args.jobs,
+                                    metric="cosine",
+                                    alpha=0.25,
+                                    min_alpha=0.05,
+                                    n_epochs=20,
                                     verbose=args.verbose),
            "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
                         analyzer=embedding_analyzer, verbose=args.verbose)

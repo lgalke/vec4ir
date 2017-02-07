@@ -256,7 +256,6 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
                  verbose=0,
                  oov=None,
                  matching=True,
-                 lowercase=False,
                  **kwargs):
         self.name = name
         self._embedding = embedding
