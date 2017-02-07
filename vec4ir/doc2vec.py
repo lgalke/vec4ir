@@ -1,49 +1,54 @@
 from gensim.models import Doc2Vec
 try:
-    from .base import RetrievalBase, RetriEvalMixin
+    from .base import RetriEvalMixin, Matching
 except SystemError:
-    from base import RetrievalBase, RetriEvalMixin
+    from base import RetriEvalMixin, Matching
 # from .word2vec import filter_vocab
 from gensim.models.doc2vec import TaggedDocument
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
+from sklearn.base import BaseEstimator
+from sklearn.neighbors import NearestNeighbors
 
 
-class Doc2VecRetrieval(RetrievalBase, RetriEvalMixin):
+class Doc2VecRetrieval(BaseEstimator, RetriEvalMixin):
     def __init__(self,
-                 intersect=None,
-                 vocab_analyzer=None,
+                 analyzer=None, matching=None,
                  name=None,
                  verbose=0,
                  n_epochs=10,
-                 oov=None,
-                 alpha=0.025,
-                 min_alpha=0.005,
+                 alpha=0.25,
+                 min_alpha=0.05,
+                 n_jobs=4,
                  **kwargs):
         # self.model = model
         self.alpha = alpha
         self.min_alpha = min_alpha
         self.verbose = verbose
-        self.oov = oov
-        self.intersect = intersect
         if name is None:
             name = "paragraph-vectors"
 
-        self._init_params(name=name, **kwargs)
-        self.analyzer = self._cv.build_analyzer()
+        if matching is True:
+            self._matching = Matching()
+        elif matching is False:
+            self._matching = None
+        else:
+            self._matching = Matching(**dict(matching))
+
+        self.analyzer = analyzer
         self.model = Doc2Vec(alpha=alpha,
                              min_alpha=alpha,
-                             size=200,
+                             size=500,
                              window=8,
                              min_count=1,
                              sample=1e-5,
-                             workers=8,
+                             workers=n_jobs,
                              negative=20,
-                             dm_mean=0,
+                             dm=0, dbow_words=1,  # words only with dm!=0?
+                             dm_mean=0,  # unused when in concat mode
                              dm_concat=1,
                              dm_tag_count=1
                              )
         self.n_epochs = n_epochs
+        self._neighbors = NearestNeighbors(**kwargs)
 
     def fit(self, docs, y):
         self._fit(docs, y)
@@ -73,31 +78,39 @@ class Doc2VecRetrieval(RetrievalBase, RetriEvalMixin):
         if verbose > 0:
             print("Finished.")
             print("model:", self.model)
+            print("Shape of docvecs", model.docvecs.shape)
+
+        if self._matching:
+            self._matching.fit(docs)
+        else:
+            # if we dont do matching, its enough to fit a nearest neighbors on
+            # all centroids before query time
+            self._neighbors.fit(model.docvecs)
+
+        self._y = y
 
         return self
 
-    def query(self, query):
-        """ k unused """
-        model = self.model
+    def query(self, query, k=None):
+        model, matching = self.model, self._matching
+        nn, analyze = self._neighbors, self.analyzer
         verbose = self.verbose
-        indices = self._matching(query)
-        # docs, labels = self._X[indices], self._y[indices]
-        labels = self._y[indices]
+        if k is None:
+            k = len(self._centroids)
+        if matching:
+            matched = matching.predict(query)
+            dvs, labels = self.model.docvecs[matched], self._y[matched]
+            n_ret = min(k, len(matched))
+            nn.fit(dvs)
+        else:
+            labels = self._y
+            n_ret = k
+            # NearestNeighbors are already fit
+
         if verbose > 0:
             print(len(labels), "documents matched.")
-        q = self.analyzer(query)
+        q = analyze(query)
         qv = model.infer_vector(q).reshape(1, -1)
-        # similarities = [model.docvecs.similarity(model.docvecs[d],qv) for d in iter(labels)]
-        similarities = []
-        for d in labels:
-            dv = model.docvecs[d].reshape(1, -1)
-            # sim = model.similarity(qv, dv)
-            sim = cosine_similarity(qv, dv)[0]
-            similarities.append(sim)
-
-        similarities = np.asarray(similarities).reshape(1, -1)
-        # similarities = [model.similarity(d, model.infer_vector(q)) for d in
-        #                 docs]
-        ind = np.argsort(similarities)[::-1]  # REVERSE! we want similar ones
+        ind = nn.kneighbors(qv, n_neighbors=n_ret, return_distance=False)[0]
         y = labels[ind]
-        return y[0]
+        return y

@@ -15,7 +15,6 @@ from abc import abstractmethod, ABC
 from collections import defaultdict
 from .thesaurus_reader import ThesaurusReader
 from .base import harvest
-import pprint
 import csv
 
 # NTCIR_ROOT_PATH = # think about this
@@ -84,7 +83,8 @@ def _first_preflabel(node):
 
 def synthesize_topics(gold, thesaurus, accessor=_first_preflabel):
     """ Returns a list of (query_id, querystring) pairs"""
-    topics = [(label, accessor(thesaurus[label])) for label in set(gold.keys())]
+    topics = [(label, accessor(thesaurus[label])) for label in
+              set(gold.keys())]
     return topics
 
 
@@ -98,7 +98,6 @@ def harvest_docs(path, verify_integrity):
                 data[int(label)] = f.read()
         # fulltext documents
         docs = pd.DataFrame.from_dict(data, orient='index')
-        print(docs.columns)
         labels, docs = docs.index.values, docs.iloc[:, 0].values
 
     elif os.path.isfile(path):
@@ -108,7 +107,8 @@ def harvest_docs(path, verify_integrity):
 
     else:
         raise UserWarning("No symlinks allowed.")
-    print("labels of type {}, docs of type {}".format(labels.dtype, docs.dtype)) 
+    print("labels of type {}, docs of type {}".format(labels.dtype,
+                                                      docs.dtype))
 
     return labels, docs
 
@@ -134,7 +134,8 @@ class QuadflorLike(IRDataSetBase):
         if self.__docs is not None:
             return self.__docs
         path = self.doc_path
-        labels, docs = harvest_docs(path, verify_integrity=self.verify_integrity)
+        labels, docs = harvest_docs(path,
+                                    verify_integrity=self.verify_integrity)
         self.__docs = docs
         return labels, docs
 
@@ -150,7 +151,8 @@ class QuadflorLike(IRDataSetBase):
 
     @property
     def topics(self):
-        """ Synthesizes the topics for the dataset, rels will be computed first."""
+        """ Synthesizes the topics for the dataset, rels will be computed
+        first."""
         if self.__topics is not None:
             return self.__topics
         rels, thesaurus = self.rels, self.thesaurus_reader.thesaurus
