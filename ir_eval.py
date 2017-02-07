@@ -21,8 +21,8 @@ import numpy as np
 import pandas as pd
 import yaml
 import matplotlib
+matplotlib.use('Agg')  # compat on non-gui uis, must be set before pyplot
 import matplotlib.pyplot as plt
-matplotlib.use('Agg')  # compat on non-gui uis
 # import matplotlib.patches as mpatches
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
@@ -304,7 +304,7 @@ def main():
 
     print("Selecting data set: {}".format(args.dataset))
     dataset = init_dataset(config['data'][args.dataset])
-    print("Loading Data...", end="")
+    print("Loading Data...")
     documents, labels, queries, rels = dataset.load(verbose=args.verbose)
     print("Done")
 
