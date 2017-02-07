@@ -208,6 +208,9 @@ def _ir_eval_parser(config):
     matching_options.add_argument("-S", "--dont-stop", dest='stop_words',
                                   default=True, action='store_true',
                                   help="Do NOT use stopwords")
+    matching_options.add_argument("-M", "--no-matching", dest='matching', 
+                                  default=True, action='store_false',
+                                  help="Do NOT apply matching operation.")
 
     parser.add_argument("-u", "--train", default=False, action='store_true',
                         help="Train a whole new word2vec model")
