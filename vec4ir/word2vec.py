@@ -78,13 +78,19 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
     oov    - token to use for out of vocabulary words
     vocab_analyzer - analyzer to use to prepare for vocabulary filtering
     try_lowercase - try to match with an uncased word if cased failed
-    >>> docs = ["the quick", "brown fox", "jumps over", "the lazy dog", "This is a document about coookies and cream and fox and dog", "The master thesis on the information retrieval task"]
+    >>> docs = ["the quick",\
+    "brown fox",\
+    "jumps over",\
+    "the lazy dog",\
+    "This is a document about coookies and cream and fox and dog",\
+    "The master thesis on the information retrieval task"]
     >>> sentences = StringSentence(docs)
     >>> from gensim.models import Word2Vec
     >>> model = Word2Vec(sentences, min_count=1)
     >>> word2vec = Word2VecRetrieval(model)
     >>> _ = word2vec.fit(docs)
-    >>> values = word2vec.evaluate([(0,"fox"), (1,"dog")], [[0,1,0,0,1,0],[0,0,0,1,1,0]])
+    >>> values = word2vec.evaluate([(0,"fox"),\
+    (1,"dog")], [[0,1,0,0,1,0],[0,0,0,1,1,0]])
     >>> values['mean_average_precision']
     1.0
     >>> values['mean_reciprocal_rank']
@@ -173,8 +179,6 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
         docs, labels = self._X[indices], self._y[indices]
         if verbose > 0:
             print(len(docs), "documents matched.")
-
-        n_ret = max(k, len(docs))
 
         # if self.wmd:
         #     if self.wmd is True: wmd = k
@@ -273,8 +277,8 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
             self._matching = Matching(**dict(matching))
 
     def _compute_centroid(self, words):
-        if len(words) == 0:
-            return self._embedding[self._oov]  # no words left at all??!!? could also return zeros
+        if len(words) == 0:  # no words left at all? could also return zeros
+            return self._embedding[self._oov]
         E = self._embedding
         embedded_words = np.vstack([E[word] for word in words])
         centroid = np.mean(embedded_words, axis=0).reshape(1, -1)
@@ -287,7 +291,8 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         # out of vocabulary words do not have to contribute to the centroid
 
         filtered_docs = (filter_vocab(E, d) for d in analyzed_docs)
-        centroids = np.vstack([self._compute_centroid(doc) for doc in filtered_docs])  # can we generate?
+        centroids = np.vstack([self._compute_centroid(doc) for doc in
+                               filtered_docs])  # can we generate?
         if self.verbose > 0:
             print("Centroids shape:", centroids.shape)
         if self._normalize:
@@ -304,7 +309,7 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
             self._neighbors.fit(centroids)
         return self
 
-    def query(self, query, k=None):
+    def query(self, query, k=None, return_distance=False):
         if k is None:
             k = len(self._centroids)
         E, analyze, nn = self._embedding, self._analyzer, self._neighbors
@@ -312,10 +317,10 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         words = filter_vocab(E, tokens, self._oov)
         query_centroid = self._compute_centroid(words)
         if self._normalize:
-            normalize(query_centroid, norm='l2', copy=False)
+            query_centroid = normalize(query_centroid, norm='l2', copy=False)
         if self.verbose > 0:
             print("Analyzed query", words)
-            # print("Centered ( normalized ) query shape", query_centroid.shape)
+            # print("Centered (normalized) query shape", query_centroid.shape)
 
         if self._matching:
             matched = self._matching.predict(query)
@@ -330,16 +335,47 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
             n_ret = k
 
         # either fit nn on the fly or precomputed in own fit method
-        pred = nn.kneighbors(query_centroid, n_neighbors=n_ret, return_distance=False)[0]
+        pred, dists = nn.kneighbors(query_centroid, n_neighbors=n_ret,
+                                    return_distance=True)[0]
 
-        return labels[pred]
+        if return_distance:
+            return labels[pred], dists
+        else:
+            return labels[pred]
 
 
-class WordMoversRetrieval(RetrievalBase, RetriEvalMixin):
+class WordMoversRetrieval(BaseEstimator, RetriEvalMixin):
     """Retrieval based on the Word Mover's Distance"""
-    def __init__(self, embedding, name="neoWMD", n_jobs=1, **kwargs):
+    def __init__(self, embedding, analyzer=None, oov=None, matching=None,
+                 name="ppwmd", n_jobs=1, **wcd_params):
         """initalize parameters"""
-        pass
+        self.wcd = WordCentroidRetrieval(embedding=embedding,
+                                         analyzer=analyzer, n_jobs=n_jobs,
+                                         normalize=True, metric="l2", oov=oov,
+                                         matching=matching)
+
+        self._analyzer = analyzer
+
+    def fit(self, X, y=None):
+        self.wcd.fit(X, y)
+        self._X = X
+        self._y = y
+        return self
+
+    def query(self, q, k=None):
+        query = self._analyzer(q)
+
+        labels, dists = self.wcd.query(q, k=None, return_distance=True)
+        # labels are sorted ascending by centroid distance
+
+        docs = self._X[labels_desc]
+
+        wmds = []
+        # <++TODO++>
+
+
+
+
 
 
 if __name__ == '__main__':

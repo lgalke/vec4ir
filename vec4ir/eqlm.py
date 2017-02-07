@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
-
+from sklearn.base import BaseEstimator
+from sklearn.feature_extraction.text import CountVectorizer
 try:
     from .base import RetrievalBase, RetriEvalMixin
     from .utils import argtopk
@@ -70,7 +71,10 @@ def expand(posterior, vocabulary, m=10):
 
 
 class EQLM(RetrievalBase, RetriEvalMixin):
-
+    """
+    Embedding-based Query Language models by Zamani and Croft 2016
+    http://maroo.cs.umass.edu/getpdf.php?id=1225
+    """
     def __init__(self,
                  retrieval_model,
                  embedding,
@@ -141,6 +145,29 @@ class EQLM(RetrievalBase, RetriEvalMixin):
 
         # employ retrieval model
         return self.retrieval_model.query(expanded_query)
+
+
+class EQE1(BaseEstimator):
+
+    """Embedding Based Query expansion"""
+
+    def __init__(self, embedding, analyzer, m=10):
+        """Initializes Embedding Based Query Expansion
+
+        :embedding: TODO
+        :analyzer: TODO
+        :m: TODO
+
+        """
+        BaseEstimator.__init__(self)
+
+        self._embedding = embedding
+        self._m = m
+        self._cv = CountVectorizer(analyzer=analyzer)
+
+    def fit(X):
+        pass
+
 
 if __name__ == "__main__":
     import doctest
