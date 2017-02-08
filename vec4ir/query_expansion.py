@@ -50,3 +50,21 @@ class EmbeddingBasedQueryLanguageModels(BaseEstimator, TransformerMixin):
         <++ZYOMG++>
 
 
+
+class CentroidExpansion(BaseEstimator):
+
+    def __init__(self, )
+        BaseEstimator.__init__(self, embedding, analyzer)
+        self._ev = EmbeddedVectorizer(embedding, analyzer=analyzer)
+
+
+    def fit(docs):
+        X_ = ev.fit_transform(raw_docs)
+        common_words = ev.inverse_transform(np.unique(X_.nonzero()))
+        X_ = np.vstack([E[word] for word in common_words])
+        pass
+
+
+
+    def transform(query):
+        pass

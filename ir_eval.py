@@ -5,7 +5,7 @@ from datetime import timedelta
 from vec4ir.datasets import NTCIR, QuadflorLike
 from argparse import ArgumentParser, FileType
 from vec4ir.base import TfidfRetrieval
-from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
+from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval, FastWordCentroidRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
@@ -27,7 +27,7 @@ matplotlib.use('Agg')  # compat on non-gui uis
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
-MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'swcd']
+MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'swcd', 'fwcd']
 
 
 def mean_std(array_like):
@@ -214,6 +214,8 @@ def _ir_eval_parser(config):
     return parser
 
 
+
+
 def init_dataset(data_config, default='quadflorlike'):
     """
     Given some dataset configuguration ("type" and **kwargs for the
@@ -393,6 +395,12 @@ def main():
                                     min_alpha=0.05,
                                     n_epochs=20,
                                     verbose=args.verbose),
+           "fwcd": FastWordCentroidRetrieval(embedding=embedding,
+                                             analyzer=embedding_analyzer,
+                                             matching=matching,
+                                             idf=True,
+                                             normalize=True,
+                                             n_jobs=args.jobs),
            "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
                         analyzer=embedding_analyzer, verbose=args.verbose)
            }
