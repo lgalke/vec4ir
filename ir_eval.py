@@ -392,6 +392,7 @@ def main():
                                     matching=matching,
                                     n_jobs=args.jobs,
                                     metric="cosine",
+                                    algorithm="brute",
                                     alpha=0.25,
                                     min_alpha=0.05,
                                     n_epochs=20,

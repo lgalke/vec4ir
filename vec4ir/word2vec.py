@@ -334,13 +334,15 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
             n_ret = k
 
         # either fit nn on the fly or precomputed in own fit method
-        pred, dists = nn.kneighbors(query_centroid, n_neighbors=n_ret,
-                                    return_distance=True)[0]
+        dist, ind = nn.kneighbors(query_centroid, n_neighbors=n_ret,
+                                    return_distance=True)
+
+        dist, ind = dist[0], ind[0]  # we only had one query in the first place
 
         if return_distance:
-            return labels[pred], dists
+            return labels[ind], dist
         else:
-            return labels[pred]
+            return labels[ind]
 
 
 class WordMoversRetrieval(BaseEstimator, RetriEvalMixin):

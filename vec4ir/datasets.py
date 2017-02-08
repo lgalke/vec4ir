@@ -358,7 +358,6 @@ class NTCIR(IRDataSetBase):
         path = os.path.join(self.root_path, "rels")
         path = os.path.join(path, "rel" + str(number) + "_ntc2-e2_0101-0149.nc")
         rels_df = NTCIR._read_rels(path, verify_integrity=verify_integrity)
-        print(rels_df)
         return rels_df['relevance']
 
     @property

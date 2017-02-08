@@ -23,8 +23,7 @@ class Doc2VecRetrieval(BaseEstimator, RetriEvalMixin):
         self.alpha = alpha
         self.min_alpha = min_alpha
         self.verbose = verbose
-        if name is None:
-            name = "paragraph-vectors"
+        self.name = "paragraph-vectors" if name is None else name
 
         if matching is True:
             self._matching = Matching()
@@ -51,7 +50,6 @@ class Doc2VecRetrieval(BaseEstimator, RetriEvalMixin):
         self._neighbors = NearestNeighbors(**kwargs)
 
     def fit(self, docs, y):
-        self._fit(docs, y)
         assert len(docs) == len(y)
         model = self.model
         n_epochs = self.n_epochs
@@ -78,7 +76,6 @@ class Doc2VecRetrieval(BaseEstimator, RetriEvalMixin):
         if verbose > 0:
             print("Finished.")
             print("model:", self.model)
-            print("Shape of docvecs", model.docvecs.shape)
 
         if self._matching:
             self._matching.fit(docs)
