@@ -103,7 +103,6 @@ class CentroidEmbedder(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
 
-
     def transform(self, X, y=None):
         """
         X is a BOW-like representation of documents, with
@@ -121,4 +120,5 @@ class CentroidEmbedder(BaseEstimator, TransformerMixin):
             centroids[row] += ((val * syn0[col] - centroids[row]) / N[row])
 
         # BOOM
+        print(centroids.shape)
         return centroids

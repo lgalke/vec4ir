@@ -337,7 +337,7 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
         # either fit nn on the fly or precomputed in own fit method
         dist, ind = nn.kneighbors(query_centroid, n_neighbors=n_ret,
-                                    return_distance=True)
+                                  return_distance=True)
 
         dist, ind = dist[0], ind[0]  # we only had one query in the first place
 
@@ -363,7 +363,7 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
             steps += [TfidfTransformer()]
         steps += [CentroidEmbedder(syn0=embedding.syn0)]
         if normalize:
-            steps += [Normalizer(copy=False)]
+            steps += [Normalizer()]
 
         print(*steps, sep='\n')
         self.pipe = make_pipeline(*steps)
@@ -400,10 +400,6 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
                                  return_distance=False)[0]
 
         return labels[ind]
-
-
-
-
 
 
 class WordMoversRetrieval(BaseEstimator, RetriEvalMixin):
