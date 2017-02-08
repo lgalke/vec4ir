@@ -386,11 +386,13 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         if self.matching:
             ind = self.matching.predict(query)
             centroids, labels = self.centroids[ind], self._y[ind]
+            if len(centroids) == 0:
+                return []
             self.nn.fit(centroids)
-            n_ret = k
+            n_ret = min(k, len(centroids))
         else:
             centroids, labels = self.centroids, self._y
-            n_ret = min(k, len(centroids))
+            n_ret = k
 
         q_centroid = self.pipe.transform(query)
 
