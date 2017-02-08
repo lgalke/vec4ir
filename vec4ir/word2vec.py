@@ -8,9 +8,10 @@ Github: https://github.com/lgalke
 Description: Embedding-based retrieval techniques.
 """
 from sklearn.base import BaseEstimator
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import normalize
+from sklearn.preprocessing import normalize, Normalizer
+from sklearn.pipline import Pipeline, make_pipeline
 # from scipy.spatial.distance import cosine
 import numpy as np
 
@@ -19,6 +20,7 @@ try:
     # from .utils import argtopk
     from .utils import filter_vocab, argtopk
     from .combination import CombinatorMixin
+    from core import CentroidEmbedder
 except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixin, Matching
     from combination import CombinatorMixin
@@ -343,6 +345,59 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
             return labels[ind], dist
         else:
             return labels[ind]
+
+
+class FastWordCentroidRetrieval(BaseEstimator):
+
+    """Docstring for FastWordCentrodRetrieval. """
+
+    def __init__(self, embedding, analyzer='word', matching=None, idf=True,
+                 normalize=True,
+                 n_jobs=1):
+        """TODO: to be defined1. """
+        self.matching = matching(**dict(matching)) if matching else None
+        steps = [CountVectorizer(vocabulary=embedding.index2word,
+                                 analyzer=analyzer)]
+        if idf:
+            steps += [TfidfTransformer()]
+        steps += [CentroidEmbedder(syn0=embedding.syn0)]
+        if normalize:
+            steps += [Normalizer(copy=False)]
+        self.nn = NearestNeighbors(n_jobs=n_jobs)
+        self.pipe = make_pipeline(steps)
+
+    def fit(self, X, y):
+        self.centroids = self.pipe.fit_transform(X)
+
+        self._y = y
+        if self.matching:
+            self.matching.fit(X)
+        else:
+            self.nn.fit(X)
+
+    def query(self, query, k=None):
+        if k is None:
+            k = len(self.centroids)
+
+        if self.matching:
+            ind = self.matching.predict(query)
+            centroids, labels = self.centroids[ind], self._y[ind]
+            n_ret = k
+        else:
+            centroids, labels = self.centroids, self._y
+            self.nn.fit(centroids)
+            n_ret = min(k, len(centroids))
+
+        q_centroid = self.pipe.transform(query)
+
+        ind = self.nn.kneighbors(q_centroid, n_neighbors=n_ret,
+                                 return_distance=False)[0]
+
+        return labels[ind]
+
+
+
+
 
 
 class WordMoversRetrieval(BaseEstimator, RetriEvalMixin):
