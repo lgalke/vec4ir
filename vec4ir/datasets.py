@@ -8,11 +8,13 @@ Description: Parsing and loading for all the data sets.
 """
 
 import pandas as pd
+import numpy as np
 import os
 from html.parser import HTMLParser
 from abc import abstractmethod, ABC
 from collections import defaultdict
 from .thesaurus_reader import ThesaurusReader
+from .base import harvest
 import csv
 
 # NTCIR_ROOT_PATH = # think about this
@@ -54,8 +56,8 @@ class IRDataSetBase(ABC):
 
         rels = self.rels
         if verbose:
-            n_rels = sum(len(rels[qid]) for qid, _querystring in queries)
-            print("{:2f}".format(n_rels / n_queries))
+            n_rels = np.asarray([len([r for r in harvest(rels, qid) if r > 0]) for qid, __ in queries])
+            print("{:2f} ({:2f}) relevant documents per query.".format(n_rels.mean(), n_rels.std()))
 
         return docs, labels, queries, rels
 
@@ -356,6 +358,7 @@ class NTCIR(IRDataSetBase):
         path = os.path.join(self.root_path, "rels")
         path = os.path.join(path, "rel" + str(number) + "_ntc2-e2_0101-0149.nc")
         rels_df = NTCIR._read_rels(path, verify_integrity=verify_integrity)
+        print(rels_df)
         return rels_df['relevance']
 
     @property
