@@ -11,7 +11,7 @@ from sklearn.base import BaseEstimator
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import normalize, Normalizer
-from sklearn.pipline import Pipeline, make_pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
 # from scipy.spatial.distance import cosine
 import numpy as np
 
@@ -20,7 +20,7 @@ try:
     # from .utils import argtopk
     from .utils import filter_vocab, argtopk
     from .combination import CombinatorMixin
-    from core import CentroidEmbedder
+    from .core import CentroidEmbedder
 except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixin, Matching
     from combination import CombinatorMixin
@@ -347,15 +347,16 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
             return labels[ind]
 
 
-class FastWordCentroidRetrieval(BaseEstimator):
+class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
     """Docstring for FastWordCentrodRetrieval. """
 
     def __init__(self, embedding, analyzer='word', matching=None, idf=True,
-                 normalize=True,
+                 normalize=True, name="FWCD",
                  n_jobs=1):
         """TODO: to be defined1. """
-        self.matching = matching(**dict(matching)) if matching else None
+        self.name = "FWCD"
+        self.matching = Matching(**dict(matching)) if matching else None
         steps = [CountVectorizer(vocabulary=embedding.index2word,
                                  analyzer=analyzer)]
         if idf:
@@ -363,8 +364,11 @@ class FastWordCentroidRetrieval(BaseEstimator):
         steps += [CentroidEmbedder(syn0=embedding.syn0)]
         if normalize:
             steps += [Normalizer(copy=False)]
+
+        print(*steps, sep='\n')
+        self.pipe = make_pipeline(*steps)
+
         self.nn = NearestNeighbors(n_jobs=n_jobs)
-        self.pipe = make_pipeline(steps)
 
     def fit(self, X, y):
         self.centroids = self.pipe.fit_transform(X)
@@ -382,10 +386,10 @@ class FastWordCentroidRetrieval(BaseEstimator):
         if self.matching:
             ind = self.matching.predict(query)
             centroids, labels = self.centroids[ind], self._y[ind]
+            self.nn.fit(centroids)
             n_ret = k
         else:
             centroids, labels = self.centroids, self._y
-            self.nn.fit(centroids)
             n_ret = min(k, len(centroids))
 
         q_centroid = self.pipe.transform(query)

@@ -1,7 +1,7 @@
 embeddings:
     glove:
         path: "/data3/lgalke/glove.gnsm"
-        oov_token: "."  # wild guess
+        oov_token: "<unk>"  # wild guess
         analyzer:
             lowercase: False
             tokenizer: "nltk"

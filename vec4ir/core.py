@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from sklearn.base import BaseEstimator, UnsupervisedMixin
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 import scipy.sparse as sp
@@ -90,7 +90,7 @@ class EmbeddedVectorizer(CountVectorizer):
         super().transform(raw_documents)
 
 
-class CentroidEmbedder(BaseEstimator, UnsupervisedMixin):
+class CentroidEmbedder(BaseEstimator, TransformerMixin):
 
     """ Embeds a BOW-Representation of Documents as the respective centroid of
     the word vectors
@@ -100,17 +100,22 @@ class CentroidEmbedder(BaseEstimator, UnsupervisedMixin):
         BaseEstimator.__init__(self)
         self.syn0 = syn0
 
+    def fit(self, X, y=None):
+        return self
+
+
     def transform(self, X, y=None):
         """
         X is a BOW-like representation of documents, with
         X[:,i] = wv.index2word[i].  This can be achieved by passing
         vocabulary=wv.index2word to your {count,tfidf}vectorizer
         """
-        syn0 = self.embedding.syn0
+        syn0 = self.syn0
         n_samples, n_dimensions, dtype = X.shape[0], syn0.shape[1], syn0.dtype
         centroids = np.zeros((n_samples, n_dimensions), dtype=dtype)
         N = np.zeros(n_samples, dtype=np.int64)
-        for row, col, val in sp.find(X):
+        rows, cols, values = sp.find(X)
+        for (row, col, val) in zip(rows, cols, values):
             # cumulative moving average
             N[row] += 1
             centroids[row] += ((val * syn0[col] - centroids[row]) / N[row])

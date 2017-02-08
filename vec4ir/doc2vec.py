@@ -96,6 +96,7 @@ class Doc2VecRetrieval(BaseEstimator, RetriEvalMixin):
             k = len(self._centroids)
         if matching:
             matched = matching.predict(query)
+            print("Matched:", matched)
             dvs, labels = self.model.docvecs[matched], self._y[matched]
             n_ret = min(k, len(matched))
             nn.fit(dvs)
