@@ -2,7 +2,10 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from .utils import filter_vocab
 from .core import EmbeddedVectorizer
 from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.neighbors import NearestNeighbors
 from scipy.special import expit
+import scipy.sparse as sp
 import numpy as np
 
 
@@ -47,24 +50,53 @@ class EmbeddingBasedQueryLanguageModels(BaseEstimator, TransformerMixin):
         """ Transorms a query into an expanded version of the query.
         """
         X_q = ev.transform(query)  # index 0?
-        <++ZYOMG++>
-
+        # <++ZYOMG++>
 
 
 class CentroidExpansion(BaseEstimator):
 
-    def __init__(self, )
+    def __init__(self, embedding, analyzer, m=10, verbose=0,
+                 **neighbor_params):
         BaseEstimator.__init__(self, embedding, analyzer)
-        self._ev = EmbeddedVectorizer(embedding, analyzer=analyzer)
+        self.embedding = embedding
+        self.analyzer = analyzer
+        self.m = m
+        self.neighbors = NearestNeighbors(n_neighbors=m, **neighbor_params)
+        self.vocabulary = None
 
+    def fit(self, docs):
+        index2word = self.embedding.index2word
+        syn0 = self.embedding.syn0
 
-    def fit(docs):
-        X_ = ev.fit_transform(raw_docs)
-        common_words = ev.inverse_transform(np.unique(X_.nonzero()))
-        X_ = np.vstack([E[word] for word in common_words])
-        pass
+        # find unique words
+        cv = CountVectorizer(analyzer=self.analyzer,
+                             vocabulary=index2word)
+        X_tmp = cv.fit(docs)
+        __, cols, __ = sp.find(X_tmp)
+        common = np.unique(cols)
 
+        # reduce vocabulary and vectors
+        common_words = index2word[common]
+        common_vectors = syn0[common]
 
+        # fit nearest neighbors with vectors
+        self.vocabulary = common_words
+        self.neighbors.fit(common_vectors)
 
-    def transform(query):
-        pass
+        return self
+
+    def transform(self, query):
+        E, analyzed = self.embedding, self.analyzer
+
+        tokens = (analyzed(word) for word in query)
+        vectors = [E[token] for token in tokens]
+        centroid = np.sum(vectors, axis=0)  # does this work
+
+        exp = self.neighbors.kneighbors([centroid], return_distance=False)[0]
+
+        expanded_query = ' '.join(query, *exp)
+
+        return expanded_query
+
+    def fit_transform(self, X, y):
+        raise NotImplemented('fit_transform does not make sense for expansion')
