@@ -5,7 +5,7 @@ from datetime import timedelta
 from vec4ir.datasets import NTCIR, QuadflorLike
 from argparse import ArgumentParser, FileType
 from vec4ir.base import TfidfRetrieval
-from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval, FastWordCentroidRetrieval
+from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval, FastWordCentroidRetrieval, WordMoversRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
-MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'swcd', 'fwcd']
+MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'swcd', 'fwcd', 'ppwmd']
 
 
 def mean_std(array_like):
@@ -192,7 +192,7 @@ def _ir_eval_parser(config):
                                   help="Case sensitive analysis")
     matching_options.add_argument("-T",
                                   "--tokenizer",
-                                  default='sword',
+                                  default='sklearn',
                                   type=str,
                                   help=("Specify tokenizer for the matching"
                                         "operation" "defaults to 'sword'"
@@ -206,7 +206,7 @@ def _ir_eval_parser(config):
                                         "glove models)"),
                                   choices=['sklearn', 'sword', 'nltk'])
     matching_options.add_argument("-S", "--dont-stop", dest='stop_words',
-                                  default=True, action='store_true',
+                                  default=True, action='store_false',
                                   help="Do NOT use stopwords")
     matching_options.add_argument("-M", "--no-matching", dest='matching',
                                   default=True, action='store_false',
@@ -215,8 +215,6 @@ def _ir_eval_parser(config):
     parser.add_argument("-u", "--train", default=False, action='store_true',
                         help="Train a whole new word2vec model")
     return parser
-
-
 
 
 def init_dataset(data_config, default='quadflorlike'):
@@ -298,14 +296,6 @@ def main():
         import doctest
         doctest.testmod()
         exit(int(0))
-
-    # load concrete data (old way)
-    # dsc = config['data'][args.dataset]
-    # dsc['verify_integrity'] = config.pop('verify_integrity', False)
-    # loader = {'econ62k' : load_econ62k,
-    #           'ntcir2' : load_ntcir2}[args.dataset]
-
-    # documents, labels, queries, rels = loader(dsc)
 
     print("Selecting data set: {}".format(args.dataset))
     dataset = init_dataset(config['data'][args.dataset])
@@ -405,6 +395,13 @@ def main():
                                              idf=True,
                                              normalize=True,
                                              n_jobs=args.jobs),
+           "ppwmd": WordMoversRetrieval(embedding=embedding,
+                                        analyzer=embedding_analyzer,
+                                        matching_params=matching,
+                                        oov=embedding_oov_token,
+                                        verbose=args.verbose,
+                                        n_jobs=args.jobs),
+
            "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
                         analyzer=embedding_analyzer, verbose=args.verbose)
            }

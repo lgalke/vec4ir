@@ -272,7 +272,7 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
         if matching is True:
             self._matching = Matching()
-        elif matching is False:
+        elif matching is False or matching is None:
             self._matching = None
         else:
             self._matching = Matching(**dict(matching))
@@ -372,6 +372,7 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
     def fit(self, X, y):
         self.centroids = self.pipe.fit_transform(X)
+        print(' FIT centroids shape', self.centroids.shape)
 
         self._y = y
         if self.matching:
@@ -404,36 +405,48 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
 class WordMoversRetrieval(BaseEstimator, RetriEvalMixin):
     """Retrieval based on the Word Mover's Distance"""
-    def __init__(self, embedding, analyzer=None, oov=None, matching=None,
-                 name="ppwmd", n_jobs=1, **wcd_params):
+    def __init__(self, embedding, analyzer=None, oov=None,
+                 matching_params=None,
+                 name="ppwmd", verbose=0, n_jobs=1):
         """initalize parameters"""
-        self.wcd = WordCentroidRetrieval(embedding=embedding,
-                                         analyzer=analyzer, n_jobs=n_jobs,
-                                         normalize=True, metric="l2", oov=oov,
-                                         matching=matching)
+        self.embedding = embedding
+        self.analyzer = analyzer
+        self.oov = oov
+        self.matching = (Matching(**dict(matching_params)) if matching_params
+                         else None)
+        self.verbose = verbose
+        self.name = name
 
-        self._analyzer = analyzer
-
-    def fit(self, X, y=None):
-        self.wcd.fit(X, y)
-        self._X = X
-        self._y = y
+    def fit(self, raw_docs, y=None):
+        if self.matching:
+            self.matching.fit(raw_docs, y)
+        analyzed_docs = (self.analyzer(doc) for doc in raw_docs)
+        X_ = [filter_vocab(self.embedding, d, oov=self.oov) for d in
+              analyzed_docs]
+        self._X = np.asarray(X_)
+        self._y = np.asarray(y)
         return self
 
-    def query(self, q, k=None):
-        query = self._analyzer(q)
+    def query(self, query, k=None):
+        k = k if k is not None else len(self._X)
+        E, analyzed = self.embedding, self.analyzer
+        if self.matching:
+            ind = self.matching.predict(query)
+            docs, labels = self._X[ind], self._y[ind]
+        else:
+            docs, labels = self._X, self._y
 
-        labels, dists = self.wcd.query(q, k=None, return_distance=True)
-        # labels are sorted ascending by centroid distance
+        q = filter_vocab(E, analyzed(query), oov=self.oov)
 
-        docs = self._X[labels_desc]
+        if self.verbose:
+            print('Analyed query: %s' % q)
+            print('Computing wm distance for %d documents' % len(docs))
 
-        wmds = []
-        # <++TODO++>
+        wm_dists = [E.wmdistance(q, doc) for doc in docs]
 
+        topk = np.argsort(wm_dists)[:k]
 
-
-
+        return labels[topk]
 
 
 if __name__ == '__main__':

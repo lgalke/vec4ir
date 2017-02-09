@@ -313,10 +313,12 @@ class RetriEvalMixin():
 
     def evaluate(self, X, Y, k=20, verbose=0, replacement=0):
         """
-        X : [(qid, str)] query id, query string pairs
-        Y : pandas dataseries with qid,docid index or [dict]
+        :X: [(qid, str)] query id, query string pairs
+        :Y: pandas dataseries with qid,docid index or [dict]
+        :k: Limit the result for all metrics to this value, the models are also given a hint of how many they should return.
+        :replacement: 0 means that (query, doc) pairs not prevalent in Y will not be considered relevant, None means that those are not considered (skipped).
         """
-        rs = []
+        # rs = []
         values = defaultdict(list)
         for qid, query in X:
             # execute query
@@ -332,51 +334,66 @@ class RetriEvalMixin():
             # soak the generator
             scored_result = [harvest(Y, qid, docid, replacement)
                              for docid in result]
-            if verbose > 0:
-                print(scored_result[:k])
             if replacement is None:
                 scored_result, notfound = filterNone(scored_result)
                 values["gold_not_found"].append(notfound)
 
+            if k is not None:
+                # dont let the models cheat by returning more than k
+                r = scored_result[:k]
+            else:
+                # if k is None, consider all
+                r = scored_result
+
+            # if verbose > 0:
+            #     print(r)
+
             gold = harvest(Y, qid)
             # print(gold[:k])
             R = np.count_nonzero(gold)
+            if verbose > 0:
+                print("Retrieved {} relevant out of {} possible."
+                      .format(np.count_nonzero(r), R))
 
             # real ndcg
             idcg = rm.dcg_at_k(gold, k)
             ndcg = rm.dcg_at_k(scored_result, k) / idcg
             values["ndcg"].append(ndcg)
+            # Verified
 
-            # MAP - consider at maximum k
-            values["MAP"].append(rm.average_precision(scored_result[:k]))
+            # MAP@k
+            ap = rm.average_precision(r)
+            values["MAP"].append(ap)
 
             # MRR - compute by hand
-            ind = np.asarray(scored_result[:k]).nonzero()[0]
+            ind = np.asarray(r).nonzero()[0]
             mrr = (1. / (ind[0] + 1)) if ind.size else 0.
             values["MRR"].append(mrr)
 
             # R precision
-            R = max(R, k)
-            recall = rm.precision_at_k(pad(scored_result, R), R)
+            R = max(R, k)  # ok lets be fair.. you cant get more than k
+            recall = rm.recall(r, R)
             values["recall"].append(recall)
 
-            precision = rm.precision_at_k(pad(scored_result, k), k)
+            # precision = rm.precision_at_k(pad(scored_result, k), k)
+            precision = rm.precision(r)
             values["precision"].append(precision)
 
             f1 = f1_score(precision, recall)
             values["f1_score"].append(f1)
 
-            p_at_5 = rm.precision_at_k(pad(scored_result, 5), 5)
+            p_at_5 = rm.precision_at_k(pad(r, 5), 5)
             values["precision@5"].append(p_at_5)
 
-            p_at_10 = rm.precision_at_k(pad(scored_result, 10), 10)
+            p_at_10 = rm.precision_at_k(pad(r, 10), 10)
             values["precision@10"].append(p_at_10)
 
-            rs.append(scored_result)
+            # rs.append(r)
             if verbose > 0:
                 print("Precision: {:.4f}".format(precision))
                 print("Recall: {:.4f}".format(recall))
                 print("F1-Score: {:.4f}".format(f1))
+                print("AP: {:.4f}".format(ap))
 
         return values
 
