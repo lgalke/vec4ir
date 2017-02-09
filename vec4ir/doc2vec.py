@@ -27,7 +27,7 @@ class Doc2VecRetrieval(BaseEstimator, RetriEvalMixin):
 
         if matching is True:
             self._matching = Matching()
-        elif matching is False:
+        elif matching is False or matching is None:
             self._matching = None
         else:
             self._matching = Matching(**dict(matching))

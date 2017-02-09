@@ -99,6 +99,7 @@ class CentroidEmbedder(BaseEstimator, TransformerMixin):
         """TODO: to be defined1. """
         BaseEstimator.__init__(self)
         self.syn0 = syn0
+        print('syn0 of shape', syn0.shape)
 
     def fit(self, X, y=None):
         return self
@@ -112,13 +113,13 @@ class CentroidEmbedder(BaseEstimator, TransformerMixin):
         syn0 = self.syn0
         n_samples, n_dimensions, dtype = X.shape[0], syn0.shape[1], syn0.dtype
         centroids = np.zeros((n_samples, n_dimensions), dtype=dtype)
-        N = np.zeros(n_samples, dtype=np.int64)
+        # N = np.zeros(n_samples, dtype=np.int64)
         rows, cols, values = sp.find(X)
         for (row, col, val) in zip(rows, cols, values):
             # cumulative moving average
-            N[row] += 1
-            centroids[row] += ((val * syn0[col] - centroids[row]) / N[row])
-
+            # N[row] += 1
+            # centroids[row] += ((val * syn0[col] - centroids[row]) / N[row])
+            centroids[row] += val * syn0[col]
         # BOOM
-        print(centroids.shape)
+        print('centroids shape', centroids.shape)
         return centroids

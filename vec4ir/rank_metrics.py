@@ -238,6 +238,23 @@ def ndcg_at_k(r, k, method=0):
     return dcg_at_k(r, k, method) / dcg_max
 
 
+# Modifications by lgalke BEGIN
+def recall(r, R):
+    """ Recall with R relevant items, Relevance is binary """
+    assert R >= 1
+    relevant_and_retrieved = np.count_nonzero(r)
+    return relevant_and_retrieved / R
+
+
+def precision(r):
+    """ Relevance is binary """
+    r = np.asarray(r)
+    if r.size == 0:
+        return 0
+    tp = np.count_nonzero(r)
+    return tp / r.size
+
+# Modifications by lgalke END
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
