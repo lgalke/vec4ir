@@ -7,6 +7,7 @@ except SystemError:
 from gensim.models.doc2vec import TaggedDocument
 from sklearn.base import BaseEstimator
 from sklearn.neighbors import NearestNeighbors
+import numpy as np
 
 
 class Doc2VecRetrieval(BaseEstimator, RetriEvalMixin):
@@ -82,7 +83,8 @@ class Doc2VecRetrieval(BaseEstimator, RetriEvalMixin):
         else:
             # if we dont do matching, its enough to fit a nearest neighbors on
             # all centroids before query time
-            self._neighbors.fit(model.docvecs)
+            dvs = np.asarray([model.docvecs[tag] for tag in y])
+            self._neighbors.fit(dvs)
 
         self._y = y
 
@@ -97,18 +99,21 @@ class Doc2VecRetrieval(BaseEstimator, RetriEvalMixin):
         if matching:
             matched = matching.predict(query)
             print("Matched:", matched)
-            dvs, labels = self.model.docvecs[matched], self._y[matched]
+            tags = self._y[matched]
+            dvs = np.asarray([model.docvecs[tag] for tag in tags])
             n_ret = min(k, len(matched))
+            if n_ret == 0:
+                return []
             nn.fit(dvs)
         else:
-            labels = self._y
+            tags = self._y
             n_ret = k
             # NearestNeighbors are already fit
 
         if verbose > 0:
-            print(len(labels), "documents matched.")
+            print(len(tags), "documents matched.")
         q = analyze(query)
         qv = model.infer_vector(q).reshape(1, -1)
         ind = nn.kneighbors(qv, n_neighbors=n_ret, return_distance=False)[0]
-        y = labels[ind]
+        y = tags[ind]
         return y
