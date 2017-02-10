@@ -371,7 +371,7 @@ class RetriEvalMixin():
             values["MRR"].append(mrr)
 
             # R precision
-            R = max(R, k)  # ok lets be fair.. you cant get more than k
+            R = min(R, k)  # ok lets be fair.. you cant get more than k
             recall = rm.recall(r, R)
             values["recall"].append(recall)
 
