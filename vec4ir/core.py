@@ -79,15 +79,29 @@ class EmbeddedVectorizer(CountVectorizer):
 
     """Embedding-aware vectorizer"""
 
-    def __init__(self, embedding, **kwargs):
+    def __init__(self, embedding, aggregation='sum', **kwargs):
         """TODO: to be defined1. """
         # list of words in the embedding
         vocabulary = embedding.index2word
         self.embedding = embedding
+        print("Embedding shape:", embedding.syn0.shape)
         CountVectorizer.__init__(self, vocabulary=vocabulary, **kwargs)
 
-    def transform(raw_documents):
-        super().transform(raw_documents)
+    def fit(self, raw_docs, y=None):
+        return super().fit(raw_docs)
+
+    def transform(self, raw_documents, y=None):
+        Xt = super().transform(raw_documents)
+        assert len(self.embedding.index2word) == len(self.vocabulary_)
+        # Xt is sparse counts
+        E = self.embedding
+        n_samples, n_dimensions = Xt.shape[0], E.syn0.shape[1]
+        dtype = E.syn0.dtype
+        centroids = np.zeros((n_samples, n_dimensions), dtype=dtype)
+        for (row, col, val) in zip(*sp.find(Xt)):
+            centroids[row, :] += (val * E.syn0[col, :])
+
+        return centroids
 
 
 class CentroidEmbedder(BaseEstimator, TransformerMixin):
