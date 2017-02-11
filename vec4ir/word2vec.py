@@ -291,7 +291,7 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         analyzed_docs = (analyze(doc) for doc in docs)
         # out of vocabulary words do not have to contribute to the centroid
 
-        filtered_docs = (filter_vocab(E, d) for d in analyzed_docs)
+        filtered_docs = (filter_vocab(E, d, self._oov) for d in analyzed_docs)
         centroids = np.vstack([self._compute_centroid(doc) for doc in
                                filtered_docs])  # can we generate?
         if self.verbose > 0:

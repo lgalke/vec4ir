@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
-MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'swcd', 'fwcd', 'ppwmd']
+MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'swcd', 'nwcd', 'fwcd', 'ppwmd']
 
 
 def mean_std(array_like):
@@ -323,10 +323,10 @@ def main():
         exit(0)
     embedding_oov_token = embedding_config["oov_token"]
 
-    # Set up matching analyzer
-    matching_analyzer = build_analyzer(tokenizer=args.tokenizer,
-                                       stop_words=args.stop_words,
-                                       lowercase=args.lowercase)
+    # Set up matching analyzer                                      Defaults
+    matching_analyzer = build_analyzer(tokenizer=args.tokenizer,    # sklearn
+                                       stop_words=args.stop_words,  # true
+                                       lowercase=args.lowercase)    # true
 
     focus = [f.lower() for f in args.focus] if args.focus else None
     repl = {"drop": None, "zero": 0}[args.repstrat]
@@ -369,6 +369,15 @@ def main():
            "swcd": WordCentroidRetrieval(embedding, name="SWCD",
                                          matching=matching,
                                          analyzer=embedding_analyzer,
+                                         oov=embedding_oov_token,
+                                         verbose=args.verbose,
+                                         normalize=False,
+                                         algorithm='brute',
+                                         metric='cosine',
+                                         n_jobs=args.jobs),
+           "nwcd": WordCentroidRetrieval(embedding, name="naive WCD",
+                                         matching=matching,
+                                         analyzer=matching_analyzer,
                                          oov=embedding_oov_token,
                                          verbose=args.verbose,
                                          normalize=False,
