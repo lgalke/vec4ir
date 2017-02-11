@@ -20,7 +20,8 @@ try:
     # from .utils import argtopk
     from .utils import filter_vocab, argtopk
     from .combination import CombinatorMixin
-    from .core import CentroidEmbedder
+    from .core import CentroidEmbedder, EmbeddedVectorizer
+
 except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixin, Matching
     from combination import CombinatorMixin
@@ -357,18 +358,15 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         """TODO: to be defined1. """
         self.name = "FWCD"
         self.matching = Matching(**dict(matching)) if matching else None
-        steps = [CountVectorizer(vocabulary=embedding.index2word,
-                                 analyzer=analyzer)]
+        steps = [EmbeddedVectorizer(embedding, analyzer=analyzer)]
         if idf:
             steps += [TfidfTransformer()]
-        steps += [CentroidEmbedder(syn0=embedding.syn0)]
-        if normalize:
-            steps += [Normalizer()]
 
         print(*steps, sep='\n')
         self.pipe = make_pipeline(*steps)
 
-        self.nn = NearestNeighbors(n_jobs=n_jobs)
+        self.nn = NearestNeighbors(n_jobs=n_jobs, metric='cosine',
+                                   algorithm='brute')
 
     def fit(self, X, y):
         self.centroids = self.pipe.fit_transform(X)

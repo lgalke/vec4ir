@@ -321,7 +321,15 @@ def main():
                                **embedding_analyzer_config)
         print_dict(stats, header=header, stream=args.outfile)
         exit(0)
-    embedding_oov_token = embedding_config["oov_token"]
+
+    if embedding_config["oov_token"] is True:
+        def word_seeder(word):
+            return embedding.seeded_vector(word)
+        embedding_oov_token = word_seeder
+    elif embedding_oov_token["oov_token"] is False:
+        embedding_oov_token = None
+    else:
+        embedding_oov_token = embedding_config["oov_token"]
 
     # Set up matching analyzer                                      Defaults
     matching_analyzer = build_analyzer(tokenizer=args.tokenizer,    # sklearn
