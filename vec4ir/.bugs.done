@@ -1,1 +1,2 @@
+apply tfidf before finalize embedding | id:2ac394abe2479abcbc905b430d18ad2a14735413
 assert that economics is loaded correctly | id:ff7200d11b9b49108d3827dab6b85602ff5d7278
