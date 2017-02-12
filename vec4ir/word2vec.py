@@ -20,7 +20,7 @@ try:
     # from .utils import argtopk
     from .utils import filter_vocab, argtopk
     from .combination import CombinatorMixin
-    from .core import CentroidEmbedder, EmbeddedVectorizer
+    from .core import EmbeddedVectorizer
 
 except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixin, Matching
@@ -352,48 +352,43 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
     """Docstring for FastWordCentrodRetrieval. """
 
-    def __init__(self, embedding, analyzer='word', matching=None, idf=True,
-                 normalize=True, name="FWCD",
+    def __init__(self, embedding, analyzer='word', matching=None, name="FWCD",
                  n_jobs=1):
         """TODO: to be defined1. """
         self.name = "FWCD"
         self.matching = Matching(**dict(matching)) if matching else None
-        steps = [EmbeddedVectorizer(embedding, analyzer=analyzer)]
-        if idf:
-            steps += [TfidfTransformer()]
-
-        print(*steps, sep='\n')
-        self.pipe = make_pipeline(*steps)
-
+        self.vect = EmbeddedVectorizer(embedding, analyzer=analyzer)
         self.nn = NearestNeighbors(n_jobs=n_jobs, metric='cosine',
                                    algorithm='brute')
 
-    def fit(self, X, y):
-        self.centroids = self.pipe.fit_transform(X)
+    def fit(self, X_raw, y):
+        cents = self.vect.fit_transform(X_raw)
+        self.centroids = cents
         print(' FIT centroids shape', self.centroids.shape)
 
         self._y = y
         if self.matching:
-            self.matching.fit(X)
+            self.matching.fit(X_raw)
         else:
-            self.nn.fit(X)
+            self.nn.fit(cents)
 
     def query(self, query, k=None):
+        centroids = self.centroids
         if k is None:
-            k = len(self.centroids)
+            k = centroids.shape[0]
+
+        q_centroid = self.vect.transform([query])
 
         if self.matching:
             ind = self.matching.predict(query)
             centroids, labels = self.centroids[ind], self._y[ind]
-            if len(centroids) == 0:
+            n_ret = min(k, centroids.shape[0])
+            if n_ret == 0:
                 return []
             self.nn.fit(centroids)
-            n_ret = min(k, len(centroids))
         else:
-            centroids, labels = self.centroids, self._y
+            labels = self._y
             n_ret = k
-
-        q_centroid = self.pipe.transform(query)
 
         ind = self.nn.kneighbors(q_centroid, n_neighbors=n_ret,
                                  return_distance=False)[0]

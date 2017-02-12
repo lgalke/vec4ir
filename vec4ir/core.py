@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import numpy as np
 import scipy.sparse as sp
 
@@ -75,33 +75,39 @@ class Retrieval(BaseEstimator):
         return y_pred
 
 
-class EmbeddedVectorizer(CountVectorizer):
+class EmbeddedVectorizer(TfidfVectorizer):
 
     """Embedding-aware vectorizer"""
 
-    def __init__(self, embedding, aggregation='sum', **kwargs):
+    def __init__(self, embedding, **kwargs):
         """TODO: to be defined1. """
         # list of words in the embedding
         vocabulary = embedding.index2word
         self.embedding = embedding
         print("Embedding shape:", embedding.syn0.shape)
-        CountVectorizer.__init__(self, vocabulary=vocabulary, **kwargs)
+        TfidfVectorizer.__init__(self, vocabulary=vocabulary, **kwargs)
 
     def fit(self, raw_docs, y=None):
-        return super().fit(raw_docs)
+        super().fit(raw_docs)
+        return self
 
     def transform(self, raw_documents, y=None):
         Xt = super().transform(raw_documents)
+        E = self.embedding
         assert len(self.embedding.index2word) == len(self.vocabulary_)
         # Xt is sparse counts
-        E = self.embedding
         n_samples, n_dimensions = Xt.shape[0], E.syn0.shape[1]
         dtype = E.syn0.dtype
         centroids = np.zeros((n_samples, n_dimensions), dtype=dtype)
+        print('centroids before filling them', centroids.shape)
         for (row, col, val) in zip(*sp.find(Xt)):
             centroids[row, :] += (val * E.syn0[col, :])
 
+        print("Centroids shape", centroids.shape)
         return centroids
+
+    def fit_transform(self, X, y=None):
+        return self.fit(X, y).transform(X, y)
 
 
 class CentroidEmbedder(BaseEstimator, TransformerMixin):

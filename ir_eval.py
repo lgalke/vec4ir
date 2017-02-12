@@ -326,7 +326,7 @@ def main():
         def word_seeder(word):
             return embedding.seeded_vector(word)
         embedding_oov_token = word_seeder
-    elif embedding_oov_token["oov_token"] is False:
+    elif embedding_config["oov_token"] is False:
         embedding_oov_token = None
     else:
         embedding_oov_token = embedding_config["oov_token"]
@@ -407,10 +407,8 @@ def main():
                                     n_epochs=20,
                                     verbose=args.verbose),
            "fwcd": FastWordCentroidRetrieval(embedding=embedding,
-                                             analyzer=embedding_analyzer,
+                                             analyzer=matching_analyzer,
                                              matching=matching,
-                                             idf=True,
-                                             normalize=True,
                                              n_jobs=args.jobs),
            "ppwmd": WordMoversRetrieval(embedding=embedding,
                                         analyzer=embedding_analyzer,
