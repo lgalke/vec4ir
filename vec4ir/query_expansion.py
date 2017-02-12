@@ -63,15 +63,16 @@ class CentroidExpansion(BaseEstimator):
         self.m = m
         self.neighbors = NearestNeighbors(n_neighbors=m, **neighbor_params)
         self.vocabulary = None
+        self.vect = CountVectorizer(analyzer=analyzer,
+                                    vocabulary=embedding.index2word)
 
     def fit(self, docs):
+        """ Fit effective vocab even if embedding contains more words """
         index2word = self.embedding.index2word
         syn0 = self.embedding.syn0
 
         # find unique words
-        cv = CountVectorizer(analyzer=self.analyzer,
-                             vocabulary=index2word)
-        X_tmp = cv.fit(docs)
+        X_tmp = self.vect.fit(docs)
         __, cols, __ = sp.find(X_tmp)
         common = np.unique(cols)
 
@@ -86,15 +87,17 @@ class CentroidExpansion(BaseEstimator):
         return self
 
     def transform(self, query):
-        E, analyzed = self.embedding, self.analyzer
+        """ Expands query by nearest tokens from collection """
+        E, analyze = self.embedding, self.analyzer
 
-        tokens = (analyzed(word) for word in query)
+        tokens = analyze(query)
         vectors = [E[token] for token in tokens]
         centroid = np.sum(vectors, axis=0)  # does this work
 
         exp = self.neighbors.kneighbors([centroid], return_distance=False)[0]
 
         expanded_query = ' '.join(query, *exp)
+        print("Expanded query:", expanded_query)
 
         return expanded_query
 

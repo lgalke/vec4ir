@@ -4,9 +4,12 @@ from timeit import default_timer as timer
 from datetime import timedelta
 from vec4ir.datasets import NTCIR, QuadflorLike
 from argparse import ArgumentParser, FileType
-from vec4ir.base import TfidfRetrieval
-from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval, FastWordCentroidRetrieval, WordMoversRetrieval
+from vec4ir.core import Retrieval
+from vec4ir.base import TfidfRetrieval, Matching
+from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
+from vec4ir.word2vec import FastWordCentroidRetrieval, WordMoversRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
+from vec4ir.query_expansion import CentroidExpansion
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
 from gensim.models import Word2Vec
@@ -27,7 +30,7 @@ import matplotlib.pyplot as plt
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
-MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'swcd', 'nwcd', 'fwcd', 'ppwmd']
+MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd', 'legacy-wmd', 'cewcd']
 
 
 def mean_std(array_like):
@@ -368,35 +371,43 @@ def main():
     tfidf = TfidfRetrieval(analyzer=matching_analyzer)
     matching = {"analyzer": matching_analyzer} if args.matching else None
 
+    WCD = FastWordCentroidRetrieval(name="mwcd", embedding=embedding,
+                                    analyzer=matching_analyzer,
+                                    matching=matching,
+                                    n_jobs=args.jobs)
+
+    matching_estimator = Matching(**matching)
+    CE = CentroidExpansion(embedding, analyzer=matching_analyzer, m=10)
+    CE_WCD = Retrieval(retrieval_model=WCD, matching=matching_estimator,
+                       query_expansion=CE)
+
     RMs = {"tfidf": tfidf,
-           "wcd": Word2VecRetrieval(embedding, wmd=False,
-                                    analyzer=matching_analyzer,
-                                    vocab_analyzer=embedding_analyzer,
-                                    oov=embedding_oov_token,
-                                    verbose=args.verbose),
-           "swcd": WordCentroidRetrieval(embedding, name="SWCD",
-                                         matching=matching,
-                                         analyzer=matching_analyzer,
-                                         oov=embedding_oov_token,
-                                         verbose=args.verbose,
-                                         normalize=False,
-                                         algorithm='brute',
-                                         metric='cosine',
-                                         n_jobs=args.jobs),
-           "nwcd": WordCentroidRetrieval(embedding, name="naive WCD",
-                                         matching=matching,
-                                         analyzer=matching_analyzer,
-                                         oov=embedding_oov_token,
-                                         verbose=args.verbose,
-                                         normalize=False,
-                                         algorithm='brute',
-                                         metric='cosine',
-                                         n_jobs=args.jobs),
-           "wmd": Word2VecRetrieval(embedding, wmd=True,
-                                    analyzer=matching_analyzer,
-                                    vocab_analyzer=embedding_analyzer,
-                                    oov=embedding_oov_token,
-                                    verbose=args.verbose),
+           "nsim": Word2VecRetrieval(embedding, wmd=False,
+                                     analyzer=matching_analyzer,
+                                     vocab_analyzer=matching_analyzer,
+                                     oov=embedding_oov_token,
+                                     verbose=args.verbose),
+           "legacy-wcd": WordCentroidRetrieval(embedding, name="legacy-mwcd",
+                                               matching=matching,
+                                               analyzer=matching_analyzer,
+                                               oov=embedding_oov_token,
+                                               verbose=args.verbose,
+                                               normalize=False,
+                                               algorithm='brute',
+                                               metric='cosine',
+                                               n_jobs=args.jobs),
+           "wcd": WCD,
+           "legacy-wmd": Word2VecRetrieval(embedding, wmd=True,
+                                           analyzer=matching_analyzer,
+                                           vocab_analyzer=embedding_analyzer,
+                                           oov=embedding_oov_token,
+                                           verbose=args.verbose),
+           "wmd": WordMoversRetrieval(embedding=embedding,
+                                      analyzer=embedding_analyzer,
+                                      matching_params=matching,
+                                      oov=embedding_oov_token,
+                                      verbose=args.verbose,
+                                      n_jobs=args.jobs),
            "pvdm": Doc2VecRetrieval(analyzer=embedding_analyzer,
                                     matching=matching,
                                     n_jobs=args.jobs,
@@ -406,17 +417,7 @@ def main():
                                     min_alpha=0.05,
                                     n_epochs=20,
                                     verbose=args.verbose),
-           "fwcd": FastWordCentroidRetrieval(embedding=embedding,
-                                             analyzer=matching_analyzer,
-                                             matching=matching,
-                                             n_jobs=args.jobs),
-           "ppwmd": WordMoversRetrieval(embedding=embedding,
-                                        analyzer=embedding_analyzer,
-                                        matching_params=matching,
-                                        oov=embedding_oov_token,
-                                        verbose=args.verbose,
-                                        n_jobs=args.jobs),
-
+           "cewcd": CE_WCD,
            "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
                         analyzer=embedding_analyzer, verbose=args.verbose)
            }

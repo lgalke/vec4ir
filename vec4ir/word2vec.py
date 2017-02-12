@@ -355,7 +355,7 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
     def __init__(self, embedding, analyzer='word', matching=None, name="FWCD",
                  n_jobs=1):
         """TODO: to be defined1. """
-        self.name = "FWCD"
+        self.name = name
         self.matching = Matching(**dict(matching)) if matching else None
         self.vect = EmbeddedVectorizer(embedding, analyzer=analyzer)
         self.nn = NearestNeighbors(n_jobs=n_jobs, metric='cosine',
@@ -372,7 +372,7 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         else:
             self.nn.fit(cents)
 
-    def query(self, query, k=None):
+    def query(self, query, k=None, matching_indices=None):
         centroids = self.centroids
         if k is None:
             k = centroids.shape[0]
@@ -381,7 +381,13 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
         if self.matching:
             ind = self.matching.predict(query)
-            centroids, labels = self.centroids[ind], self._y[ind]
+            centroids, labels = centroids[ind], self._y[ind]
+            n_ret = min(k, centroids.shape[0])
+            if n_ret == 0:
+                return []
+            self.nn.fit(centroids)
+        elif matching_indices:
+            centroids, labels = centroids[ind], self._y[ind]
             n_ret = min(k, centroids.shape[0])
             if n_ret == 0:
                 return []
