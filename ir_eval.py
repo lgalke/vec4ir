@@ -8,6 +8,7 @@ from vec4ir.core import Retrieval
 from vec4ir.base import TfidfRetrieval, Matching
 from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.word2vec import FastWordCentroidRetrieval, WordMoversRetrieval
+from vec4ir.word2vec import WmdSimilarityRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.query_expansion import CentroidExpansion
 from vec4ir.eqlm import EQLM
@@ -438,7 +439,9 @@ def main():
                                          verbose=args.verbose,
                                          n_jobs=args.jobs),
            "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
-                        analyzer=embedding_analyzer, verbose=args.verbose)
+                        analyzer=embedding_analyzer, verbose=args.verbose),
+           "gensim-wmd": WmdSimilarityRetrieval(embedding, matching_analyzer,
+                                                args.k)
            }
 
     if focus:

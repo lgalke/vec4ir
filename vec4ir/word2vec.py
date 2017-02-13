@@ -12,6 +12,7 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import normalize, Normalizer
 from sklearn.pipeline import Pipeline, make_pipeline
+from gensim.similarities import WmdSimilarity
 # from scipy.spatial.distance import cosine
 import numpy as np
 
@@ -447,6 +448,29 @@ class WordMoversRetrieval(BaseEstimator, RetriEvalMixin):
         topk = np.argsort(wm_dists)[:k]
 
         return labels[topk]
+
+
+class WmdSimilarityRetrieval(BaseEstimator, RetriEvalMixin):
+    def __init__(self, embedding, analyzer, k, name='gwmd', verbose=0):
+        self.embedding = embedding
+        self.analyzer = analyzer
+        self.name = name
+        self.verbose = verbose
+        self.instance = None
+
+    def fit(self, X, y=None):
+        E, analyze = self.embedding, self.analyzer
+        corpus = [analyze(doc) for doc in X]
+        self.instance = WmdSimilarity(corpus, E, num_best=self.k)
+
+        self._labels = y
+
+    def query(self, sent, k=None, matching_indices=None):
+        query = self.analyzer(sent)
+        sims = self.instance[query]
+        indices, scores = zip(*sims)
+        indices = list(indices)
+        return self._labels[indices]
 
 
 if __name__ == '__main__':
