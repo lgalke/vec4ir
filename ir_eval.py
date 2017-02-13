@@ -393,6 +393,12 @@ def main():
     CE_TFIDF = Retrieval(retrieval_model=tfidf, matching=None,
                          query_expansion=CE, name='CE+tfidf')
 
+    WCD_mom = FastWordCentroidRetrieval(name="wcd", embedding=embedding,
+                                        analyzer=matching_analyzer,
+                                        matching=matching,
+                                        n_jobs=args.jobs,
+                                        momentum=0.9)
+
     RMs = {"tfidf": tfidf,
            "nsim": Word2VecRetrieval(embedding, wmd=False,
                                      analyzer=matching_analyzer,
@@ -441,7 +447,8 @@ def main():
            "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
                         analyzer=embedding_analyzer, verbose=args.verbose),
            "gensim-wmd": WmdSimilarityRetrieval(embedding, matching_analyzer,
-                                                args.k)
+                                                args.k),
+           'wcdmom': WCD_mom
            }
 
     if focus:

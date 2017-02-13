@@ -354,12 +354,12 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
     """Docstring for FastWordCentrodRetrieval. """
 
     def __init__(self, embedding, analyzer='word', matching=None, name="FWCD",
-                 n_jobs=1, use_idf=True):
+                 n_jobs=1, use_idf=True, momentum=None):
         """TODO: to be defined1. """
         self.name = name
         self.matching = Matching(**dict(matching)) if matching else None
         self.vect = EmbeddedVectorizer(embedding, analyzer=analyzer, norm='l2',
-                                       use_idf=use_idf)
+                                       use_idf=use_idf, momentum=momentum)
         self.nn = NearestNeighbors(n_jobs=n_jobs, metric='cosine',
                                    algorithm='brute')
 

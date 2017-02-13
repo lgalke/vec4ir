@@ -82,7 +82,7 @@ class EmbeddedVectorizer(TfidfVectorizer):
 
     """Embedding-aware vectorizer"""
 
-    def __init__(self, embedding, **kwargs):
+    def __init__(self, embedding, momentum=None, **kwargs):
         """TODO: to be defined1. """
         # list of words in the embedding
         vocabulary = embedding.index2word
@@ -112,43 +112,15 @@ class EmbeddedVectorizer(TfidfVectorizer):
         return self.fit(X, y).transform(X, y)
 
 
-def embed(X, E):
+def embed(X, E, momentum=None):
+    if momentum:
+        vt = np.zeros((1, E.shape[1]), dtype=E.dtype)
     embedded = np.zeros((X.shape[0], E.shape[1]), dtype=E.dtype)
     for (row, col, val) in zip(*sp.find(X)):
-        embedded[row, :] += (val * E[col, :])
+        update = val * E[col, :]
+        if momentum:
+            vt = momentum * vt + update
+            embedded[row, :] += vt
+        else:
+            embedded[row, :] += update
     return embedded
-
-
-class CentroidEmbedder(BaseEstimator, TransformerMixin):
-
-    """ Embeds a BOW-Representation of Documents as the respective centroid of
-    the word vectors
-    """
-    def __init__(self, syn0):
-        """TODO: to be defined1. """
-        BaseEstimator.__init__(self)
-        self.syn0 = syn0
-        print('syn0 of shape', syn0.shape)
-
-    def fit(self, X, y=None):
-        return self
-
-    def transform(self, X, y=None):
-        """
-        X is a BOW-like representation of documents, with
-        X[:,i] = wv.index2word[i].  This can be achieved by passing
-        vocabulary=wv.index2word to your {count,tfidf}vectorizer
-        """
-        syn0 = self.syn0
-        n_samples, n_dimensions, dtype = X.shape[0], syn0.shape[1], syn0.dtype
-        centroids = np.zeros((n_samples, n_dimensions), dtype=dtype)
-        # N = np.zeros(n_samples, dtype=np.int64)
-        rows, cols, values = sp.find(X)
-        for (row, col, val) in zip(rows, cols, values):
-            # cumulative moving average
-            # N[row] += 1
-            # centroids[row] += ((val * syn0[col] - centroids[row]) / N[row])
-            centroids[row] += val * syn0[col]
-        # BOOM
-        print('centroids shape', centroids.shape)
-        return centroids
