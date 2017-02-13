@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin, MetaEstimatorMixin
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import numpy as np
 import scipy.sparse as sp
+from .base import RetriEvalMixin
 
 
-class Retrieval(BaseEstimator):
+class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
 
     """Meta estimator for an end to end information retrieval process"""
 
     def __init__(self, retrieval_model, vectorizer=None, matching=None,
-                 query_expansion=None):
+                 query_expansion=None, name='RM'):
         """TODO: to be defined1.
 
         :retrieval_model: TODO
@@ -26,6 +27,7 @@ class Retrieval(BaseEstimator):
         self._vectorizer = vectorizer
         self._matching = matching
         self._query_expansion = query_expansion
+        self.name = name
 
     def fit(self, raw_docs, y):
         """ Fit vectorizer to raw_docs, transform them and fit the
@@ -44,6 +46,7 @@ class Retrieval(BaseEstimator):
             X = raw_docs
 
         if query_expansion:
+            print('input to qe', len(X))
             query_expansion.fit(X, y)
 
         if matching:
@@ -96,18 +99,24 @@ class EmbeddedVectorizer(TfidfVectorizer):
         E = self.embedding
         assert len(self.embedding.index2word) == len(self.vocabulary_)
         # Xt is sparse counts
-        n_samples, n_dimensions = Xt.shape[0], E.syn0.shape[1]
-        dtype = E.syn0.dtype
-        centroids = np.zeros((n_samples, n_dimensions), dtype=dtype)
-        print('centroids before filling them', centroids.shape)
-        for (row, col, val) in zip(*sp.find(Xt)):
-            centroids[row, :] += (val * E.syn0[col, :])
+        centroids = embed(Xt, E.syn0)
+        # n_samples, n_dimensions = Xt.shape[0], E.syn0.shape[1]
+        # dtype = E.syn0.dtype
+        # centroids = np.zeros((n_samples, n_dimensions), dtype=dtype)
+        # for (row, col, val) in zip(*sp.find(Xt)):
+        #     centroids[row, :] += (val * E.syn0[col, :])
 
-        print("Centroids shape", centroids.shape)
         return centroids
 
     def fit_transform(self, X, y=None):
         return self.fit(X, y).transform(X, y)
+
+
+def embed(X, E):
+    embedded = np.zeros((X.shape[0], E.shape[1]), dtype=E.dtype)
+    for (row, col, val) in zip(*sp.find(X)):
+        embedded[row, :] += (val * E[col, :])
+    return embedded
 
 
 class CentroidEmbedder(BaseEstimator, TransformerMixin):

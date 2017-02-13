@@ -445,7 +445,7 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixin, RetriEvalMixin):
         self._X = sp.vstack([self._X, Xt])
         return self
 
-    def query(self, query, k=None):
+    def query(self, query, k=None, matched_indices=None):
         # matching step
         matching_ind = self._matching(query)
         # print(matching_ind, file=sys.stderr)

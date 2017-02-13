@@ -372,7 +372,7 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         else:
             self.nn.fit(cents)
 
-    def query(self, query, k=None, matching_indices=None):
+    def query(self, query, k=None, matched_indices=None):
         centroids = self.centroids
         if k is None:
             k = centroids.shape[0]
@@ -386,7 +386,7 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
             if n_ret == 0:
                 return []
             self.nn.fit(centroids)
-        elif matching_indices:
+        elif matched_indices:
             centroids, labels = centroids[ind], self._y[ind]
             n_ret = min(k, centroids.shape[0])
             if n_ret == 0:
@@ -426,7 +426,7 @@ class WordMoversRetrieval(BaseEstimator, RetriEvalMixin):
         self._y = np.asarray(y)
         return self
 
-    def query(self, query, k=None):
+    def query(self, query, k=None, matched_indices=None):
         k = k if k is not None else len(self._X)
         E, analyzed = self.embedding, self.analyzer
         if self.matching:

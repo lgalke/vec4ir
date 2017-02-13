@@ -30,7 +30,8 @@ import matplotlib.pyplot as plt
 # import logging
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
-MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd', 'legacy-wmd', 'cewcd']
+MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd',
+              'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom']
 
 
 def mean_std(array_like):
@@ -152,6 +153,9 @@ def _ir_eval_parser(config):
                         choices=MODEL_KEYS, default=None)
     parser.add_argument("-j", "--jobs", type=int, default=-1,
                         help="How many jobs to use, default=-1 (one per core)")
+    parser.add_argument("-n", "--normalize", action='store_true',
+                        default=False,
+                        help='normalize word vectors before anything else')
 
     # OPTIONS FOR OUTPUT
     output_options = parser.add_argument_group("Output options")
@@ -310,6 +314,9 @@ def main():
     print("Selecting embedding: {}".format(args.embedding))
     embedding_config = config["embeddings"][args.embedding]
     embedding = smart_load_word2vec(embedding_config["path"])
+    if args.normalize:
+        print('Normalizing word vectors')
+        embedding.init_sims(replace=True)
     embedding_analyzer_config = embedding_config["analyzer"]
     embedding_analyzer = build_analyzer(**embedding_analyzer_config)
     if args.stats:
@@ -325,14 +332,7 @@ def main():
         print_dict(stats, header=header, stream=args.outfile)
         exit(0)
 
-    if embedding_config["oov_token"] is True:
-        def word_seeder(word):
-            return embedding.seeded_vector(word)
-        embedding_oov_token = word_seeder
-    elif embedding_config["oov_token"] is False:
-        embedding_oov_token = None
-    else:
-        embedding_oov_token = embedding_config["oov_token"]
+    embedding_oov_token = embedding_config["oov_token"]
 
     # Set up matching analyzer                                      Defaults
     matching_analyzer = build_analyzer(tokenizer=args.tokenizer,    # sklearn
@@ -376,10 +376,16 @@ def main():
                                     matching=matching,
                                     n_jobs=args.jobs)
 
-    matching_estimator = Matching(**matching)
-    CE = CentroidExpansion(embedding, analyzer=matching_analyzer, m=10)
-    CE_WCD = Retrieval(retrieval_model=WCD, matching=matching_estimator,
-                       query_expansion=CE)
+    # matching_estimator = Matching(**matching)
+    CE = CentroidExpansion(embedding, matching_analyzer, m=10,
+                           verbose=args.verbose, n_jobs=args.jobs,
+                           algorithm='brute',
+                           metric='cosine')
+    CE_WCD = Retrieval(retrieval_model=WCD, matching=None,
+                       query_expansion=CE, name='CE+wcd')
+
+    CE_TFIDF = Retrieval(retrieval_model=tfidf, matching=None,
+                         query_expansion=CE, name='CE+tfidf')
 
     RMs = {"tfidf": tfidf,
            "nsim": Word2VecRetrieval(embedding, wmd=False,
@@ -418,6 +424,13 @@ def main():
                                     n_epochs=20,
                                     verbose=args.verbose),
            "cewcd": CE_WCD,
+           "cetfidf": CE_TFIDF,
+           'wmdnom': WordMoversRetrieval(embedding=embedding,
+                                         analyzer=matching_analyzer,
+                                         matching_params=None,
+                                         oov=embedding_oov_token,
+                                         verbose=args.verbose,
+                                         n_jobs=args.jobs),
            "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
                         analyzer=embedding_analyzer, verbose=args.verbose)
            }
