@@ -5,6 +5,7 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import numpy as np
 import scipy.sparse as sp
 from .base import RetriEvalMixin
+frmo sklearn.decomposition import PCA
 
 
 class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
@@ -125,3 +126,11 @@ def embed(X, E, momentum=None):
         else:
             embedded[row, :] += update
     return embedded
+
+
+def subtract_principal_components(syn0, D):
+    pca = PCA(n_components=D)
+    firstfew = PCA.fit_transform(syn0)
+    print('Shape of first %d princial components' % D, firstfew.shape)
+    new_syn0 = syn0 - firstfew
+    return new_syn0

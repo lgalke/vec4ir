@@ -4,7 +4,7 @@ from timeit import default_timer as timer
 from datetime import timedelta
 from vec4ir.datasets import NTCIR, QuadflorLike
 from argparse import ArgumentParser, FileType
-from vec4ir.core import Retrieval
+from vec4ir.core import Retrieval, subtract_principal_components
 from vec4ir.base import TfidfRetrieval, Matching
 from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.word2vec import FastWordCentroidRetrieval, WordMoversRetrieval
@@ -154,10 +154,14 @@ def _ir_eval_parser(config):
                         choices=MODEL_KEYS, default=None)
     parser.add_argument("-j", "--jobs", type=int, default=-1,
                         help="How many jobs to use, default=-1 (one per core)")
-    parser.add_argument("-n", "--normalize", action='store_true',
-                        default=False,
-                        help='normalize word vectors before anything else')
 
+    emb_opt = parser.add_argument_group("Embedding options")
+    emb_opt.add_argument("-n", "--normalize", action='store_true',
+                         default=False,
+                         help='normalize word vectors before anything else')
+    emb_opt.add_argument("-s", "--subtract", type=int,
+                         default=None,
+                         help='subtract first few principal components')
     # OPTIONS FOR OUTPUT
     output_options = parser.add_argument_group("Output options")
     output_options.add_argument("-o", "--outfile", default=sys.stdout,
@@ -315,6 +319,10 @@ def main():
     print("Selecting embedding: {}".format(args.embedding))
     embedding_config = config["embeddings"][args.embedding]
     embedding = smart_load_word2vec(embedding_config["path"])
+    if args.subtract:
+        print('Subtracting first %d principal components' % args.subtract)
+        syn0 = embedding.syn0
+        embedding.syn0 = subtract_principal_components(syn0, args.subtract)
     if args.normalize:
         print('Normalizing word vectors')
         embedding.init_sims(replace=True)
