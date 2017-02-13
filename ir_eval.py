@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd',
-              'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf']
+              'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf', 'wcdmom']
 
 
 def mean_std(array_like):
@@ -393,11 +393,11 @@ def main():
     CE_TFIDF = Retrieval(retrieval_model=tfidf, matching=None,
                          query_expansion=CE, name='CE+tfidf')
 
-    WCD_mom = FastWordCentroidRetrieval(name="wcd", embedding=embedding,
+    WCD_mom = FastWordCentroidRetrieval(name="wcd-nom", embedding=embedding,
                                         analyzer=matching_analyzer,
                                         matching=matching,
                                         n_jobs=args.jobs,
-                                        momentum=0.9)
+                                        momentum=0.5)
 
     RMs = {"tfidf": tfidf,
            "nsim": Word2VecRetrieval(embedding, wmd=False,

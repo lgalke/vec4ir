@@ -87,6 +87,7 @@ class EmbeddedVectorizer(TfidfVectorizer):
         # list of words in the embedding
         vocabulary = embedding.index2word
         self.embedding = embedding
+        self.momentum = momentum
         print("Embedding shape:", embedding.syn0.shape)
         TfidfVectorizer.__init__(self, vocabulary=vocabulary, **kwargs)
 
@@ -99,7 +100,7 @@ class EmbeddedVectorizer(TfidfVectorizer):
         E = self.embedding
         assert len(self.embedding.index2word) == len(self.vocabulary_)
         # Xt is sparse counts
-        centroids = embed(Xt, E.syn0)
+        centroids = embed(Xt, E.syn0, self.momentum)
         # n_samples, n_dimensions = Xt.shape[0], E.syn0.shape[1]
         # dtype = E.syn0.dtype
         # centroids = np.zeros((n_samples, n_dimensions), dtype=dtype)
@@ -120,7 +121,7 @@ def embed(X, E, momentum=None):
         update = val * E[col, :]
         if momentum:
             vt = momentum * vt + update
-            embedded[row, :] += vt
+            embedded[row, :] += vt[0, :]
         else:
             embedded[row, :] += update
     return embedded
