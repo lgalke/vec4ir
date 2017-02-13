@@ -214,8 +214,8 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
         # may be fewer than k
 
         # ind = np.argsort(cosine_similarities)[::-1]
-        if verbose > 0:
-            print(cosine_similarities[topk])
+        # if verbose > 0:
+        #     print(cosine_similarities[topk])
 
         if not wmd:
             # no wmd, were done
@@ -353,11 +353,12 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
     """Docstring for FastWordCentrodRetrieval. """
 
     def __init__(self, embedding, analyzer='word', matching=None, name="FWCD",
-                 n_jobs=1):
+                 n_jobs=1, use_idf=True):
         """TODO: to be defined1. """
         self.name = name
         self.matching = Matching(**dict(matching)) if matching else None
-        self.vect = EmbeddedVectorizer(embedding, analyzer=analyzer)
+        self.vect = EmbeddedVectorizer(embedding, analyzer=analyzer, norm='l2',
+                                       use_idf=use_idf)
         self.nn = NearestNeighbors(n_jobs=n_jobs, metric='cosine',
                                    algorithm='brute')
 

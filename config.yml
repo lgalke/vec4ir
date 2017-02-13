@@ -29,17 +29,31 @@ data:
         y: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
         thes: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json" 
 
-    ntcir2:
+    short-ntcir2:
         type: "ntcir"
         root_path: "../data/NTCIR2/"
         field: "title"
         topic: "title"
         rels: 2
 
-    ntcir2abstract:
+    short-ntcir2abstract:
         type: "ntcir"
         root_path: "../data/NTCIR2/"
         field: "content"
         topic: "title"
+        rels: 2
+            
+    long-ntcir2:
+        type: "ntcir"
+        root_path: "../data/NTCIR2/"
+        field: "title"
+        topic: "description"
+        rels: 2
+
+    long-ntcir2abstract:
+        type: "ntcir"
+        root_path: "../data/NTCIR2/"
+        field: "content"
+        topic: "description"
         rels: 2
             

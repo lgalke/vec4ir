@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd',
-              'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom']
+              'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf']
 
 
 def mean_std(array_like):
@@ -371,10 +371,15 @@ def main():
     tfidf = TfidfRetrieval(analyzer=matching_analyzer)
     matching = {"analyzer": matching_analyzer} if args.matching else None
 
-    WCD = FastWordCentroidRetrieval(name="mwcd", embedding=embedding,
+    WCD = FastWordCentroidRetrieval(name="wcd", embedding=embedding,
                                     analyzer=matching_analyzer,
                                     matching=matching,
                                     n_jobs=args.jobs)
+    WCDnoidf = FastWordCentroidRetrieval(name="wcd-noidf", embedding=embedding,
+                                         analyzer=matching_analyzer,
+                                         matching=matching,
+                                         use_idf=False,
+                                         n_jobs=args.jobs)
 
     # matching_estimator = Matching(**matching)
     CE = CentroidExpansion(embedding, matching_analyzer, m=10,
@@ -403,6 +408,7 @@ def main():
                                                metric='cosine',
                                                n_jobs=args.jobs),
            "wcd": WCD,
+           "wcdnoidf": WCDnoidf,
            "legacy-wmd": Word2VecRetrieval(embedding, wmd=True,
                                            analyzer=matching_analyzer,
                                            vocab_analyzer=embedding_analyzer,
