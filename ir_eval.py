@@ -4,7 +4,7 @@ from timeit import default_timer as timer
 from datetime import timedelta
 from vec4ir.datasets import NTCIR, QuadflorLike
 from argparse import ArgumentParser, FileType
-from vec4ir.core import Retrieval, subtract_principal_components
+from vec4ir.core import Retrieval, all_but_the_top
 from vec4ir.base import TfidfRetrieval, Matching
 from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.word2vec import FastWordCentroidRetrieval, WordMoversRetrieval
@@ -168,7 +168,7 @@ def _ir_eval_parser(config):
                                 type=FileType('a'))
     output_options.add_argument("-v", "--verbose", default=2, type=int,
                                 help="verbosity level")
-    output_options.add_argument('-s',
+    output_options.add_argument('-a',
                                 '--stats',
                                 default=False,
                                 action='store_true',
@@ -322,7 +322,7 @@ def main():
     if args.subtract:
         print('Subtracting first %d principal components' % args.subtract)
         syn0 = embedding.syn0
-        embedding.syn0 = subtract_principal_components(syn0, args.subtract)
+        embedding.syn0 = all_but_the_top(syn0, args.subtract)
     if args.normalize:
         print('Normalizing word vectors')
         embedding.init_sims(replace=True)

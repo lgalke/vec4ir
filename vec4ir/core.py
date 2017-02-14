@@ -5,7 +5,7 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import numpy as np
 import scipy.sparse as sp
 from .base import RetriEvalMixin
-frmo sklearn.decomposition import PCA
+from sklearn.decomposition import PCA
 
 
 class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
@@ -128,9 +128,31 @@ def embed(X, E, momentum=None):
     return embedded
 
 
-def subtract_principal_components(syn0, D):
+def all_but_the_top(v, D):
+    """
+    All-but-the-Top: Simple and Effective Postprocessing for Word
+    Representations
+    https://arxiv.org/abs/1702.01417
+
+    Arguments:
+        :v: word vectors of shape (n_words, n_dimensions)
+        :D: number of principal components to subtract
+
+    """
+    print("All but the top")
+    # 1. Compute the mean for v
+    mu = np.mean(v, axis=0)
+    v_tilde = v - mu  # broadcast hopefully works
+
+    # 2. Compute the PCA components
+
     pca = PCA(n_components=D)
-    firstfew = PCA.fit_transform(syn0)
-    print('Shape of first %d princial components' % D, firstfew.shape)
-    new_syn0 = syn0 - firstfew
-    return new_syn0
+    u = pca.fit_transform(v.T)
+
+    # 3. Postprocess the representations
+    for w in range(v_tilde.shape[0]):
+        v_tilde[w, :] -= np.sum([(u[:, i] * v[w]) * u[:, i].T for i in
+                                 range(D)],
+                                axis=0)
+
+    return v_tilde
