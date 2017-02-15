@@ -21,7 +21,7 @@ try:
     # from .utils import argtopk
     from .utils import filter_vocab, argtopk
     from .combination import CombinatorMixin
-    from .core import EmbeddedVectorizer
+    from .core import EmbeddedVectorizer, all_but_the_top
 
 except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixin, Matching
@@ -365,6 +365,15 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
     def fit(self, X_raw, y):
         cents = self.vect.fit_transform(X_raw)
+        # print("Largest singular value: {:.2f}".format(
+        #     np.linalg.norm(cents, ord=2)))
+        # cents = all_but_the_top(cents, 1)
+        # print("Largest singular value: {:.2f}".format(
+        #     np.linalg.norm(cents, ord=2)))
+        # print("Renormalizing")
+        # normalize(cents, copy=False)
+        # print("Largest singular value: {:.2f}".format(
+        #     np.linalg.norm(cents, ord=2)))
         self.centroids = cents
         print(' FIT centroids shape', self.centroids.shape)
 
@@ -457,6 +466,7 @@ class WmdSimilarityRetrieval(BaseEstimator, RetriEvalMixin):
         self.name = name
         self.verbose = verbose
         self.instance = None
+        self.k = k
 
     def fit(self, X, y=None):
         E, analyze = self.embedding, self.analyzer

@@ -117,6 +117,8 @@ class EmbeddedVectorizer(TfidfVectorizer):
 def embed(X, E, momentum=None):
     if momentum:
         vt = np.zeros((1, E.shape[1]), dtype=E.dtype)
+    else:
+        return (X @ E)
     embedded = np.zeros((X.shape[0], E.shape[1]), dtype=E.dtype)
     for (row, col, val) in zip(*sp.find(X)):
         update = val * E[col, :]

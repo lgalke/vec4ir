@@ -32,7 +32,8 @@ import matplotlib.pyplot as plt
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 #                     level=logging.INFO)
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd',
-              'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf', 'wcdmom']
+              'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf', 'wcdmom',
+              'gensim-wmd']
 
 
 def mean_std(array_like):
@@ -159,16 +160,16 @@ def _ir_eval_parser(config):
     emb_opt.add_argument("-n", "--normalize", action='store_true',
                          default=False,
                          help='normalize word vectors before anything else')
-    emb_opt.add_argument("-s", "--subtract", type=int,
+    emb_opt.add_argument("-a", "--all-but-the-top", dest='subtract', type=int,
                          default=None,
-                         help='subtract first few principal components')
+                         help='Apply all but the top embedding postprocessing')
     # OPTIONS FOR OUTPUT
     output_options = parser.add_argument_group("Output options")
     output_options.add_argument("-o", "--outfile", default=sys.stdout,
                                 type=FileType('a'))
     output_options.add_argument("-v", "--verbose", default=2, type=int,
                                 help="verbosity level")
-    output_options.add_argument('-a',
+    output_options.add_argument('-s',
                                 '--stats',
                                 default=False,
                                 action='store_true',
@@ -453,7 +454,7 @@ def main():
                                          verbose=args.verbose,
                                          n_jobs=args.jobs),
            "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
-                        analyzer=embedding_analyzer, verbose=args.verbose),
+                        analyzer=matching_analyzer, verbose=args.verbose),
            "gensim-wmd": WmdSimilarityRetrieval(embedding, matching_analyzer,
                                                 args.k),
            'wcdmom': WCD_mom
