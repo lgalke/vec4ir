@@ -1,30 +1,49 @@
 from sklearn.base import BaseEstimator, TransformerMixin
-from .utils import filter_vocab
-from .core import EmbeddedVectorizer, embed
+try:
+    from .utils import filter_vocab
+    from .core import EmbeddedVectorizer, embed
+except SystemError:
+    from utils import filter_vocab
+    from core import EmbeddedVectorizer, embed
 from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.neighbors import NearestNeighbors
 from scipy.special import expit
+from collections import Counter
 import scipy.sparse as sp
 import numpy as np
 
 
-def delta(X, Y=None, n_jobs=-1):
+def delta(X, Y, n_jobs=-1, a=1, c=0):
     """Pairwise delta function: cosine and sigmoid
 
     :X: TODO
     :returns: TODO
 
     """
-    X_dists = pairwise_distances(X, Y, metric="cosine", n_jobs=n_jobs)
-    X_dists = expit(X_dists)
-    return X_dists
+    D = pairwise_distances(X, Y, metric="cosine", n_jobs=n_jobs)
+    if c != 0:
+        D -= c
+    if a != 1:
+        D *= a
+    D = expit(D)
+    return D
 
 
 class EmbeddingBasedQueryLanguageModels(BaseEstimator, TransformerMixin):
-    """Embedding-based Query Language Models by Zamani and Croft 2016 """
+    """Embedding-based Query Language Models by Zamani and Croft 2016
+    >>> sents = ["obama speaks to the press in illinois",\
+                "the president talks to the media in chicago"]
+    >>> ls = lambda s: s.lower().split()
+    >>> from gensim.models import Word2Vec
+    >>> wv = Word2Vec(sentences=[ls(sent) for sent in sents], min_count=1)
+    >>> eqlm = EmbeddingBasedQueryLanguageModels(wv, analyzer=ls, m=1, eqe=2, verbose=1)
+    >>> _ = eqlm.fit(sents)
+    >>> eqlm.transform('obama press')
+    """
 
-    def __init__(self, embedding, m=10, analyzer=None):
+    def __init__(self, embedding, m=10, analyzer=None, eqe=1, verbose=0, a=1,
+                 c=0, n_jobs=1):
         """
         Initializes the embedding based query language model query expansion
         technique
@@ -32,25 +51,61 @@ class EmbeddingBasedQueryLanguageModels(BaseEstimator, TransformerMixin):
         BaseEstimator.__init__(self)
         self._embedding = embedding
         self._analyzer = analyzer
-        self._ev = EmbeddedVectorizer(embedding, analyzer=analyzer)
+        if eqe not in [1, 2]:
+            raise ValueError
+        self._eqe = eqe
+        self.verbose = verbose
+        self._a = a
+        self._c = c
+        self.m = m
+        self.n_jobs = n_jobs
+        self.vocabulary = {word: index for index, word in
+                           enumerate(embedding.index2word)}
+        print(embedding.index2word)
 
     def fit(self, raw_docs, y=None):
         """ Learns how to expand query with respect to corpus X """
-        E, ev = self._embedding, self._ev
-        X_ = ev.fit_transform(raw_docs)
-        common_words = ev.inverse_transform(np.unique(X_.nonzero()))
-        X_ = np.vstack([E[word] for word in common_words])
-        deltas = delta(X_, X_)
-        priors = np.sum(deltas, axis=0)
-
-        self.deltas = deltas
-        self.priors = priors
+        E = self._embedding.syn0
+        a, c = self._a, self._c
+        D = delta(E, E, n_jobs=self.n_jobs, a=a, c=c)
+        self._D = D
 
     def transform(self, query, y=None):
         """ Transorms a query into an expanded version of the query.
         """
-        X_q = ev.transform(query)  # index 0?
-        # <++ZYOMG++>
+        wv, D, = self._embedding, self._D
+        analyze, eqe = self._analyzer, self._eqe
+        vocabulary, m = self.vocabulary, self.m
+        q = [vocabulary[w] for w in analyze(query)]  # [n_terms]
+        c = Counter(q)
+        if eqe == 1:
+            prior = np.sum(D, axis=1)  # [n_words, 1] could be precomputed
+            print("prior.shape", prior.shape)
+            conditional = D[q] / prior  # [n_terms, n_words]
+            print("conditional.shape", conditional.shape)
+            posterior = prior * np.product(conditional, axis=0)  # [1, n_words]
+            print("posterior.shape", posterior.shape)
+            topm = np.argpartition(posterior, -m)[-m:]
+            print("topm.shape", topm.shape)
+            expansion = [wv.index2word[i] for i in topm]
+        elif eqe == 2:
+            qnorm = np.asarray([(c[i] / len(q)) for i in q])
+            print("qnorm.shape", qnorm.shape)
+            nom = D[:, q]
+            print("nom.shape", nom.shape)
+            denom = np.sum(D[q], axis=1)
+            print("denom.shape", denom.shape)
+            frac = nom / denom
+            print("frac.shape", frac.shape)
+            normfrac = frac * qnorm
+            print("normfrac.shape", normfrac.shape)
+            posterior = np.sum(normfrac, axis=0)
+            print("posterior.shape", posterior.shape)
+            topm = np.argpartition(posterior, -m)[-m:]
+            print("topm.shape", topm.shape)
+            expansion = [wv.index2word[i] for i in topm]
+        print("Expanding:", *expansion)
+        return ' '.join([query, *expansion])
 
 
 class CentroidExpansion(BaseEstimator):
@@ -106,3 +161,8 @@ class CentroidExpansion(BaseEstimator):
 
     def fit_transform(self, X, y):
         raise NotImplemented('fit_transform does not make sense for expansion')
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()

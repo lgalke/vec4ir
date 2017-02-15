@@ -4,7 +4,10 @@ from sklearn.base import BaseEstimator, TransformerMixin, MetaEstimatorMixin
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import numpy as np
 import scipy.sparse as sp
-from .base import RetriEvalMixin
+try:
+    from .base import RetriEvalMixin
+except SystemError:
+    from base import RetriEvalMixin
 from sklearn.decomposition import PCA
 
 
@@ -115,6 +118,11 @@ class EmbeddedVectorizer(TfidfVectorizer):
 
 
 def embed(X, E, momentum=None):
+    """
+    X (n_samples, n_features)
+    E (n_features, n_dims)
+    X @ E (n_samples, n_dims)
+    """
     if momentum:
         vt = np.zeros((1, E.shape[1]), dtype=E.dtype)
     else:
