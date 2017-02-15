@@ -4,3 +4,6 @@ add more datasets to cfg | id:80045786409bc32abe5bd118098bf424817cc049
 eqlm: scale sigmoid with a and c | id:87bfe63f8bd3d5ff3a1a6707bd0b975e14b49aa8
 FREEZING UPTRAINING | id:b5642fa6cea575bb38cf5406fd709ba0431ba07f
 improve eqlm performance by not computing priors but caching them | id:c37574067354199c8f07379c53dca1427d633d5c
+bm25 | id:d96d7fcf37daa883b579143ca069523802ea6e1e
+metrics@10 | id:e1058027651325e1dba9fcdb7d550d7c7ba874b1
+@1000 optional | id:ed74339571049e0778398e4b380355b58713bc70

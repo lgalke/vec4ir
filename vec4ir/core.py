@@ -115,6 +115,11 @@ class EmbeddedVectorizer(TfidfVectorizer):
 
 
 def embed(X, E, momentum=None):
+    """
+    X (n_samples, n_features)
+    E (n_features, n_dims)
+    X @ E (n_samples, n_dims)
+    """
     if momentum:
         vt = np.zeros((1, E.shape[1]), dtype=E.dtype)
     embedded = np.zeros((X.shape[0], E.shape[1]), dtype=E.dtype)
