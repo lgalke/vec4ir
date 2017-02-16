@@ -61,7 +61,6 @@ class EmbeddingBasedQueryLanguageModels(BaseEstimator, TransformerMixin):
         self.n_jobs = n_jobs
         self.vocabulary = {word: index for index, word in
                            enumerate(embedding.index2word)}
-        print(embedding.index2word)
 
     def fit(self, raw_docs, y=None):
         """ Learns how to expand query with respect to corpus X """

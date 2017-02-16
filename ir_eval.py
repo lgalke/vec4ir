@@ -10,7 +10,7 @@ from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.word2vec import FastWordCentroidRetrieval, WordMoversRetrieval
 from vec4ir.word2vec import WmdSimilarityRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
-from vec4ir.query_expansion import CentroidExpansion
+from vec4ir.query_expansion import CentroidExpansion, EmbeddingBasedQueryLanguageModels
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
 from gensim.models import Word2Vec
@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 #                     level=logging.INFO)
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd',
               'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf', 'wcdmom',
-              'gensim-wmd']
+              'gensim-wmd', 'eqe1tfidf', 'eqe1wcd']
 
 
 def mean_std(array_like):
@@ -391,6 +391,14 @@ def main():
                                          use_idf=False,
                                          n_jobs=args.jobs)
 
+    eqe1 = EmbeddingBasedQueryLanguageModels(embedding,
+                                             analyzer=matching_analyzer,
+                                             m=10,
+                                             eqe=1,
+                                             n_jobs=args.jobs)
+    eqe1_tfidf = Retrieval(query_expansion=eqe1, retrieval_model=tfidf)
+    eqe1_wcd = Retrieval(query_expansion=eqe1, retrieval_model=WCD)
+
     # matching_estimator = Matching(**matching)
     CE = CentroidExpansion(embedding, matching_analyzer, m=10,
                            verbose=args.verbose, n_jobs=args.jobs,
@@ -457,7 +465,9 @@ def main():
                         analyzer=matching_analyzer, verbose=args.verbose),
            "gensim-wmd": WmdSimilarityRetrieval(embedding, matching_analyzer,
                                                 args.k),
-           'wcdmom': WCD_mom
+           'wcdmom': WCD_mom,
+           'eqe1tfidf': eqe1_tfidf,
+           'eqe1wcd': eqe1_wcd
            }
 
     if focus:
