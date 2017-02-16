@@ -5,12 +5,15 @@ from datetime import timedelta
 from vec4ir.datasets import NTCIR, QuadflorLike
 from argparse import ArgumentParser, FileType
 from vec4ir.core import Retrieval, all_but_the_top
-from vec4ir.base import TfidfRetrieval, Matching
+from vec4ir.base import TfidfRetrieval
+# from vec4ir.base import Matching
 from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.word2vec import FastWordCentroidRetrieval, WordMoversRetrieval
 from vec4ir.word2vec import WmdSimilarityRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
-from vec4ir.query_expansion import CentroidExpansion, EmbeddingBasedQueryLanguageModels
+from vec4ir.query_expansion import CentroidExpansion
+from vec4ir.query_expansion import EmbeddingBasedQueryLanguageModels
+from vec4ir.postprocessing import uptrain
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
 from gensim.models import Word2Vec
@@ -19,8 +22,8 @@ from operator import itemgetter
 from textwrap import indent
 from nltk.tokenize import word_tokenize
 import sys
-import os
 import pprint
+import os
 import numpy as np
 import pandas as pd
 import yaml
@@ -225,8 +228,9 @@ def _ir_eval_parser(config):
                                   default=True, action='store_false',
                                   help="Do NOT apply matching operation.")
 
-    parser.add_argument("-u", "--train", default=False, action='store_true',
-                        help="Train a whole new word2vec model")
+    parser.add_argument("-t", "--t", default=False, action='store_true',
+                        help=("Uptraining if embedding is also given, else"
+                              "train a whole new model."))
     return parser
 
 
@@ -310,6 +314,12 @@ def main():
         doctest.testmod()
         exit(int(0))
 
+    print("Preparing analzyer")
+    # Set up matching analyzer                                      Defaults
+    matching_analyzer = build_analyzer(tokenizer=args.tokenizer,    # sklearn
+                                       stop_words=args.stop_words,  # true
+                                       lowercase=args.lowercase)    # true
+    analyzed = matching_analyzer  # alias
     print("Selecting data set: {}".format(args.dataset))
     dataset = init_dataset(config['data'][args.dataset])
     print("Loading Data...")
@@ -317,9 +327,28 @@ def main():
     print("Done")
 
     # Set up embedding specific analyzer
-    print("Selecting embedding: {}".format(args.embedding))
-    embedding_config = config["embeddings"][args.embedding]
-    embedding = smart_load_word2vec(embedding_config["path"])
+    if args.embedding in config['embeddings']:
+        print('Found Embedding key in config file:', args.embedding)
+        model_path = config['embeddings']['path']
+        embedding_oov_token = config['embedding']["oov_token"]
+    else:
+        print('Using', args.embedding, 'as model path')
+        model_path = args.embedding
+
+    # Now model path is either:
+    # 1. filename from config
+    # 2. raw string argument passed to script
+    # 3. None, so no pre-trained embedding will be used
+    if args.train or model_path is None:
+        sents = [analyzed(doc) for doc in documents]
+        embedding = uptrain(sents, model_path=model_path,
+                            binary=('bin' in model_path),
+                            lockf=0.0,
+                            min_count=1,
+                            size=300)
+    else:
+        embedding = smart_load_word2vec(model_path)
+
     if args.subtract:
         print('Subtracting first %d principal components' % args.subtract)
         syn0 = embedding.syn0
@@ -327,44 +356,28 @@ def main():
     if args.normalize:
         print('Normalizing word vectors')
         embedding.init_sims(replace=True)
-    embedding_analyzer_config = embedding_config["analyzer"]
-    embedding_analyzer = build_analyzer(**embedding_analyzer_config)
+
+    # embedding_config = config["embeddings"][args.embedding]
+    # embedding_analyzer_config = embedding_config["analyzer"]
+    # embedding_analyzer = build_analyzer(**embedding_analyzer_config)
     if args.stats:
         print("Computing collection statistics...")
         stats = collection_statistics(embedding=embedding,
-                                      analyzer=embedding_analyzer,
-                                      documents=documents)
-        header = ("Statistics: {} x {}"
+                                      documents=sents,
+                                      analyzer=None)
+        header = ("Statistics: {dataset} x {embedding}"
                   " x {tokenizer} x lower: {lowercase}"
                   " x stop_words: {stop_words}")
-        header = header.format(args.dataset, args.embedding,
-                               **embedding_analyzer_config)
+        header = header.format(**args)
         print_dict(stats, header=header, stream=args.outfile)
         exit(0)
 
-    embedding_oov_token = embedding_config["oov_token"]
-
-    # Set up matching analyzer                                      Defaults
-    matching_analyzer = build_analyzer(tokenizer=args.tokenizer,    # sklearn
-                                       stop_words=args.stop_words,  # true
-                                       lowercase=args.lowercase)    # true
-
-    focus = [f.lower() for f in args.focus] if args.focus else None
     repl = {"drop": None, "zero": 0}[args.repstrat]
-
-    # TODO we do not train at all at the moment
-    # if not embedding:
-    #     print("Training word2vec model on all available data...")
-    #     sentences = StringSentence(documents, analyzer)
-    #     embedding = Word2Vec(sentences,
-    #                          min_count=1,
-    #                          iter=20)
-    #     embedding.init_sims(replace=True)  # embedding becomes read-only
 
     if args.filter_queries is True:
         old = len(queries)
         queries = [(nb, query) for nb, query in queries if
-                   is_embedded(query, embedding, embedding_analyzer)]
+                   is_embedded(query, embedding, matching_analyzer)]
         print("Retained {} (of {}) queries".format(len(queries), old))
 
     def evaluation(m):
@@ -435,7 +448,7 @@ def main():
            "wcdnoidf": WCDnoidf,
            "legacy-wmd": Word2VecRetrieval(embedding, wmd=True,
                                            analyzer=matching_analyzer,
-                                           vocab_analyzer=embedding_analyzer,
+                                           vocab_analyzer=matching_analyzer,
                                            oov=embedding_oov_token,
                                            verbose=args.verbose),
            "wmd": WordMoversRetrieval(embedding=embedding,
@@ -444,7 +457,7 @@ def main():
                                       oov=None,
                                       verbose=args.verbose,
                                       n_jobs=args.jobs),
-           "pvdm": Doc2VecRetrieval(analyzer=embedding_analyzer,
+           "pvdm": Doc2VecRetrieval(analyzer=matching_analyzer,
                                     matching=matching,
                                     n_jobs=args.jobs,
                                     metric="cosine",
@@ -470,6 +483,7 @@ def main():
            'eqe1wcd': eqe1_wcd
            }
 
+    focus = [f.lower() for f in args.focus] if args.focus else None
     if focus:
         print("Focussing on:", " ".join(focus))
         for f in focus:

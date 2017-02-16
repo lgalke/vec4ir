@@ -55,11 +55,11 @@ def argtopk(A, k, axis=-1, sort=True):
     return ind
 
 
-def collection_statistics(embedding, analyzer, documents):
+def collection_statistics(embedding, documents, analyzer=None):
     # print(embedding, analyzer, documents, sep='\n')
     c = Counter(n_tokens=0, n_embedded=0, n_oov=0)
     for document in documents:
-        words = analyzer(document)
+        words = analyzer(document) if analyzer is not None else document
         for word in words:
             c['n_tokens'] += 1
             if word in embedding:
