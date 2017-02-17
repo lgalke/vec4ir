@@ -30,10 +30,9 @@ import yaml
 import matplotlib
 matplotlib.use('Agg')  # compat on non-gui uis, must be set before pyplot
 import matplotlib.pyplot as plt
-# import matplotlib.patches as mpatches
-# import logging
-# logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
-#                     level=logging.INFO)
+import logging
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
+                    level=logging.INFO)
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd',
               'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf', 'wcdmom',
               'gensim-wmd', 'eqe1tfidf', 'eqe1wcd']
@@ -228,7 +227,7 @@ def _ir_eval_parser(config):
                                   default=True, action='store_false',
                                   help="Do NOT apply matching operation.")
 
-    parser.add_argument("-t", "--t", default=False, action='store_true',
+    parser.add_argument("-t", "--train", default=False, action='store_true',
                         help=("Uptraining if embedding is also given, else"
                               "train a whole new model."))
     return parser
@@ -294,9 +293,7 @@ def print_dict(d, header=None, stream=sys.stdout, commentstring="% "):
 
 
 def main():
-    """TODO: Docstring for main.
-    :returns: TODO
-    """
+    """Main Evalation Procedure"""
     # parse command line arguments and read config file
     meta_parser = ArgumentParser(add_help=False)
     meta_parser.add_argument('-c',
@@ -329,8 +326,9 @@ def main():
     # Set up embedding specific analyzer
     if args.embedding in config['embeddings']:
         print('Found Embedding key in config file:', args.embedding)
-        model_path = config['embeddings']['path']
-        embedding_oov_token = config['embedding']["oov_token"]
+        embedding_config = config['embeddings'][args.embedding]
+        model_path = embedding_config['path']
+        embedding_oov_token = embedding_config["oov_token"]
     else:
         print('Using', args.embedding, 'as model path')
         model_path = args.embedding
@@ -345,9 +343,18 @@ def main():
                             binary=('bin' in model_path),
                             lockf=0.0,
                             min_count=1,
+                            workers=args.jobs,
+                            iter=20,
+                            negative=20,
+                            sg=1,
+                            sorted_vocab=1,
+                            alpha=0.2,
+                            min_alpha=0.001,
                             size=300)
     else:
         embedding = smart_load_word2vec(model_path)
+
+    print("Top 10 frequent words:", embedding.index2word[:10])
 
     if args.subtract:
         print('Subtracting first %d principal components' % args.subtract)
