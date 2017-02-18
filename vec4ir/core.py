@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from sklearn.base import BaseEstimator, TransformerMixin, MetaEstimatorMixin
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.base import BaseEstimator, MetaEstimatorMixin
+from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 import scipy.sparse as sp
 try:
@@ -104,37 +104,23 @@ class EmbeddedVectorizer(TfidfVectorizer):
         E = self.embedding
         assert len(self.embedding.index2word) == len(self.vocabulary_)
         # Xt is sparse counts
-        centroids = embed(Xt, E.syn0, self.momentum)
-        # n_samples, n_dimensions = Xt.shape[0], E.syn0.shape[1]
-        # dtype = E.syn0.dtype
-        # centroids = np.zeros((n_samples, n_dimensions), dtype=dtype)
-        # for (row, col, val) in zip(*sp.find(Xt)):
-        #     centroids[row, :] += (val * E.syn0[col, :])
-
-        return centroids
+        return (Xt @ E)
 
     def fit_transform(self, X, y=None):
         return self.fit(X, y).transform(X, y)
 
 
-def embed(X, E, momentum=None):
+def embed(X, E):
     """
     X (n_samples, n_features)
     E (n_features, n_dims)
     X @ E (n_samples, n_dims)
     """
-    if momentum:
-        vt = np.zeros((1, E.shape[1]), dtype=E.dtype)
-    else:
-        return (X @ E)
+    raise DeprecationWarning("This is slow, use X @ syn0 instead.")
     embedded = np.zeros((X.shape[0], E.shape[1]), dtype=E.dtype)
     for (row, col, val) in zip(*sp.find(X)):
         update = val * E[col, :]
-        if momentum:
-            vt = momentum * vt + update
-            embedded[row, :] += vt[0, :]
-        else:
-            embedded[row, :] += update
+        embedded[row, :] += update
     return embedded
 
 

@@ -1,16 +1,11 @@
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator
 try:
-    from .utils import filter_vocab
     from .core import EmbeddedVectorizer, embed
 except SystemError:
-    from utils import filter_vocab
     from core import EmbeddedVectorizer, embed
 from sklearn.metrics.pairwise import pairwise_distances
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.neighbors import NearestNeighbors
 from scipy.special import expit
 from collections import Counter
-import scipy.sparse as sp
 import numpy as np
 
 
@@ -30,14 +25,14 @@ def delta(X, Y, n_jobs=-1, a=1, c=0):
     return D
 
 
-class EmbeddingBasedQueryLanguageModels(BaseEstimator, TransformerMixin):
+class EmbeddedQueryExpansion(BaseEstimator):
     """Embedding-based Query Language Models by Zamani and Croft 2016
     >>> sents = ["obama speaks to the press in illinois",\
                 "the president talks to the media in chicago"]
     >>> ls = lambda s: s.lower().split()
     >>> from gensim.models import Word2Vec
     >>> wv = Word2Vec(sentences=[ls(sent) for sent in sents], min_count=1)
-    >>> eqlm = EmbeddingBasedQueryLanguageModels(wv, analyzer=ls, m=1, eqe=2, verbose=1)
+    >>> eqlm = EmbeddedQueryExpansion(wv, analyzer=ls, m=1, eqe=2, verbose=1)
     >>> _ = eqlm.fit(sents)
     >>> eqlm.transform('obama press')
     """
@@ -59,14 +54,16 @@ class EmbeddingBasedQueryLanguageModels(BaseEstimator, TransformerMixin):
         self._c = c
         self.m = m
         self.n_jobs = n_jobs
-        self.vocabulary = {word: index for index, word in
-                           enumerate(embedding.index2word)}
+        self.vocabulary = None
 
     def fit(self, raw_docs, y=None):
-        """ Learns how to expand query with respect to corpus X """
-        E = self._embedding.syn0
+        """ Learn vocabulary to index and distance matrix of words"""
+        wv = self._embedding
+        E = wv._embedding.syn0
         a, c = self._a, self._c
         D = delta(E, E, n_jobs=self.n_jobs, a=a, c=c)
+        self.vocabulary = {word: index for index, word in
+                           enumerate(wv.index3word)}
         self._D = D
 
     def transform(self, query, y=None):
@@ -106,52 +103,39 @@ class EmbeddingBasedQueryLanguageModels(BaseEstimator, TransformerMixin):
         print("Expanding:", *expansion)
         return ' '.join([query, *expansion])
 
+    def fit_transform(self, X, y):
+        raise NotImplemented('fit_transform does not make sense for expansion')
+
 
 class CentroidExpansion(BaseEstimator):
 
-    def __init__(self, embedding, analyzer, m=10, verbose=0,
-                 **neighbor_params):
+    def __init__(self, embedding, analyzer='word', m=10, verbose=0,
+                 **ev_params):
         self.embedding = embedding
         self.m = m
-        self.neighbors = NearestNeighbors(n_neighbors=m, **neighbor_params)
-        self.common = None
-        self.vect = CountVectorizer(analyzer=analyzer,
-                                    vocabulary=embedding.index2word)
+        self.vect = EmbeddedVectorizer(vocabulary=embedding.index2word,
+                                       analyzer=analyzer,
+                                       **ev_params)
         BaseEstimator.__init__(self)
 
-    def fit(self, docs, y=None):
+    def fit(self, X, y=None):
         """ Fit effective vocab even if embedding contains more words """
-        index2word = self.embedding.index2word
-        syn0 = self.embedding.syn0
-
-        # find unique words
-        X_tmp = self.vect.fit_transform(docs)
-        __, cols, __ = sp.find(X_tmp)
-
-        features = np.unique(cols)
-        print('features:', features)
-
-        # reduce vocabulary and vectors
-        common_words = np.array([index2word[f] for f in features])
-        common_vectors = syn0[features]
-        print('CE: common vectors shape', common_vectors.shape)
-
-        # fit nearest neighbors with vectors
-        self.common = common_words
-        self.neighbors.fit(common_vectors)
-
+        self.vect.fit(X)
         return self
 
     def transform(self, query, y=None):
         """ Expands query by nearest tokens from collection """
-        E, vect = self.embedding, self.vect
+        wv, vect = self.embedding, self.vect
+
         qt = vect.transform([query])
-        emb = embed(qt, E.syn0)
+        v = embed(qt, wv.syn0)[0]  # only one vector
 
-        ind = self.neighbors.kneighbors(emb, return_distance=False,
-                                        n_neighbors=self.m)
+        exp_words = wv.similar_by_vector(v, topn=self.m)
 
-        exp_words = self.common[ind.ravel()]
+        # ind = self.neighbors.kneighbors(emb, return_distance=False,
+        #                                 n_neighbors=self.m)
+
+        # exp_words = self.common[ind.ravel()]
 
         expanded_query = query + ' ' + ' '.join(exp_words)
         print("Expanded query:", expanded_query)
