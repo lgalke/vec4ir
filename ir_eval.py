@@ -463,7 +463,7 @@ def main():
              args.retrieval_model)
         )
         ir = Retrieval(retrieval_model, query_expansion=query_expansion,
-                       name=rname, Matching=match_op)
+                       name=rname, matching=match_op)
         results[rname] = evaluation(ir)
         exit(0)
 
