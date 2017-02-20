@@ -162,6 +162,8 @@ def _ir_eval_parser(config):
     parser.add_argument("-q", "--query-expansion", type=str, default=None,
                         choices=QUERY_EXPANSION,
                         help="Choose query expansion technique.")
+    parser.add_argument("-m", type=int, default=10,
+                        help='number of terms to expand in QE')
     parser.add_argument("-r", "--retrieval-model", type=str, default=None,
                         choices=RETRIEVAL_MODEL,
                         help="Choose query expansion technique.")
@@ -300,11 +302,12 @@ def build_query_expansion(key, embedding, analyzer='word', m=10, verbose=0,
                           n_jobs=1):
     if key is None:
         return None
-    QEs = {'ce': CentroidExpansion(embedding, analyzer=analyzer, m=m),
+    QEs = {'ce': CentroidExpansion(embedding, analyzer=analyzer, m=m,
+                                   use_idf=True),
            'eqe1': EmbeddedQueryExpansion(embedding, analzyer=analyzer, m=m,
                                           verbose=verbose, eqe=1,
                                           n_jobs=n_jobs, a=1, c=0),
-           'eqe1': EmbeddedQueryExpansion(embedding, analzyer=analyzer, m=m,
+           'eqe2': EmbeddedQueryExpansion(embedding, analzyer=analyzer, m=m,
                                           verbose=verbose, eqe=2,
                                           n_jobs=n_jobs, a=1, c=0)}
     return QEs[key]
@@ -446,7 +449,7 @@ def main():
     results = dict()
     if args.retrieval_model is not None:
         query_expansion = build_query_expansion(args.query_expansion,
-                                                embedding=embedding,
+                                                embedding,
                                                 analyzer=analyzed, m=args.m,
                                                 verbose=args.verbose,
                                                 n_jobs=args.jobs)
