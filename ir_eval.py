@@ -6,7 +6,7 @@ from vec4ir.datasets import NTCIR, QuadflorLike
 from argparse import ArgumentParser, FileType
 from vec4ir.core import Retrieval, all_but_the_top
 from vec4ir.base import TfidfRetrieval
-from vec4ir.base import Tfidf
+from vec4ir.base import Tfidf, Matching
 # from vec4ir.base import Matching
 from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.word2vec import FastWordCentroidRetrieval, WordMoversRetrieval
@@ -40,7 +40,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 QUERY_EXPANSION = ['ce', 'eqe1', 'eqe2']
 RETRIEVAL_MODEL = ['tfidf', 'wcd', 'wmd']
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd',
-              'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf', 'wcdmom',
+              'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf',
               'gensim-wmd', 'eqe1tfidf', 'eqe1wcd']
 
 
@@ -304,10 +304,10 @@ def build_query_expansion(key, embedding, analyzer='word', m=10, verbose=0,
         return None
     QEs = {'ce': CentroidExpansion(embedding, analyzer=analyzer, m=m,
                                    use_idf=True),
-           'eqe1': EmbeddedQueryExpansion(embedding, analzyer=analyzer, m=m,
+           'eqe1': EmbeddedQueryExpansion(embedding, analyzer=analyzer, m=m,
                                           verbose=verbose, eqe=1,
                                           n_jobs=n_jobs, a=1, c=0),
-           'eqe2': EmbeddedQueryExpansion(embedding, analzyer=analyzer, m=m,
+           'eqe2': EmbeddedQueryExpansion(embedding, analyzer=analyzer, m=m,
                                           verbose=verbose, eqe=2,
                                           n_jobs=n_jobs, a=1, c=0)}
     return QEs[key]
@@ -456,13 +456,14 @@ def main():
         retrieval_model = build_retrieval_model(args.retrieval_model,
                                                 embedding, analyzer=analyzed,
                                                 use_idf=True)
+        match_op = Matching(analyzer=matching_analyzer)
         rname = '+'.join(
             (args.embedding,
              args.query_expansion if args.query_expansion else '',
              args.retrieval_model)
         )
         ir = Retrieval(retrieval_model, query_expansion=query_expansion,
-                       name=rname)
+                       name=rname, Matching=match_op)
         results[rname] = evaluation(ir)
         exit(0)
 
@@ -489,20 +490,12 @@ def main():
 
     # matching_estimator = Matching(**matching)
     CE = CentroidExpansion(embedding, matching_analyzer, m=10,
-                           verbose=args.verbose, n_jobs=args.jobs,
-                           algorithm='brute',
-                           metric='cosine')
+                           verbose=args.verbose)
     CE_WCD = Retrieval(retrieval_model=WCD, matching=None,
                        query_expansion=CE, name='CE+wcd')
 
     CE_TFIDF = Retrieval(retrieval_model=tfidf, matching=None,
                          query_expansion=CE, name='CE+tfidf')
-
-    WCD_mom = FastWordCentroidRetrieval(name="wcd-nom", embedding=embedding,
-                                        analyzer=matching_analyzer,
-                                        matching=matching,
-                                        n_jobs=args.jobs,
-                                        momentum=0.5)
 
     RMs = {"tfidf": tfidf,
            "nsim": Word2VecRetrieval(embedding, wmd=False,
@@ -553,7 +546,6 @@ def main():
                         analyzer=matching_analyzer, verbose=args.verbose),
            "gensim-wmd": WmdSimilarityRetrieval(embedding, matching_analyzer,
                                                 args.k),
-           'wcdmom': WCD_mom,
            'eqe1tfidf': eqe1_tfidf,
            'eqe1wcd': eqe1_wcd
            }

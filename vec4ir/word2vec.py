@@ -8,6 +8,7 @@ Github: https://github.com/lgalke
 Description: Embedding-based retrieval techniques.
 """
 from sklearn.base import BaseEstimator
+from sklearn.preprocessing import normalize
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics.pairwise import linear_kernel
@@ -256,7 +257,9 @@ class WordCentroidDistance(BaseEstimator):
         self.centroids = None
 
     def fit(self, X):
-        self.centroids = self.vect.fit_transform(X)
+        Xt = self.vect.fit_transform(X)
+        normalize(Xt, copy=False)  # We need this because of linear kernel
+        self.centroids = Xt
 
     def query(self, query, k=None, indices=None):
         centroids = self.centroids
@@ -264,6 +267,7 @@ class WordCentroidDistance(BaseEstimator):
             raise NotFittedError
         q = self.vect.transform([query])
         D = linear_kernel(q, self.centroids)  # l2 normalized, so linear kernel
+        print("WCD D.shape", D.shape)
         ind = np.argsort(D[0])[::-1]  # similarity metric, so reverse
         if k is not None:
             ind = ind[:k]

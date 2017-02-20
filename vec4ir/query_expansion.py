@@ -113,7 +113,7 @@ class CentroidExpansion(BaseEstimator):
                  **ev_params):
         self.embedding = embedding
         self.m = m
-        self.vect = EmbeddedVectorizer(vocabulary=embedding.index2word,
+        self.vect = EmbeddedVectorizer(embedding,
                                        analyzer=analyzer,
                                        **ev_params)
         BaseEstimator.__init__(self)
