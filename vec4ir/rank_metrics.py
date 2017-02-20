@@ -253,6 +253,11 @@ def precision(r):
         return 0
     tp = np.count_nonzero(r)
     return tp / r.size
+
+
+def safe_precision_at_k(r, k):
+    r = np.asarray(r)[:k]
+    return precision_at_k(r, min(k, r.size))
 # Modifications by lgalke END
 
 

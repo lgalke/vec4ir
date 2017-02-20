@@ -9,8 +9,10 @@ Description: Base classed for (embedding-based) retrieval.
 """
 
 from sklearn.base import BaseEstimator
+from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from abc import abstractmethod
 from collections import defaultdict
 from timeit import default_timer as timer
@@ -150,25 +152,6 @@ def TermMatch(X, q):
     return matching_doc_indices
 
 
-# def cosine_similarity(X, query, n_retrieve):
-#     """
-#     Computes the `n_retrieve` nearest neighbors using cosine similarity
-#     Xmatched : The documents that have matching terms (if matching='terms')
-#     q : the query
-#     n_retrieve : The number of indices to return.
-#     >>> X = np.array([[10,1,0], [1,10,0], [0,0,10]])
-#     >>> cosine_similarity(X, np.array([[0,23,0]]), 2)
-#     array([1, 0])
-#     >>> cosine_similarity(X, np.array([[1,0,0]]), 2)
-#     array([0, 1])
-#     >>> cosine_similarity(X, np.array([[1,0,10]]), 3)
-#     array([2, 0, 1])
-#     """
-#     nn = NearestNeighbors(metric='cosine', algorithm='brute').fit(X)
-#     ind = nn.kneighbors(query, n_neighbors=n_retrieve, return_distance=False)
-#     return ind.ravel()  # we want a plain list of indices
-
-
 def _checkXy(X, y):
     if y is not None and len(X) != len(y):
         raise ValueError("Shapes of X and y do not match.")
@@ -178,10 +161,12 @@ class Matching(BaseEstimator):
 
     """Typical Matching Operation of Retrieval Systems"""
 
-    def __init__(self, match_fn=TermMatch, binary=True, dtype=np.bool_, **cv_params):
+    def __init__(self, match_fn=TermMatch, binary=True, dtype=np.bool_,
+                 **cv_params):
         """initializes a Matching object
 
-        :match_fn: A matching function of signature `docs, query` -> indices of matching docs
+        :match_fn: A matching function of signature `docs, query`
+                    -> indices of matching docs
         :binary: Store only binary term occurrences.
         :dtype: Data type of internal feature matrix
         :cv_params: Parameter for the count vectorizer such as lowercase=True
@@ -190,19 +175,18 @@ class Matching(BaseEstimator):
         # RetrievalBase.__init__(self)
 
         self._match_fn = match_fn
-        self._countvectorizer = CountVectorizer(binary=binary, dtype=dtype, **cv_params)
+        self._vect = CountVectorizer(binary=binary, dtype=dtype,
+                                     **cv_params)
 
-    def fit(self, X, y=None):
-        _checkXy(X, y)
-
-        cv = self._countvectorizer
+    def fit(self, X):
+        cv = self._vect
 
         self._fit_X = cv.fit_transform(X)  # fit internal countvectorizer
 
         return self
 
     def predict(self, query):
-        cv, match_fn, fit_X = self._countvectorizer, self._match_fn, self._fit_X
+        cv, match_fn, fit_X = self._vect, self._match_fn, self._fit_X
         # q = cv.transform(np.asarray([query]))
         q = cv.transform(([query]))
         ind = match_fn(fit_X, q)
@@ -396,6 +380,29 @@ class RetriEvalMixin():
                 print("AP: {:.4f}".format(ap))
 
         return values
+
+
+class Tfidf(TfidfVectorizer):
+    def __init__(self, analyzer='word', use_idf=True):
+        TfidfVectorizer.__init__(self, analyzer=analyzer, use_idf=use_idf)
+        self._fit_X = None
+
+    def fit(self, X):
+        Xt = super().fit_transform(X)
+        self._fit_X = Xt
+        return self
+
+    def query(self, query, k=None, indices=None):
+        q = super().transform([query])
+        if indices is not None:
+            fit_X = self._fit_X[indices]
+        else:
+            fit_X = self._fit_X
+        D = pairwise_distances(q, fit_X[indices], metric='cosine',)
+        ind = np.argsort(D[0])
+        if k is not None:
+            ind = ind[:k]
+        return ind
 
 
 class TfidfRetrieval(RetrievalBase, CombinatorMixin, RetriEvalMixin):

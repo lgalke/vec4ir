@@ -8,10 +8,10 @@ Github: https://github.com/lgalke
 Description: Embedding-based retrieval techniques.
 """
 from sklearn.base import BaseEstimator
-from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import normalize, Normalizer
-from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.metrics.pairwise import linear_kernel
+from sklearn.exceptions import NotFittedError
 from gensim.similarities import WmdSimilarity
 # from scipy.spatial.distance import cosine
 import numpy as np
@@ -247,6 +247,29 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
         return result
 
 
+class WordCentroidDistance(BaseEstimator):
+
+    def __init__(self, embedding, analyzer='word', use_idf=True):
+        self.vect = EmbeddedVectorizer(embedding,
+                                       analyzer=analyzer,
+                                       use_idf=use_idf)
+        self.centroids = None
+
+    def fit(self, X):
+        self.centroids = self.vect.fit_transform(X)
+
+    def query(self, query, k=None, indices=None):
+        centroids = self.centroids
+        if centroids is None:
+            raise NotFittedError
+        q = self.vect.transform([query])
+        D = linear_kernel(q, self.centroids)  # l2 normalized, so linear kernel
+        ind = np.argsort(D[0])[::-1]  # similarity metric, so reverse
+        if k is not None:
+            ind = ind[:k]
+        return ind
+
+
 class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
     """
     Retrieval Model based on Word Centroid Distance
@@ -354,16 +377,16 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
     """Docstring for FastWordCentrodRetrieval. """
 
     def __init__(self, embedding, analyzer='word', matching=None, name="FWCD",
-                 n_jobs=1, use_idf=True, momentum=None):
+                 n_jobs=1, use_idf=True):
         """TODO: to be defined1. """
         self.name = name
         self.matching = Matching(**dict(matching)) if matching else None
         self.vect = EmbeddedVectorizer(embedding, analyzer=analyzer, norm='l2',
-                                       use_idf=use_idf, momentum=momentum)
+                                       use_idf=use_idf)
         self.nn = NearestNeighbors(n_jobs=n_jobs, metric='cosine',
                                    algorithm='brute')
 
-    def fit(self, X_raw, y):
+    def fit(self, X_raw, y=None):
         cents = self.vect.fit_transform(X_raw)
         # print("Largest singular value: {:.2f}".format(
         #     np.linalg.norm(cents, ord=2)))
@@ -383,7 +406,7 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         else:
             self.nn.fit(cents)
 
-    def query(self, query, k=None, matched_indices=None):
+    def query(self, query, k=None, indices=None):
         centroids = self.centroids
         if k is None:
             k = centroids.shape[0]
@@ -397,7 +420,7 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
             if n_ret == 0:
                 return []
             self.nn.fit(centroids)
-        elif matched_indices:
+        elif indices:
             centroids, labels = centroids[ind], self._y[ind]
             n_ret = min(k, centroids.shape[0])
             if n_ret == 0:

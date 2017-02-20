@@ -6,6 +6,7 @@ from vec4ir.datasets import NTCIR, QuadflorLike
 from argparse import ArgumentParser, FileType
 from vec4ir.core import Retrieval, all_but_the_top
 from vec4ir.base import TfidfRetrieval
+from vec4ir.base import Tfidf
 # from vec4ir.base import Matching
 from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.word2vec import FastWordCentroidRetrieval, WordMoversRetrieval
@@ -13,6 +14,7 @@ from vec4ir.word2vec import WmdSimilarityRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.query_expansion import CentroidExpansion
 from vec4ir.query_expansion import EmbeddedQueryExpansion
+from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
 from vec4ir.postprocessing import uptrain
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
@@ -33,6 +35,9 @@ import matplotlib.pyplot as plt
 import logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
+
+QUERY_EXPANSION = ['ce', 'eqe1', 'eqe2']
+RETRIEVAL_MODEL = ['tfidf', 'wcd', 'wmd']
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd',
               'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf', 'wcdmom',
               'gensim-wmd', 'eqe1tfidf', 'eqe1wcd']
@@ -153,6 +158,12 @@ def _ir_eval_parser(config):
     parser.add_argument("-e", "--embedding", type=str, default=None,
                         choices=valid_embedding_keys,
                         help="Specify embedding to use (as in config file)")
+    parser.add_argument("-q", "--query-expansion", type=str, default=None,
+                        choices=QUERY_EXPANSION,
+                        help="Choose query expansion technique.")
+    parser.add_argument("-r", "--retrieval-model", type=str, default=None,
+                        choices=RETRIEVAL_MODEL,
+                        help="Choose query expansion technique.")
     parser.add_argument("-f", "--focus", nargs='+',
                         choices=MODEL_KEYS, default=None)
     parser.add_argument("-j", "--jobs", type=int, default=-1,
@@ -284,6 +295,40 @@ def build_analyzer(tokenizer=None, stop_words=None, lowercase=True):
     return analyzer
 
 
+def build_query_expansion(key, embedding, analyzer='word', m=10, verbose=0,
+                          n_jobs=1):
+    if key is None:
+        return None
+    QEs = {'ce': CentroidExpansion(embedding, analyzer=analyzer, m=m),
+           'eqe1': EmbeddedQueryExpansion(embedding, analzyer=analyzer, m=m,
+                                          verbose=verbose, eqe=1,
+                                          n_jobs=n_jobs, a=1, c=0),
+           'eqe1': EmbeddedQueryExpansion(embedding, analzyer=analyzer, m=m,
+                                          verbose=verbose, eqe=2,
+                                          n_jobs=n_jobs, a=1, c=0)}
+    return QEs[key]
+
+
+def build_retrieval_model(key, embedding, analyzer='word', use_idf=True):
+    """
+    Arguments:
+    :key:
+    :embedding:
+    :analyzer:
+    :use_idf:
+
+    """
+    RMs = {
+        'tfidf': Tfidf(analyzer=analyzer, use_idf=use_idf),
+        'wcd': WordCentroidDistance(embedding=embedding,
+                                    analyzer=analyzer,
+                                    use_idf=use_idf),
+        'wmd': WordMoversDistance(embedding=embedding,
+                                  analyzer=analyzer)
+    }
+    return RMs[key]
+
+
 def print_dict(d, header=None, stream=sys.stdout, commentstring="% "):
     if header:
         print(indent(header, commentstring), file=stream)
@@ -311,7 +356,7 @@ def main():
         doctest.testmod()
         exit(int(0))
 
-    print("Preparing analzyer")
+    print("Preparing analyzer")
     # Set up matching analyzer                                      Defaults
     matching_analyzer = build_analyzer(tokenizer=args.tokenizer,    # sklearn
                                        stop_words=args.stop_words,  # true
@@ -398,6 +443,25 @@ def main():
                        replacement=repl)
 
     results = dict()
+    if args.retrieval_model is not None:
+        query_expansion = build_query_expansion(args.query_expansion,
+                                                embedding=embedding,
+                                                analyzer=analyzed, m=args.m,
+                                                verbose=args.verbose,
+                                                n_jobs=args.jobs)
+        retrieval_model = build_retrieval_model(args.retrieval_model,
+                                                embedding, analyzer=analyzed,
+                                                use_idf=True)
+        rname = '+'.join(
+            (args.embedding,
+             args.query_expansion if args.query_expansion else '',
+             args.retrieval_model)
+        )
+        ir = Retrieval(retrieval_model, query_expansion=query_expansion,
+                       name=rname)
+        results[rname] = evaluation(ir)
+        exit(0)
+
     tfidf = TfidfRetrieval(analyzer=matching_analyzer)
     matching = {"analyzer": matching_analyzer} if args.matching else None
 
