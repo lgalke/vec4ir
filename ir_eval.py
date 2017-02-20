@@ -14,7 +14,8 @@ from vec4ir.word2vec import WmdSimilarityRetrieval
 from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.query_expansion import CentroidExpansion
 from vec4ir.query_expansion import EmbeddedQueryExpansion
-from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
+from vec4ir.word2vec import WordCentroidDistance
+from vec4ir.word2vec import WordMoversDistance
 from vec4ir.postprocessing import uptrain
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
@@ -322,9 +323,9 @@ def build_retrieval_model(key, embedding, analyzer='word', use_idf=True):
         'tfidf': Tfidf(analyzer=analyzer, use_idf=use_idf),
         'wcd': WordCentroidDistance(embedding=embedding,
                                     analyzer=analyzer,
-                                    use_idf=use_idf),
-        'wmd': WordMoversDistance(embedding=embedding,
-                                  analyzer=analyzer)
+                                    use_idf=use_idf)
+        # 'wmd': WordMoversDistance(embedding=embedding,
+        #                           analyzer=analyzer)
     }
     return RMs[key]
 
