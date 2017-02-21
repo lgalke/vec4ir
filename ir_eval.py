@@ -392,7 +392,7 @@ def main():
                             binary=('bin' in model_path),
                             lockf=0.0,
                             min_count=1,
-                            workers=args.jobs,
+                            workers=min(1, args.jobs),
                             iter=20,
                             negative=20,
                             sg=1,
