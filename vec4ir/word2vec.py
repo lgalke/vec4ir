@@ -249,6 +249,10 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
 
 
 class WordCentroidDistance(BaseEstimator):
+    """
+    This class should only be used inside a Retrieval, so that Retrieval
+    cares about the matching and the indices the indices
+    """
 
     def __init__(self, embedding, analyzer='word', use_idf=True):
         self.vect = EmbeddedVectorizer(embedding,
@@ -270,9 +274,10 @@ class WordCentroidDistance(BaseEstimator):
         q = self.vect.transform([query])
         D = linear_kernel(q, self.centroids)  # l2 normalized, so linear kernel
         print("WCD D.shape", D.shape)
-        ind = np.argsort(D[0])[::-1]  # similarity metric, so reverse
+        ind = np.argsort(D[0, :])[::-1]  # similarity metric, so reverse
         if k is not None:  # we could use our argtopk in the first place
             ind = ind[:k]
+        print(ind)
         return ind
 
 
