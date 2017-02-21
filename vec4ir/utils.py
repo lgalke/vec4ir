@@ -55,9 +55,10 @@ def argtopk(A, k, axis=-1, sort=True):
     return ind
 
 
-def collection_statistics(embedding, documents, analyzer=None):
+def collection_statistics(embedding, documents, analyzer=None, topn=None):
     # print(embedding, analyzer, documents, sep='\n')
     c = Counter(n_tokens=0, n_embedded=0, n_oov=0)
+    f = Counter()
     for document in documents:
         words = analyzer(document) if analyzer is not None else document
         for word in words:
@@ -65,10 +66,13 @@ def collection_statistics(embedding, documents, analyzer=None):
             if word in embedding:
                 c['n_embedded'] += 1
             else:
+                f[word] += 1
                 c['n_oov'] += 1
 
     d = dict(c)
     d['oov_ratio'] = c['n_oov'] / c['n_tokens']
+    if topn:
+        return d, f.most_common(topn)
     return d
 
 

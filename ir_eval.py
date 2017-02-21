@@ -418,14 +418,16 @@ def main():
     # embedding_analyzer = build_analyzer(**embedding_analyzer_config)
     if args.stats:
         print("Computing collection statistics...")
-        stats = collection_statistics(embedding=embedding,
-                                      documents=sents,
-                                      analyzer=None)
+        stats, mcf = collection_statistics(embedding=embedding,
+                                           documents=sents,
+                                           analyzer=None,
+                                           topn=10)
         header = ("Statistics: {dataset} x {embedding}"
                   " x {tokenizer} x lower: {lowercase}"
                   " x stop_words: {stop_words}")
         header = header.format(**args)
         print_dict(stats, header=header, stream=args.outfile)
+        print("Most common fails:", *mcf, sep='\n')
         exit(0)
 
     repl = {"drop": None, "zero": 0}[args.repstrat]
