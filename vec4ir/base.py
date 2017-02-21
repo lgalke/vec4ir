@@ -9,7 +9,7 @@ Description: Base classed for (embedding-based) retrieval.
 """
 
 from sklearn.base import BaseEstimator
-from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.metrics.pairwise import pairwise_distances, linear_kernel
 from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -19,12 +19,15 @@ from timeit import default_timer as timer
 import scipy.sparse as sp
 import numpy as np
 import pandas as pd
+from sklearn.exceptions import NotFittedError
 
 try:
     from . import rank_metrics as rm
+    from .utils import argtopk
     from .combination import CombinatorMixin
 except (SystemError, ValueError):
     from combination import CombinatorMixin
+    from utils import argtopk
     import rank_metrics as rm
 
 
@@ -384,7 +387,8 @@ class RetriEvalMixin():
 
 class Tfidf(TfidfVectorizer):
     def __init__(self, analyzer='word', use_idf=True):
-        TfidfVectorizer.__init__(self, analyzer=analyzer, use_idf=use_idf)
+        TfidfVectorizer.__init__(self, analyzer=analyzer, use_idf=use_idf,
+                                 norm='l2')
         self._fit_X = None
 
     def fit(self, X):
@@ -393,15 +397,17 @@ class Tfidf(TfidfVectorizer):
         return self
 
     def query(self, query, k=None, indices=None):
+        if self._fit_X is None:
+            raise NotFittedError
+
         q = super().transform([query])
         if indices is not None:
             fit_X = self._fit_X[indices]
         else:
             fit_X = self._fit_X
-        D = pairwise_distances(q, fit_X[indices], metric='cosine',)
-        ind = np.argsort(D[0])
-        if k is not None:
-            ind = ind[:k]
+        # fit_X is l2 normalized, so we can
+        D = linear_kernel(q, fit_X)
+        ind = argtopk(D[0], k)
         return ind
 
 
