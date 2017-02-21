@@ -21,7 +21,7 @@ def filter_vocab(model, words, oov=None):
     return filtered
 
 
-def argtopk(A, k, axis=-1, sort=True):
+def argtopk(A, k=None, sort=True):
     """ Get the the top k elements (in sorted order)
     >>> A = np.asarray([5,4,3,6,7,8,9,0])
     >>> argtopk(A, 3)
@@ -34,35 +34,27 @@ def argtopk(A, k, axis=-1, sort=True):
     array([6, 5, 4, 3, 0, 1, 2, 7])
     >>> argtopk(A, 28)
     array([6, 5, 4, 3, 0, 1, 2, 7])
-    >>> B = np.asarray([[1,2,3],[4,3,2],[-9,-2,-7]])
-    >>> B.shape
-    (3, 3)
-    >>> r = argtopk(B, 2)
-    >>> r[0]
-    array([2,1])
-    >>> r[1]
-    array([0,1])
-    >>> r[2]
-    array([1,2])
+    >>> argtopk(A, None)
+    array([6, 5, 4, 3, 0, 1, 2, 7])
+    >>> X = np.arange(20)
+    >>> argtopk(X, 10)
+    array([19, 18, 17, 16, 15, 14, 13, 12, 11, 10])
     """
     A = np.asarray(A)
-    if k is None or k >= len(A):
-        # catch this for more convenience, if list is too short
+    if len(A.shape) > 1:
+        raise ValueError('argtopk only defined for 1-d slices')
+    axis = -1
+    if k is None or k >= A.size:
+        # if list is too short or k is None, return all in sort order
         return np.argsort(A, axis=axis)[::-1]
 
     assert k > 0
     # now 0 < k < len(A)
-    ind = np.argpartition(A, -k, axis=axis)
-    import sys
-    # select k highest, so fancy for multi dimensional arrays
-    ind = ind[..., -k:]  # <++TODO++> only works for single dim
-    print(ind, file=sys.stderr)
-
+    ind = np.argpartition(A, -k, axis=axis)[-k:]
     if sort:
         # sort according to values in A
-        ind = ind[np.argsort(A[ind], axis=axis)]
         # argsort is always from lowest to highest, so reverse
-        ind = ind[::-1]
+        ind = ind[np.argsort(A[ind], axis=axis)][::-1]
 
     return ind
 
