@@ -127,17 +127,17 @@ class CentroidExpansion(BaseEstimator):
         """ Expands query by nearest tokens from collection """
         wv, vect = self.embedding, self.vect
 
-        qt = vect.transform([query])
-        v = embed(qt, wv.syn0)[0]  # only one vector
+        v = vect.transform([query])[0]
 
-        exp_words = wv.similar_by_vector(v, topn=self.m)
+        exp_tuples = wv.similar_by_vector(v, topn=self.m)
+        words, __scores = zip(*exp_tuples)
 
         # ind = self.neighbors.kneighbors(emb, return_distance=False,
         #                                 n_neighbors=self.m)
 
         # exp_words = self.common[ind.ravel()]
 
-        expanded_query = query + ' ' + ' '.join(exp_words)
+        expanded_query = query + ' ' + ' '.join(words)
         print("Expanded query:", expanded_query)
 
         return expanded_query
