@@ -326,8 +326,7 @@ def build_retrieval_model(key, embedding, analyzer, use_idf=True):
         'wcd': WordCentroidDistance(embedding=embedding,
                                     analyzer=analyzer,
                                     use_idf=use_idf),
-        'wmd': WordMoversDistance(embedding=embedding,
-                                  analyzer=analyzer)
+        'wmd': WordMoversDistance(embedding, analyzer)
     }
     return RMs[key]
 
@@ -453,8 +452,7 @@ def main():
     results = dict()
     if args.retrieval_model is not None:
         query_expansion = build_query_expansion(args.query_expansion,
-                                                embedding,
-                                                analyzer=analyzed, m=args.m,
+                                                embedding, analyzed, m=args.m,
                                                 verbose=args.verbose,
                                                 n_jobs=args.jobs)
         retrieval_model = build_retrieval_model(args.retrieval_model,

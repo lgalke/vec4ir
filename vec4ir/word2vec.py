@@ -28,7 +28,7 @@ except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixin, Matching
     from combination import CombinatorMixin
 
-default_analyzer = CountVectorizer().build_analyzer()
+DEFAULT_ANALYZER = CountVectorizer().build_analyzer()
 
 
 class StringSentence(object):
@@ -59,7 +59,7 @@ class StringSentence(object):
     """
     def __init__(self, documents, analyze_fn=None, max_sentence_length=10000):
         if analyze_fn is None:
-            self.analyze_fn = default_analyzer
+            self.analyze_fn = DEFAULT_ANALYZER
         else:
             self.analyze_fn = analyze_fn
         self.documents = documents
@@ -280,7 +280,7 @@ class WordCentroidDistance(BaseEstimator):
         return ind
 
 class WordMoversDistance(BaseEstimator):
-    def __init__(self, embedding, analyze_fn=default_analyzer):
+    def __init__(self, embedding, analyze_fn=DEFAULT_ANALYZER):
         self.embedding = embedding
         self.analyze_fn = analyze_fn
 
