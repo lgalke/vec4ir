@@ -399,7 +399,6 @@ class Tfidf(TfidfVectorizer):
     def query(self, query, k=None, indices=None):
         if self._fit_X is None:
             raise NotFittedError
-
         q = super().transform([query])
         if indices is not None:
             fit_X = self._fit_X[indices]

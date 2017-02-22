@@ -241,9 +241,8 @@ def _ir_eval_parser(config):
                                   default=True, action='store_false',
                                   help="Do NOT apply matching operation.")
 
-    parser.add_argument("-t", "--train", default=False, action='store_true',
-                        help=("Uptraining if embedding is also given, else"
-                              "train a whole new model."))
+    parser.add_argument("-t", "--train", default=None, type=int,
+                        help="Number of epochs to train")
     return parser
 
 
@@ -386,20 +385,22 @@ def main():
     # 1. filename from config
     # 2. raw string argument passed to script
     # 3. None, so no pre-trained embedding will be used
-    if args.train or model_path is None:
+    if args.train is not None or model_path is None:
         sents = [analyzed(doc) for doc in documents]
         embedding = uptrain(sents, model_path=model_path,
                             binary=('bin' in model_path),
                             lockf=0.0,
-                            min_count=1,
-                            workers=min(1, args.jobs),
-                            iter=20,
-                            negative=20,
-                            sg=1,
-                            sorted_vocab=1,
-                            alpha=0.2,
-                            min_alpha=0.001,
-                            size=300)
+                            min_count=1,  # keep all the words
+                            workers=max(1, args.jobs),  # no -1
+                            iter=args.train,  # number of epochs
+                            negative=50,  # number of negative samples
+                            sg=1,  # skip gram!
+                            sorted_vocab=1,  # why not
+                            alpha=0.25,  # initial learning rate
+                            sample=0.001,
+                            min_alpha=0.005,  # linear decay target
+                            size=300  # vector size
+                            )
     else:
         embedding = smart_load_word2vec(model_path)
 
@@ -467,102 +468,102 @@ def main():
         ir = Retrieval(retrieval_model, query_expansion=query_expansion,
                        name=rname, matching=match_op)
         results[rname] = evaluation(ir)
-        exit(0)
-
-    tfidf = TfidfRetrieval(analyzer=matching_analyzer)
-    matching = {"analyzer": matching_analyzer} if args.matching else None
-
-    WCD = FastWordCentroidRetrieval(name="wcd", embedding=embedding,
-                                    analyzer=matching_analyzer,
-                                    matching=matching,
-                                    n_jobs=args.jobs)
-    WCDnoidf = FastWordCentroidRetrieval(name="wcd-noidf", embedding=embedding,
-                                         analyzer=matching_analyzer,
-                                         matching=matching,
-                                         use_idf=False,
-                                         n_jobs=args.jobs)
-
-    eqe1 = EmbeddedQueryExpansion(embedding,
-                                  analyzer=matching_analyzer,
-                                  m=10,
-                                  eqe=1,
-                                  n_jobs=args.jobs)
-    eqe1_tfidf = Retrieval(query_expansion=eqe1, retrieval_model=tfidf)
-    eqe1_wcd = Retrieval(query_expansion=eqe1, retrieval_model=WCD)
-
-    # matching_estimator = Matching(**matching)
-    CE = CentroidExpansion(embedding, matching_analyzer, m=10,
-                           verbose=args.verbose)
-    CE_WCD = Retrieval(retrieval_model=WCD, matching=None,
-                       query_expansion=CE, name='CE+wcd')
-
-    CE_TFIDF = Retrieval(retrieval_model=tfidf, matching=None,
-                         query_expansion=CE, name='CE+tfidf')
-
-    RMs = {"tfidf": tfidf,
-           "nsim": Word2VecRetrieval(embedding, wmd=False,
-                                     analyzer=matching_analyzer,
-                                     vocab_analyzer=matching_analyzer,
-                                     oov=embedding_oov_token,
-                                     verbose=args.verbose),
-           "legacy-wcd": WordCentroidRetrieval(embedding, name="legacy-mwcd",
-                                               matching=matching,
-                                               analyzer=matching_analyzer,
-                                               oov=embedding_oov_token,
-                                               verbose=args.verbose,
-                                               normalize=False,
-                                               algorithm='brute',
-                                               metric='cosine',
-                                               n_jobs=args.jobs),
-           "wcd": WCD,
-           "wcdnoidf": WCDnoidf,
-           "legacy-wmd": Word2VecRetrieval(embedding, wmd=True,
-                                           analyzer=matching_analyzer,
-                                           vocab_analyzer=matching_analyzer,
-                                           oov=embedding_oov_token,
-                                           verbose=args.verbose),
-           "wmd": WordMoversRetrieval(embedding=embedding,
-                                      analyzer=matching_analyzer,
-                                      matching_params=matching,
-                                      oov=None,
-                                      verbose=args.verbose,
-                                      n_jobs=args.jobs),
-           "pvdm": Doc2VecRetrieval(analyzer=matching_analyzer,
-                                    matching=matching,
-                                    n_jobs=args.jobs,
-                                    metric="cosine",
-                                    algorithm="brute",
-                                    alpha=0.25,
-                                    min_alpha=0.05,
-                                    n_epochs=20,
-                                    verbose=args.verbose),
-           "cewcd": CE_WCD,
-           "cetfidf": CE_TFIDF,
-           'wmdnom': WordMoversRetrieval(embedding=embedding,
-                                         analyzer=matching_analyzer,
-                                         matching_params=None,
-                                         oov=embedding_oov_token,
-                                         verbose=args.verbose,
-                                         n_jobs=args.jobs),
-           "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
-                        analyzer=matching_analyzer, verbose=args.verbose),
-           "gensim-wmd": WmdSimilarityRetrieval(embedding, matching_analyzer,
-                                                args.k),
-           'eqe1tfidf': eqe1_tfidf,
-           'eqe1wcd': eqe1_wcd
-           }
-
-    focus = [f.lower() for f in args.focus] if args.focus else None
-    if focus:
-        print("Focussing on:", " ".join(focus))
-        for f in focus:
-            RM = RMs[f]
-            results[RM.name] = evaluation(RMs[f])
-            del RM, RMs[f]  # clean up
     else:
-        for key, RM in RMs.items():
-            results[RM.name] = evaluation(RM)
-            del RM, RMs[key]  # clean up
+
+        tfidf = TfidfRetrieval(analyzer=matching_analyzer)
+        matching = {"analyzer": matching_analyzer} if args.matching else None
+
+        WCD = FastWordCentroidRetrieval(name="wcd", embedding=embedding,
+                                        analyzer=matching_analyzer,
+                                        matching=matching,
+                                        n_jobs=args.jobs)
+        WCDnoidf = FastWordCentroidRetrieval(name="wcd-noidf",
+                                             embedding=embedding,
+                                             analyzer=matching_analyzer,
+                                             matching=matching, use_idf=False,
+                                             n_jobs=args.jobs)
+
+        eqe1 = EmbeddedQueryExpansion(embedding,
+                                      analyzer=matching_analyzer,
+                                      m=10,
+                                      eqe=1,
+                                      n_jobs=args.jobs)
+        eqe1_tfidf = Retrieval(query_expansion=eqe1, retrieval_model=tfidf)
+        eqe1_wcd = Retrieval(query_expansion=eqe1, retrieval_model=WCD)
+
+        # matching_estimator = Matching(**matching)
+        CE = CentroidExpansion(embedding, matching_analyzer, m=10,
+                               verbose=args.verbose)
+        CE_WCD = Retrieval(retrieval_model=WCD, matching=None,
+                           query_expansion=CE, name='CE+wcd')
+
+        CE_TFIDF = Retrieval(retrieval_model=tfidf, matching=None,
+                             query_expansion=CE, name='CE+tfidf')
+
+        RMs = {"tfidf": tfidf,
+               "nsim": Word2VecRetrieval(embedding, wmd=False,
+                                         analyzer=matching_analyzer,
+                                         vocab_analyzer=matching_analyzer,
+                                         oov=embedding_oov_token,
+                                         verbose=args.verbose),
+               "legacy-wcd": WordCentroidRetrieval(embedding, name="legacy-mwcd",
+                                                   matching=matching,
+                                                   analyzer=matching_analyzer,
+                                                   oov=embedding_oov_token,
+                                                   verbose=args.verbose,
+                                                   normalize=False,
+                                                   algorithm='brute',
+                                                   metric='cosine',
+                                                   n_jobs=args.jobs),
+               "wcd": WCD,
+               "wcdnoidf": WCDnoidf,
+               "legacy-wmd": Word2VecRetrieval(embedding, wmd=True,
+                                               analyzer=matching_analyzer,
+                                               vocab_analyzer=matching_analyzer,
+                                               oov=embedding_oov_token,
+                                               verbose=args.verbose),
+               "wmd": WordMoversRetrieval(embedding=embedding,
+                                          analyzer=matching_analyzer,
+                                          matching_params=matching,
+                                          oov=None,
+                                          verbose=args.verbose,
+                                          n_jobs=args.jobs),
+               "pvdm": Doc2VecRetrieval(analyzer=matching_analyzer,
+                                        matching=matching,
+                                        n_jobs=args.jobs,
+                                        metric="cosine",
+                                        algorithm="brute",
+                                        alpha=0.25,
+                                        min_alpha=0.05,
+                                        n_epochs=20,
+                                        verbose=args.verbose),
+               "cewcd": CE_WCD,
+               "cetfidf": CE_TFIDF,
+               'wmdnom': WordMoversRetrieval(embedding=embedding,
+                                             analyzer=matching_analyzer,
+                                             matching_params=None,
+                                             oov=embedding_oov_token,
+                                             verbose=args.verbose,
+                                             n_jobs=args.jobs),
+               "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
+                            analyzer=matching_analyzer, verbose=args.verbose),
+               "gensim-wmd": WmdSimilarityRetrieval(embedding, matching_analyzer,
+                                                    args.k),
+               'eqe1tfidf': eqe1_tfidf,
+               'eqe1wcd': eqe1_wcd
+            }
+
+        focus = [f.lower() for f in args.focus] if args.focus else None
+        if focus:
+            print("Focussing on:", " ".join(focus))
+            for f in focus:
+                RM = RMs[f]
+                results[RM.name] = evaluation(RMs[f])
+                del RM, RMs[f]  # clean up
+        else:
+            for key, RM in RMs.items():
+                results[RM.name] = evaluation(RM)
+                del RM, RMs[key]  # clean up
 
     if args.plot:
         plot_precision_recall_curves(results, path=args.plot)

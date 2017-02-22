@@ -67,6 +67,9 @@ class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
 
         if matching:
             ind = matching.predict(q)
+            print('{} documents matched.'.format(len(ind)))
+            if len(ind) == 0:
+                return []
             labels = labels[ind]  # Reduce our own view
         else:
             ind = None

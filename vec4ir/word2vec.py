@@ -273,7 +273,6 @@ class WordCentroidDistance(BaseEstimator):
             centroids = centroids[indices]
         q = self.vect.transform([query])
         D = linear_kernel(q, centroids)  # l2 normalized, so linear kernel
-        print("WCD D.shape", D.shape)
         ind = np.argsort(D[0, :])[::-1]  # similarity metric, so reverse
         if k is not None:  # we could use our argtopk in the first place
             ind = ind[:k]
