@@ -1,6 +1,6 @@
 embeddings:
     glove:
-        path: "/data3/lgalke/glove.gnsm"
+        path: "/data3/lgalke/glove.840B.300d.w2v_format.txt"
         oov_token: "UNK"  # wild guess
         analyzer:
             lowercase: False

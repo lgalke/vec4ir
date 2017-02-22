@@ -113,8 +113,7 @@ class EmbeddedQueryExpansion(BaseEstimator):
 class CentroidExpansion(BaseEstimator):
 
     def __init__(self, embedding, analyzer='word', m=10, verbose=0,
-                 infer_vocab=True, use_idf=True,
-                 **ev_params):
+                 use_idf=True, **ev_params):
         """Expand a query by the nearest known tokens to its centroid
         """
         self.embedding = embedding
@@ -123,25 +122,11 @@ class CentroidExpansion(BaseEstimator):
                                        analyzer=analyzer,
                                        use_idf=use_idf,
                                        **ev_params)
-        self.infer_vocab = infer_vocab
         BaseEstimator.__init__(self)
 
     def fit(self, X, y=None):
         """ Fit effective vocab even if embedding contains more words """
         self.vect.fit(X)
-        if self.infer_vocab:
-            wv = self.embedding
-            # Extracted words
-            words = self.vect.vocabulary
-            # Manual Intersection for final vocabulary
-            vocab = list(set(words) & set(wv.index2word))
-            # Obtain vectors for vocabulary
-            vectors = np.asarray([wv[word] for word in vocab])
-            print("CE vectors.shape", vectors.shape)
-            # Normalize for linear kernel
-            self.vectors = normalize(vectors)
-            print("Most frequent corpus words:",
-                  Counter(vocab).most_common(10))
         return self
 
     def transform(self, query, y=None):
@@ -150,12 +135,8 @@ class CentroidExpansion(BaseEstimator):
 
         v = vect.transform([query])[0]
 
-        if self.infer_vocab:
-            D = linear_kernel(v, self.vectors)[0, :]
-            words = argtopk(D, self.m)
-        else:
-            exp_tuples = wv.similar_by_vector(v, topn=self.m)
-            words, __scores = zip(*exp_tuples)
+        exp_tuples = wv.similar_by_vector(v, topn=self.m)
+        words, __scores = zip(*exp_tuples)
 
         # ind = self.neighbors.kneighbors(emb, return_distance=False,
         #                                 n_neighbors=self.m)
