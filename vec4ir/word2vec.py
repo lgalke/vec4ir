@@ -280,7 +280,21 @@ class WordCentroidDistance(BaseEstimator):
         print(ind)
         return ind
 
+class WordMoversDistance(BaseEstimator):
+    def __init__(self, embedding, analyze_fn=default_analyzer):
+        self.embedding = embedding
+        self.analyze_fn = analyze_fn
 
+    def fit(self, raw_docs):
+        self.docs = np.array([self.analyze_fn(doc) for doc in raw_docs])
+
+    def query(self, query, k=None, indices=None):
+        docs = self.docs if indices is None else self.docs[indices]
+        q = self.analyze_fn(query)
+        dists = np.asarray(self.embedding.wmdistance(q, d) for d in docs)
+        ind = argtopk(dists)
+        return ind
+        
 class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
     """
     Retrieval Model based on Word Centroid Distance
