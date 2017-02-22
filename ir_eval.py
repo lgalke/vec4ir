@@ -418,6 +418,7 @@ def main():
     # embedding_analyzer_config = embedding_config["analyzer"]
     # embedding_analyzer = build_analyzer(**embedding_analyzer_config)
     if args.stats:
+        # out source
         print("Computing collection statistics...")
         stats, mcf = collection_statistics(embedding=embedding,
                                            documents=sents,
@@ -457,7 +458,7 @@ def main():
                                                 verbose=args.verbose,
                                                 n_jobs=args.jobs)
         retrieval_model = build_retrieval_model(args.retrieval_model,
-                                                embedding, analyzer=analyzed,
+                                                embedding, analyzed,
                                                 use_idf=True)
         match_op = Matching(analyzer=matching_analyzer)
         rname = '+'.join(
@@ -506,7 +507,8 @@ def main():
                                          vocab_analyzer=matching_analyzer,
                                          oov=embedding_oov_token,
                                          verbose=args.verbose),
-               "legacy-wcd": WordCentroidRetrieval(embedding, name="legacy-mwcd",
+               "legacy-wcd": WordCentroidRetrieval(embedding,
+                                                   name="legacy-mwcd",
                                                    matching=matching,
                                                    analyzer=matching_analyzer,
                                                    oov=embedding_oov_token,
@@ -519,7 +521,7 @@ def main():
                "wcdnoidf": WCDnoidf,
                "legacy-wmd": Word2VecRetrieval(embedding, wmd=True,
                                                analyzer=matching_analyzer,
-                                               vocab_analyzer=matching_analyzer,
+                                               vocab_analyzer=analyzed,
                                                oov=embedding_oov_token,
                                                verbose=args.verbose),
                "wmd": WordMoversRetrieval(embedding=embedding,
@@ -547,11 +549,11 @@ def main():
                                              n_jobs=args.jobs),
                "eqlm": EQLM(tfidf, embedding, m=10, eqe=1,
                             analyzer=matching_analyzer, verbose=args.verbose),
-               "gensim-wmd": WmdSimilarityRetrieval(embedding, matching_analyzer,
-                                                    args.k),
+               "gensim-wmd": WmdSimilarityRetrieval(embedding,
+                                                    matching_analyzer, args.k),
                'eqe1tfidf': eqe1_tfidf,
                'eqe1wcd': eqe1_wcd
-            }
+               }
 
         focus = [f.lower() for f in args.focus] if args.focus else None
         if focus:

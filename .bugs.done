@@ -21,5 +21,6 @@ documents get loaded with additional id | id:b6cd0c07c6e20c6bf5431c241ceda5be139
 improve eqlm performance by not computing priors but caching them | id:c37574067354199c8f07379c53dca1427d633d5c
 really really do uptraining | id:d4e13212103cf758ae4d68fdee6232b8b979ed73
 ask henrik to install python3-tk | id:e68816aded1230ef247eb4c90c5b1aba2c3838ae
+NONONO RMs have to take care of labels! | id:eb863db3de5cb431d1b81f6b104e1e2a24891000
 why is economics so bad | id:f6961206efbb7c0528075601086f87e0faa4f1c9
 move averaging in ir_eval and print precision recall curves | id:fb5831e3c328205d89282e60a0f99602201a67d9

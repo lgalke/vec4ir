@@ -2,8 +2,8 @@ no need to remove tokens before wmd | id:0744608c4de5845caa625ed4af735aacbdaa461
 can we compute wmd more efficiently | id:5e4472f39a90ec0e9757b86d36cf72776df146f7
 assert that Retrieval, Tfidf, WCD work | id:7bd8bf7b5d59303ade345242ff71ec46f007b284
 add more datasets to cfg | id:80045786409bc32abe5bd118098bf424817cc049
+add idf option | id:9057a9c38e60301ecddea17d2a5bc028c8a00646
 processify queries | id:d847866cbbca12cb0e42a8d15e602d1d990dd28a
 bm25 | id:d96d7fcf37daa883b579143ca069523802ea6e1e
 metrics@10 | id:e1058027651325e1dba9fcdb7d550d7c7ba874b1
-NONONO RMs have to take care of labels! | id:eb863db3de5cb431d1b81f6b104e1e2a24891000
 @1000 optional | id:ed74339571049e0778398e4b380355b58713bc70
