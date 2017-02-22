@@ -421,13 +421,13 @@ def main():
         # out source
         print("Computing collection statistics...")
         stats, mcf = collection_statistics(embedding=embedding,
-                                           documents=sents,
-                                           analyzer=None,
-                                           topn=10)
-        header = ("Statistics: {dataset} x {embedding}"
-                  " x {tokenizer} x lower: {lowercase}"
-                  " x stop_words: {stop_words}")
-        header = header.format(**args)
+                                           documents=documents,
+                                           analyzer=matching_analyzer,
+                                           topn=25)
+        header = ("Statistics: {a.dataset} x {a.embedding}"
+                  " x {a.tokenizer} x lower: {a.lowercase}"
+                  " x stop_words: {a.stop_words}")
+        header = header.format(a=args)
         print_dict(stats, header=header, stream=args.outfile)
         print("Most common fails:", *mcf, sep='\n')
         exit(0)
