@@ -105,7 +105,6 @@ class EmbeddedVectorizer(TfidfVectorizer):
     def transform(self, raw_documents, y=None):
         Xt = super().transform(raw_documents)
         wv = self.embedding
-        assert len(wv.index2word) == len(self.vocabulary_)
         # Xt is sparse counts
         return (Xt @ wv.syn0)
 

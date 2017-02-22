@@ -169,8 +169,8 @@ def _ir_eval_parser(config):
                         help="Choose query expansion technique.")
     parser.add_argument("-f", "--focus", nargs='+',
                         choices=MODEL_KEYS, default=None)
-    parser.add_argument("-j", "--jobs", type=int, default=-1,
-                        help="How many jobs to use, default=-1 (one per core)")
+    parser.add_argument("-j", "--jobs", type=int, default=8,
+                        help="How many jobs to use, default=8 (one per core)")
 
     emb_opt = parser.add_argument_group("Embedding options")
     emb_opt.add_argument("-n", "--normalize", action='store_true',

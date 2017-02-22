@@ -272,12 +272,14 @@ class WordCentroidDistance(BaseEstimator):
         if indices is not None:
             centroids = centroids[indices]
         q = self.vect.transform([query])
+        q = normalize(q, copy=False)
         D = linear_kernel(q, centroids)  # l2 normalized, so linear kernel
-        ind = np.argsort(D[0, :])[::-1]  # similarity metric, so reverse
-        if k is not None:  # we could use our argtopk in the first place
-            ind = ind[:k]
-        print(ind)
-        return ind
+        # ind = np.argsort(D[0, :])[::-1]  # similarity metric, so reverse
+        # if k is not None:  # we could use our argtopk in the first place
+        #     ind = ind[:k]
+        # print(ind)
+        ret = argtopk(D[0], k=k)
+        return ret
 
 class WordMoversDistance(BaseEstimator):
     def __init__(self, embedding, analyze_fn=DEFAULT_ANALYZER):
