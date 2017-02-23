@@ -464,6 +464,8 @@ def main():
              args.query_expansion if args.query_expansion else '',
              args.retrieval_model)
         )
+        if args.normalize:
+            rname = 'norm-'
         ir = Retrieval(retrieval_model, query_expansion=query_expansion,
                        name=rname, matching=match_op)
         results[rname] = evaluation(ir)
