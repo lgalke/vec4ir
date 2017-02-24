@@ -407,8 +407,8 @@ def main():
 
     if args.subtract:
         print('Subtracting first %d principal components' % args.subtract)
-        syn0 = embedding.syn0
-        embedding.syn0 = all_but_the_top(syn0, args.subtract)
+        syn0 = embedding.wv.syn0
+        embedding.wv.syn0 = all_but_the_top(syn0, args.subtract)
     if args.normalize:
         print('Normalizing word vectors')
         embedding.init_sims(replace=True)
@@ -465,7 +465,7 @@ def main():
              args.retrieval_model)
         )
         if args.normalize:
-            rname = 'norm-'
+            rname = 'norm-' + rname
         ir = Retrieval(retrieval_model, query_expansion=query_expansion,
                        name=rname, matching=match_op)
         results[rname] = evaluation(ir)

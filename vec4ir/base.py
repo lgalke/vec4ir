@@ -369,18 +369,21 @@ class RetriEvalMixin():
             f1 = f1_score(precision, recall)
             values["f1_score"].append(f1)
 
-            p_at_5 = rm.precision_at_k(pad(r, 5), 5)
+            # Safe variant does not fail if len(r) < k
+            p_at_5 = rm.safe_precision_at_k(r, 5)
             values["precision@5"].append(p_at_5)
 
-            p_at_10 = rm.precision_at_k(pad(r, 10), 10)
+            p_at_10 = rm.safe_precision_at_k(r, 10)
             values["precision@10"].append(p_at_10)
 
             # rs.append(r)
             if verbose > 0:
-                print("Precision: {:.4f}".format(precision))
-                print("Recall: {:.4f}".format(recall))
-                print("F1-Score: {:.4f}".format(f1))
+                # print("Precision: {:.4f}".format(precision))
+                # print("Recall: {:.4f}".format(recall))
+                # print("F1-Score: {:.4f}".format(f1))
                 print("AP: {:.4f}".format(ap))
+                print("RR: {:.4f}".format(mrr))
+                print("NDCG: {:.4f}".format(ndcg))
 
         return values
 

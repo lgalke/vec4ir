@@ -238,12 +238,12 @@ def ndcg_at_k(r, k, method=0):
     return dcg_at_k(r, k, method) / dcg_max
 
 
-# Modifications by lgalke BEGIN
-def recall(r, R):
+# Additions by lgalke BEGIN
+def recall(r, n_relevant):
     """ Recall bounded to R, relevance is binary"""
-    assert R >= 1
+    assert n_relevant >= 1
     relevant_and_retrieved = np.count_nonzero(r)
-    return relevant_and_retrieved / R
+    return relevant_and_retrieved / n_relevant
 
 
 def precision(r):
@@ -256,9 +256,11 @@ def precision(r):
 
 
 def safe_precision_at_k(r, k):
-    r = np.asarray(r)[:k]
+    r = np.asarray(r)
+    if r.size == 0:
+        return 0.
     return precision_at_k(r, min(k, r.size))
-# Modifications by lgalke END
+# Additions by lgalke END
 
 
 if __name__ == "__main__":

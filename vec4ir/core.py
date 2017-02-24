@@ -94,7 +94,7 @@ class EmbeddedVectorizer(TfidfVectorizer):
         # list of words in the embedding
         vocabulary = embedding.index2word
         self.embedding = embedding
-        print("Embedding shape:", embedding.syn0.shape)
+        print("Embedding shape:", embedding.wv.syn0.shape)
         TfidfVectorizer.__init__(self, vocabulary=vocabulary, **kwargs)
 
     def fit(self, raw_docs, y=None):
@@ -103,9 +103,9 @@ class EmbeddedVectorizer(TfidfVectorizer):
 
     def transform(self, raw_documents, y=None):
         Xt = super().transform(raw_documents)
-        wv = self.embedding
+        syn0 = self.embedding.wv.syn0
         # Xt is sparse counts
-        return (Xt @ wv.syn0)
+        return (Xt @ syn0)
 
     def fit_transform(self, X, y=None):
         return self.fit(X, y).transform(X, y)
