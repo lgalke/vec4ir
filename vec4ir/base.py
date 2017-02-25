@@ -8,21 +8,22 @@ Github: https://github.com/lgalke
 Description: Base classed for (embedding-based) retrieval.
 """
 
-from sklearn.base import BaseEstimator
-from sklearn.metrics.pairwise import pairwise_distances, linear_kernel
-from sklearn.neighbors import NearestNeighbors
-from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
+from timeit import default_timer as timer
+
 from abc import abstractmethod
 from collections import defaultdict
-from timeit import default_timer as timer
+from sklearn.base import BaseEstimator
+from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+from sklearn.neighbors import NearestNeighbors
+from sklearn.exceptions import NotFittedError
 import scipy.sparse as sp
 import numpy as np
 import pandas as pd
-from sklearn.exceptions import NotFittedError
 
 try:
-    from . import rank_metrics as rm
+    import rank_metrics as rm
     from .utils import argtopk
     from .combination import CombinatorMixin
 except (SystemError, ValueError):
@@ -32,6 +33,9 @@ except (SystemError, ValueError):
 
 
 def f1_score(precision, recall):
+    """
+    Computes the harmonic mean of precision and recall (f1 score)
+    """
     if precision == 0 and recall == 0:
         return 0
     return 2 * precision * recall / (precision + recall)
@@ -105,11 +109,12 @@ def harvest(source, query_id, doc_id=None, default=0):
         return score
 
 
-def filterNone(L):
-    old_len = len(L)
-    new_L = [l for l in L if l is not None]
-    diff = old_len - len(new_L)
-    return new_L, diff
+def filter_none(some_list):
+    """ Just filters None elements out of a list """
+    old_len = len(some_list)
+    new_list = [l for l in some_list if l is not None]
+    diff = old_len - len(new_list)
+    return new_list, diff
 
 
 def pad(r, k, padding=0):
@@ -302,8 +307,11 @@ class RetriEvalMixin():
         """
         :X: [(qid, str)] query id, query string pairs
         :Y: pandas dataseries with qid,docid index or [dict]
-        :k: Limit the result for all metrics to this value, the models are also given a hint of how many they should return.
-        :replacement: 0 means that (query, doc) pairs not prevalent in Y will not be considered relevant, None means that those are not considered (skipped).
+        :k: Limit the result for all metrics to this value, the models are also
+        given a hint of how many they should return.
+        :replacement: 0 means that (query, doc) pairs not prevalent in Y will
+        not be considered relevant, None means that those are not considered
+        (skipped).
         """
         # rs = []
         values = defaultdict(list)
@@ -322,7 +330,7 @@ class RetriEvalMixin():
             scored_result = [harvest(Y, qid, docid, replacement)
                              for docid in result]
             if replacement is None:
-                scored_result, notfound = filterNone(scored_result)
+                scored_result, notfound = filter_none(scored_result)
                 values["gold_not_found"].append(notfound)
 
             if k is not None:
@@ -421,14 +429,16 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixin, RetriEvalMixin):
     >>> _ = tfidf.fit(docs)
     >>> tfidf._y.shape
     (4,)
-    >>> values = tfidf.evaluate(zip([0,1],["fox","dog"]), [{0:0,1:1,2:0,3:0}, {0:0,1:0,2:0,3:1}], k=20)
+    >>> gold = [{0:0,1:1,2:0,3:0}, {0:0,1:0,2:0,3:1}]
+    >>> values = tfidf.evaluate(zip([0,1],["fox","dog"]), gold, k=20)
     >>> import pprint
     >>> pprint.pprint(values["mean_average_precision"])
     1.0
     >>> _ = tfidf.partial_fit(["new fox doc"])
     >>> list(tfidf.query("new fox doc"))
     [4, 1]
-    >>> values = tfidf.evaluate([(0,"new fox doc")], np.asarray([[0,2,0,0,0]]), k=3)
+    >>> gold = np.asarray([[0,2,0,0,0]])
+    >>> values = tfidf.evaluate([(0,"new fox doc")], gold, k=3)
     >>> pprint.pprint(values["mean_average_precision"])
     0.5
     """

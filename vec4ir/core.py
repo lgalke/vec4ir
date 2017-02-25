@@ -11,6 +11,7 @@ except SystemError:
     from base import RetriEvalMixin
 from sklearn.decomposition import PCA
 
+
 class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
 
     """Meta estimator for an end to end information retrieval process"""

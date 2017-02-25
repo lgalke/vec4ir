@@ -30,17 +30,17 @@ class IRDataSetBase(ABC):
 
     @property
     @abstractmethod
-    def docs():
+    def docs(self):
         pass
 
     @property
     @abstractmethod
-    def rels():
+    def rels(self):
         pass
 
     @property
     @abstractmethod
-    def topics():
+    def topics(self):
         pass
 
     def load(self, verbose=False):
@@ -52,12 +52,14 @@ class IRDataSetBase(ABC):
         queries = self.topics
         if verbose:
             n_queries = len(queries)
-            print(len(queries), "queries.")
+            print(n_queries, "queries.")
 
         rels = self.rels
         if verbose:
-            n_rels = np.asarray([len([r for r in harvest(rels, qid) if r > 0]) for qid, __ in queries])
-            print("{:2f} ({:2f}) relevant documents per query.".format(n_rels.mean(), n_rels.std()))
+            n_rels = np.asarray([len([r for r in harvest(rels, qid) if r > 0])
+                                 for qid, __ in queries])
+            print("{:2f} ({:2f}) relevant documents per query."
+                  .format(n_rels.mean(), n_rels.std()))
 
         return docs, labels, queries, rels
 
@@ -370,6 +372,7 @@ class NTCIR(IRDataSetBase):
         topics_df = NTCIR._read_topics(path, names, verify_integrity=verify_integrity)
         topics = topics_df[desired_topic_field]
         return list(zip(topics.index, topics))
+
 
 if __name__ == '__main__':
     ntcir2 = NTCIR('/home/lpag/git/vec4ir/data/NTCIR2/', verify_integrity=True, rels=2)

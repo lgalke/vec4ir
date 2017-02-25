@@ -15,7 +15,6 @@ from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.query_expansion import CentroidExpansion
 from vec4ir.query_expansion import EmbeddedQueryExpansion
 from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
-# from vec4ir.word2vec import WordMoversDistance
 from vec4ir.postprocessing import uptrain
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
@@ -31,9 +30,9 @@ import numpy as np
 import pandas as pd
 import yaml
 import matplotlib
+import logging
 matplotlib.use('Agg')  # compat on non-gui uis, must be set before pyplot
 import matplotlib.pyplot as plt
-import logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
