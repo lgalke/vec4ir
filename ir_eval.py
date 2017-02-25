@@ -18,7 +18,7 @@ from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
 from vec4ir.postprocessing import uptrain
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
-from gensim.models import Word2Vec
+from gensim.models import KeyedVectors
 from sklearn.feature_extraction.text import CountVectorizer
 from operator import itemgetter
 from textwrap import indent
@@ -138,11 +138,11 @@ def smart_load_word2vec(model_path):
     if ext == ".gnsm":  # Native format
         print("Loading embeddings in native gensim format: {}"
               .format(model_path))
-        model = Word2Vec.load(model_path)
+        model = KeyedVectors.load(model_path)
     else:  # either word2vec text or word2vec binary format
         binary = ".bin" in model_path
         print("Loading embeddings in word2vec format: {}".format(model_path))
-        model = Word2Vec.load_word2vec_format(model_path, binary=binary)
+        model = KeyedVectors.load_word2vec_format(model_path, binary=binary)
     return model
 
 
