@@ -320,7 +320,6 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         self._oov = oov
         self.verbose = verbose
         self.n_jobs = n_jobs
-
         self._neighbors = NearestNeighbors(**kwargs)
 
         self._analyzer = analyzer
@@ -438,6 +437,7 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
     def query(self, query, k=None, indices=None):
         centroids = self.centroids
+
         if k is None:
             k = centroids.shape[0]
 
