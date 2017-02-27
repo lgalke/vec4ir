@@ -18,6 +18,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 from sklearn.neighbors import NearestNeighbors
 from sklearn.exceptions import NotFittedError
+from joblib import Parallel, delayed
 import scipy.sparse as sp
 import numpy as np
 import pandas as pd
@@ -85,13 +86,13 @@ def harvest(source, query_id, doc_id=None, default=0):
             # source is ndarray or list
             scores = source[query_id]
 
-        try:
-            # scores is numpy array-like?
-            scores = np.sort(scores)[::-1]
-        except ValueError:
-            # probably scores is a dict itself...
-            scores = np.asarray(list(scores.values()))
-            scores = np.sort(scores)[::-1]
+#         try:
+#             # scores is numpy array-like?
+#             scores = np.sort(scores)[::-1]
+#         except ValueError:
+#             # probably scores is a dict itself...
+#             scores = np.asarray(list(scores.values()))
+#             scores = np.sort(scores)[::-1]
         return scores
     else:
         # Return relevance score for the respective (query, document) pair
@@ -293,6 +294,82 @@ class RetrievalBase(BaseEstimator):
         return ind
 
 
+def process_and_evaluate(model, X, Y, k, n_jobs=1):
+    print("Query time with %d jobs" % n_jobs)
+
+    # TODO can we unzip Y and only pass the fucking chunk of y which 
+    # it needs to harvest??
+    qids_rs = Parallel(n_jobs=n_jobs)(delayed(process_query)(model, x, Y, k)
+                                      for x in X)
+
+    print("Evaluating the results:")
+
+    scores = evaluate_results(qids_rs, Y, k)
+
+    return scores
+
+
+def process_query(model, x, Y, k):
+    """ Processes one query, good for parallelization
+    :x: pair of query_id, query
+    :Y: dict of dict - like of relevance with query_id's as key in outer dict
+    and doc_ids as keys of inner dict
+    """
+    qid, query = x
+    # t0 = timer()
+    print("{} : {}", qid, query)
+    result = model.query(query, k=k)
+    if k is not None:
+        result = result[:k]
+    # values["time_per_query"].append(timer() - t0)
+    relevance = [harvest(Y, qid, docid) for docid in result]
+    return (qid, np.asarray(relevance))
+
+
+def evaluate_results(qids_rs, Y, k):
+    values = defaultdict(list)
+    for qid, r in qids_rs:
+        gold = np.asarray(harvest(Y, qid))
+        gold_topk = gold[argtopk(gold, k)]
+        R = np.count_nonzero(gold_topk)
+        # real ndcg
+        idcg = rm.dcg_at_k(gold_topk, k)
+        ndcg = rm.dcg_at_k(r, k) / idcg
+        values["ndcg"].append(ndcg)
+        # Verified
+
+        # MAP@k
+        ap = rm.average_precision(r)
+        values["MAP"].append(ap)
+
+        # MRR - compute by hand
+        ind = np.asarray(r).nonzero()[0]
+        mrr = (1. / (ind[0] + 1)) if ind.size else 0.
+        values["MRR"].append(mrr)
+
+        # R precision
+        # R = min(R, k)  # ok lets be fair.. you cant get more than k
+        # we dont need that anymore, since we chop of the remainder
+        # before computing R
+        recall = rm.recall(r, R)
+        values["recall"].append(recall)
+
+        # precision = rm.precision_at_k(pad(scored_result, k), k)
+        precision = rm.precision(r)
+        values["precision"].append(precision)
+
+        f1 = f1_score(precision, recall)
+        values["f1_score"].append(f1)
+
+        # Safe variant does not fail if len(r) < k
+        p_at_5 = rm.safe_precision_at_k(r, 5)
+        values["precision@5"].append(p_at_5)
+
+        p_at_10 = rm.safe_precision_at_k(r, 10)
+        values["precision@10"].append(p_at_10)
+    return values
+
+
 class RetriEvalMixin():
 
     @abstractmethod
@@ -300,10 +377,10 @@ class RetriEvalMixin():
         pass
 
     @abstractmethod
-    def query(X):
+    def query(X, k=None):
         pass
 
-    def evaluate(self, X, Y, k=20, verbose=0, replacement=0):
+    def evaluate(self, X, Y, k=20, verbose=0, replacement=0, n_jobs=1):
         """
         :X: [(qid, str)] query id, query string pairs
         :Y: pandas dataseries with qid,docid index or [dict]
@@ -314,6 +391,9 @@ class RetriEvalMixin():
         (skipped).
         """
         # rs = []
+
+        if n_jobs > 1:
+            return process_and_evaluate(self, X, Y, k, n_jobs)
         values = defaultdict(list)
         for qid, query in X:
             # execute query
@@ -343,15 +423,16 @@ class RetriEvalMixin():
             # if verbose > 0:
             #     print(r)
 
-            gold = harvest(Y, qid)
-            # print(gold[:k])
-            R = np.count_nonzero(gold)
+            gold = np.asarray(harvest(Y, qid))
+            gold_topk = gold[argtopk(gold, k)]
+            print('Top k in gold standard:', gold_topk)
+            R = np.count_nonzero(gold_topk)
             if verbose > 0:
                 print("Retrieved {} relevant out of {} possible."
                       .format(np.count_nonzero(r), R))
 
             # real ndcg
-            idcg = rm.dcg_at_k(gold, k)
+            idcg = rm.dcg_at_k(gold_topk, k)
             ndcg = rm.dcg_at_k(scored_result, k) / idcg
             values["ndcg"].append(ndcg)
             # Verified
@@ -366,7 +447,9 @@ class RetriEvalMixin():
             values["MRR"].append(mrr)
 
             # R precision
-            R = min(R, k)  # ok lets be fair.. you cant get more than k
+            # R = min(R, k)  # ok lets be fair.. you cant get more than k
+            # we dont need that anymore, since we chop of the remainder
+            # before computing R
             recall = rm.recall(r, R)
             values["recall"].append(recall)
 
