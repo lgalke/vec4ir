@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 
 try:
-    import rank_metrics as rm
+    from . import rank_metrics as rm
     from .utils import argtopk
     from .combination import CombinatorMixin
 except (SystemError, ValueError):
@@ -60,8 +60,8 @@ def harvest(source, query_id, doc_id=None, default=0):
     42
     >>> harvest(ll, 1, -42, 1337)
     1337
-    >>> harvest(ll, 1)
-    array([55, 42, 33, 22])
+    >>> sorted(harvest(ll, 1), reverse=True)
+    [55, 42, 33, 22]
     >>> nda = np.array(ll)
     >>> harvest(nda, 1, 2)
     42
@@ -72,8 +72,8 @@ def harvest(source, query_id, doc_id=None, default=0):
     42
     >>> harvest(ld, 1, "fail", 1337)
     1337
-    >>> harvest(ld, 0)
-    array([5, 4, 3, 2])
+    >>> sorted(harvest(ld, 0))
+    [2, 3, 4, 5]
     """
     is_pd = isinstance(source, pd.Series)
     is_dict = isinstance(source, dict)
@@ -91,7 +91,10 @@ def harvest(source, query_id, doc_id=None, default=0):
 #             scores = np.sort(scores)[::-1]
 #         except ValueError:
 #             # probably scores is a dict itself...
-#             scores = np.asarray(list(scores.values()))
+        if isinstance(scores, dict):
+            scores = np.asarray(list(scores.values()))
+        else:
+            scores = np.asarray(scores)
 #             scores = np.sort(scores)[::-1]
         return scores
     else:
@@ -104,8 +107,18 @@ def harvest(source, query_id, doc_id=None, default=0):
             scores = source[query_id]
             # no special treatment for ndarray since we want to raise exception
             # when query id is out of bounds
-            # FIXME this wont work if scores are a numpy array
-            score = scores.get(doc_id, default)
+            try:
+                # ok now if scores provides a get
+                # (pandas or dict), lets use it:
+                score = scores.get(doc_id, default)
+            except AttributeError:
+                # try the brute force access
+                try:
+                    score = scores[doc_id]
+                # the user should be aware when he wants to index his stuff
+                # by numpy indexing: only int doc ids allowed, of course.
+                except IndexError:
+                    score = default
 
         return score
 
@@ -295,7 +308,14 @@ class RetrievalBase(BaseEstimator):
 
 
 def process_and_evaluate(model, X, Y, k, n_jobs=1):
-    print("Query time with %d jobs" % n_jobs)
+    """
+    Arguments:
+        X : query_id, query pairs
+        Y : dict of dicts (harvestable)
+        k : int how many to retrieve
+
+    """
+    print("Starting query time with %d jobs" % n_jobs)
 
     # TODO can we unzip Y and only pass the fucking chunk of y which 
     # it needs to harvest??
@@ -329,7 +349,7 @@ def process_query(model, x, Y, k):
 def evaluate_results(qids_rs, Y, k):
     values = defaultdict(list)
     for qid, r in qids_rs:
-        gold = np.asarray(harvest(Y, qid))
+        gold = harvest(Y, qid)
         gold_topk = gold[argtopk(gold, k)]
         R = np.count_nonzero(gold_topk)
         # real ndcg
@@ -423,9 +443,14 @@ class RetriEvalMixin():
             # if verbose > 0:
             #     print(r)
 
-            gold = np.asarray(harvest(Y, qid))
-            gold_topk = gold[argtopk(gold, k)]
-            print('Top k in gold standard:', gold_topk)
+            # gold = np.array(list(Y[qid].values()))
+            gold = harvest(Y, qid)
+            import sys
+            # print(gold, file=sys.stderr)
+            topk_indices = argtopk(gold, k)
+            print(topk_indices, file=sys.stderr)
+            gold_topk = gold[topk_indices]
+            print('Top k in gold standard:', gold_topk, file=sys.stderr)
             R = np.count_nonzero(gold_topk)
             if verbose > 0:
                 print("Retrieved {} relevant out of {} possible."
@@ -515,15 +540,15 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixin, RetriEvalMixin):
     >>> gold = [{0:0,1:1,2:0,3:0}, {0:0,1:0,2:0,3:1}]
     >>> values = tfidf.evaluate(zip([0,1],["fox","dog"]), gold, k=20)
     >>> import pprint
-    >>> pprint.pprint(values["mean_average_precision"])
-    1.0
+    >>> pprint.pprint(values["MAP"])
+    [1.0, 1.0]
     >>> _ = tfidf.partial_fit(["new fox doc"])
     >>> list(tfidf.query("new fox doc"))
     [4, 1]
     >>> gold = np.asarray([[0,2,0,0,0]])
     >>> values = tfidf.evaluate([(0,"new fox doc")], gold, k=3)
-    >>> pprint.pprint(values["mean_average_precision"])
-    0.5
+    >>> pprint.pprint(values["MAP"])
+    [0.5]
     """
 
     def __init__(self, norm='l2', use_idf=True, smooth_idf=True,

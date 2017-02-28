@@ -281,6 +281,7 @@ class WordCentroidDistance(BaseEstimator):
         ret = argtopk(D[0], k=k)
         return ret
 
+
 class WordMoversDistance(BaseEstimator):
     def __init__(self, embedding, analyze_fn=DEFAULT_ANALYZER):
         self.embedding = embedding
