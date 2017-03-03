@@ -18,6 +18,9 @@ embeddings:
             tokenizer: "sword"
             stop_words: True
 
+    doc2vec:
+        path: "/data11/fmai/models/pv-models/wiki_1000_8.docvecs.doctag_syn0.npy"
+
 data:
     econ62k:
         type: "QuadflorLike"
