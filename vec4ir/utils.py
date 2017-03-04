@@ -46,7 +46,10 @@ def argtopk(A, k=None, sort=True):
     axis = -1
     if k is None or k >= A.size:
         # if list is too short or k is None, return all in sort order
-        return np.argsort(A, axis=axis)[::-1]
+        if sort:
+            return np.argsort(A, axis=axis)[::-1]
+        else:
+            return np.arange(A.shape[0])
 
     assert k > 0
     # now 0 < k < len(A)

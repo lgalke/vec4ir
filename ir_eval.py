@@ -325,7 +325,8 @@ def build_retrieval_model(key, embedding, analyzer, use_idf=True):
         'wcd': WordCentroidDistance(embedding=embedding,
                                     analyzer=analyzer,
                                     use_idf=use_idf),
-        'wmd': WordMoversDistance(embedding, analyzer)
+        'wmd': WordMoversDistance(embedding, analyzer),
+        'd2v': Doc2VecRetrieval()
     }
     return RMs[key]
 
