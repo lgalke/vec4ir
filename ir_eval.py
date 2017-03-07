@@ -172,15 +172,20 @@ def _ir_eval_parser(config):
                         help="How many jobs to use, default=8 (one per core)")
 
     emb_opt = parser.add_argument_group("Embedding options")
-    emb_opt.add_argument("-I", "--no-idf", action='store_false', dest='idf',
-                         default=True,
-                         help='Do not use IDF when aggregating word vectors')
     emb_opt.add_argument("-n", "--normalize", action='store_true',
                          default=False,
                          help='normalize word vectors before anything else')
     emb_opt.add_argument("-a", "--all-but-the-top", dest='subtract', type=int,
                          default=None,
                          help='Apply all but the top embedding postprocessing')
+
+    ret_opt = parser.add_argument_group("Retrieval Options")
+    ret_opt.add_argument("-I", "--no-idf", action='store_false', dest='idf',
+                         default=True,
+                         help='Do not use IDF when aggregating word vectors')
+    ret_opt.add_argument("-w", "--wmd", type=float, dest='wmd', default=1.0,
+                         help="WMD Completeness factor, defaults to 1.0")
+
     # OPTIONS FOR OUTPUT
     output_options = parser.add_argument_group("Output options")
     output_options.add_argument("-o", "--outfile", default=sys.stdout,
@@ -314,13 +319,15 @@ def build_query_expansion(key, embedding, analyzer='word', m=10, verbose=0,
     return QEs[key]
 
 
-def build_retrieval_model(key, embedding, analyzer, use_idf=True):
+def build_retrieval_model(key, embedding, analyzer, use_idf=True,
+                          wmd_factor=1.0):
     """
     Arguments:
-    :key:
-    :embedding:
-    :analyzer:
-    :use_idf:
+    :key: the key which specifies the selected retrieval model
+    :embedding: word vectors (or document vectors for doc2vec)
+    :analyzer: analyzer function
+    :use_idf: Usage of inverse document frequency
+    :wmd_factor: Completeness factor for word movers distance
 
     """
     RMs = {
@@ -328,7 +335,8 @@ def build_retrieval_model(key, embedding, analyzer, use_idf=True):
         'wcd': WordCentroidDistance(embedding=embedding,
                                     analyzer=analyzer,
                                     use_idf=use_idf),
-        'wmd': WordMoversDistance(embedding, analyzer),
+        'wmd': WordMoversDistance(embedding, analyzer,
+                                  complete=wmd_factor),
         'd2v': Doc2VecInference(embedding, analyzer)
     }
     return RMs[key]
@@ -463,7 +471,8 @@ def main():
                                                 use_idf=args.idf)
         retrieval_model = build_retrieval_model(args.retrieval_model,
                                                 embedding, analyzed,
-                                                use_idf=args.idf)
+                                                use_idf=args.idf,
+                                                wmd_factor=args.wmd)
         match_op = Matching(analyzer=matching_analyzer)
         rname = '+'.join(
             (args.embedding,

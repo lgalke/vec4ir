@@ -294,6 +294,7 @@ class WordMoversDistance(BaseEstimator):
 
         """
         assert complete >= 0.0 and complete <= 1.0
+        self.complete = complete
         self.embedding = embedding
         self.analyze_fn = analyze_fn
         self.wcd = WordCentroidDistance(embedding, analyzer=analyze_fn,
