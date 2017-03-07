@@ -11,7 +11,7 @@ from vec4ir.base import Tfidf, Matching
 from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.word2vec import FastWordCentroidRetrieval, WordMoversRetrieval
 from vec4ir.word2vec import WmdSimilarityRetrieval
-from vec4ir.doc2vec import Doc2VecRetrieval
+from vec4ir.doc2vec import Doc2VecRetrieval, Doc2VecInference
 from vec4ir.query_expansion import CentroidExpansion
 from vec4ir.query_expansion import EmbeddedQueryExpansion
 from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
@@ -37,7 +37,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
 QUERY_EXPANSION = ['ce', 'eqe1', 'eqe2']
-RETRIEVAL_MODEL = ['tfidf', 'wcd', 'wmd']
+RETRIEVAL_MODEL = ['tfidf', 'wcd', 'wmd', 'd2v']
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd',
               'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf',
               'gensim-wmd', 'eqe1tfidf', 'eqe1wcd']
@@ -172,6 +172,9 @@ def _ir_eval_parser(config):
                         help="How many jobs to use, default=8 (one per core)")
 
     emb_opt = parser.add_argument_group("Embedding options")
+    emb_opt.add_argument("-I", "--no-idf", action='store_false', dest='idf',
+                         default=True,
+                         help='Do not use IDF when aggregating word vectors')
     emb_opt.add_argument("-n", "--normalize", action='store_true',
                          default=False,
                          help='normalize word vectors before anything else')
@@ -297,11 +300,11 @@ def build_analyzer(tokenizer=None, stop_words=None, lowercase=True):
 
 
 def build_query_expansion(key, embedding, analyzer='word', m=10, verbose=0,
-                          n_jobs=1):
+                          n_jobs=1, use_idf=True):
     if key is None:
         return None
     QEs = {'ce': CentroidExpansion(embedding, analyzer=analyzer, m=m,
-                                   use_idf=True),
+                                   use_idf=use_idf),
            'eqe1': EmbeddedQueryExpansion(embedding, analyzer=analyzer, m=m,
                                           verbose=verbose, eqe=1,
                                           n_jobs=n_jobs, a=1, c=0),
@@ -326,7 +329,7 @@ def build_retrieval_model(key, embedding, analyzer, use_idf=True):
                                     analyzer=analyzer,
                                     use_idf=use_idf),
         'wmd': WordMoversDistance(embedding, analyzer),
-        'd2v': Doc2VecRetrieval()
+        'd2v': Doc2VecInference(embedding, analyzer)
     }
     return RMs[key]
 
@@ -375,7 +378,8 @@ def main():
         print('Found Embedding key in config file:', args.embedding)
         embedding_config = config['embeddings'][args.embedding]
         model_path = embedding_config['path']
-        embedding_oov_token = embedding_config["oov_token"]
+        if "oov_token" in embedding_config:
+            embedding_oov_token = embedding_config["oov_token"]
     else:
         print('Using', args.embedding, 'as model path')
         model_path = args.embedding
@@ -455,10 +459,11 @@ def main():
         query_expansion = build_query_expansion(args.query_expansion,
                                                 embedding, analyzed, m=args.m,
                                                 verbose=args.verbose,
-                                                n_jobs=args.jobs)
+                                                n_jobs=args.jobs,
+                                                use_idf=args.idf)
         retrieval_model = build_retrieval_model(args.retrieval_model,
                                                 embedding, analyzed,
-                                                use_idf=True)
+                                                use_idf=args.idf)
         match_op = Matching(analyzer=matching_analyzer)
         rname = '+'.join(
             (args.embedding,
