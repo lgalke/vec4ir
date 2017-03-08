@@ -18,7 +18,7 @@ from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
 from vec4ir.postprocessing import uptrain
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
-from gensim.models import Word2Vec
+from gensim.models import Word2Vec, Doc2Vec
 from sklearn.feature_extraction.text import CountVectorizer
 from operator import itemgetter
 from textwrap import indent
@@ -38,6 +38,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 
 QUERY_EXPANSION = ['ce', 'eqe1', 'eqe2']
 RETRIEVAL_MODEL = ['tfidf', 'wcd', 'wmd', 'd2v']
+D2V_RETRIEVAL = ['d2v']
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd',
               'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf',
               'gensim-wmd', 'eqe1tfidf', 'eqe1wcd']
@@ -130,7 +131,7 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
     return values
 
 
-def smart_load_word2vec(model_path):
+def smart_load_embedding(model_path, doc2vec=False):
     print("Smart loading", model_path)
     if model_path is None:
         return None
@@ -138,7 +139,10 @@ def smart_load_word2vec(model_path):
     if ext == ".gnsm":  # Native format
         print("Loading embeddings in native gensim format: {}"
               .format(model_path))
-        model = Word2Vec.load(model_path)
+        if doc2vec:
+            model = Doc2Vec.load(model_path)
+        else:
+            model = Word2Vec.load(model_path)
     else:  # either word2vec text or word2vec binary format
         binary = ".bin" in model_path
         print("Loading embeddings in word2vec format: {}".format(model_path))
@@ -392,10 +396,13 @@ def main():
         print('Using', args.embedding, 'as model path')
         model_path = args.embedding
 
+
+    doc2vec = args.retrieval_model in D2V_RETRIEVAL
+
     # Now model path is either:
     # 1. filename from config
     # 2. raw string argument passed to script
-    # 3. None, so no pre-trained embedding will be used
+    # 3. None, so NO pre-trained embedding will be used
     if args.train is not None or model_path is None:
         sents = [analyzed(doc) for doc in documents]
         embedding = uptrain(sents, model_path=model_path,
@@ -413,7 +420,7 @@ def main():
                             size=300  # vector size
                             )
     else:
-        embedding = smart_load_word2vec(model_path)
+        embedding = smart_load_embedding(model_path, doc2vec=doc2vec)
 
     print("Top 10 frequent words:", embedding.index2word[:10])
 
