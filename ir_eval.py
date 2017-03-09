@@ -15,11 +15,10 @@ from vec4ir.doc2vec import Doc2VecRetrieval
 from vec4ir.query_expansion import CentroidExpansion
 from vec4ir.query_expansion import EmbeddedQueryExpansion
 from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
-# from vec4ir.word2vec import WordMoversDistance
 from vec4ir.postprocessing import uptrain
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
-from gensim.models import Word2Vec
+from gensim.models import KeyedVectors
 from sklearn.feature_extraction.text import CountVectorizer
 from operator import itemgetter
 from textwrap import indent
@@ -31,9 +30,9 @@ import numpy as np
 import pandas as pd
 import yaml
 import matplotlib
+import logging
 matplotlib.use('Agg')  # compat on non-gui uis, must be set before pyplot
 import matplotlib.pyplot as plt
-import logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
@@ -139,11 +138,11 @@ def smart_load_word2vec(model_path):
     if ext == ".gnsm":  # Native format
         print("Loading embeddings in native gensim format: {}"
               .format(model_path))
-        model = Word2Vec.load(model_path)
+        model = KeyedVectors.load(model_path)
     else:  # either word2vec text or word2vec binary format
         binary = ".bin" in model_path
         print("Loading embeddings in word2vec format: {}".format(model_path))
-        model = Word2Vec.load_word2vec_format(model_path, binary=binary)
+        model = KeyedVectors.load_word2vec_format(model_path, binary=binary)
     return model
 
 
@@ -407,8 +406,8 @@ def main():
 
     if args.subtract:
         print('Subtracting first %d principal components' % args.subtract)
-        syn0 = embedding.syn0
-        embedding.syn0 = all_but_the_top(syn0, args.subtract)
+        syn0 = embedding.wv.syn0
+        embedding.wv.syn0 = all_but_the_top(syn0, args.subtract)
     if args.normalize:
         print('Normalizing word vectors')
         embedding.init_sims(replace=True)
@@ -464,6 +463,8 @@ def main():
              args.query_expansion if args.query_expansion else '',
              args.retrieval_model)
         )
+        if args.normalize:
+            rname = 'norm-' + rname
         ir = Retrieval(retrieval_model, query_expansion=query_expansion,
                        name=rname, matching=match_op)
         results[rname] = evaluation(ir)

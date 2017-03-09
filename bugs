@@ -1,6 +1,5 @@
-no need to remove tokens before wmd | id:0744608c4de5845caa625ed4af735aacbdaa4614
-can we compute wmd more efficiently | id:5e4472f39a90ec0e9757b86d36cf72776df146f7
-assert that Retrieval, Tfidf, WCD work | id:7bd8bf7b5d59303ade345242ff71ec46f007b284
+great idea, interactive result generation by pickling results dict | id:087b71af82913d3aeb609fc460bc90ed10362a09
+do bm25 | id:416b812140d3e9c4711294408d76992db48fa233
 add more datasets to cfg | id:80045786409bc32abe5bd118098bf424817cc049
 add idf option | id:9057a9c38e60301ecddea17d2a5bc028c8a00646
 processify queries | id:d847866cbbca12cb0e42a8d15e602d1d990dd28a

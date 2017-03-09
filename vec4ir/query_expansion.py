@@ -62,7 +62,7 @@ class EmbeddedQueryExpansion(BaseEstimator):
     def fit(self, raw_docs, y=None):
         """ Learn vocabulary to index and distance matrix of words"""
         wv = self._embedding
-        E = wv._embedding.syn0
+        E = wv._embedding.wv.syn0
         a, c = self._a, self._c
         D = delta(E, E, n_jobs=self.n_jobs, a=a, c=c)
         self.vocabulary = {word: index for index, word in

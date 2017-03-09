@@ -1,3 +1,4 @@
+---
 embeddings:
     glove:
         path: "/data3/lgalke/glove.840B.300d.w2v_format.txt"
@@ -19,15 +20,18 @@ embeddings:
 data:
     econ62k:
         type: "QuadflorLike"
-        X: "/data3/kd-mp/kd-mp/Resources/Goldstandard/formatted_econbiz-annotation-62k-titles.csv"
-        y: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
-        thes: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json" 
+        X:
+            "/data3/kd-mp/kd-mp/Resources/Goldstandard/formatted_econbiz-annotation-62k-titles.csv"
+        y:
+            "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
+        thes: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json"
 
     econfull:
         type: "QuadflorLike"
         X: "/data3/kd-mp/data/ZBW62k/Text"
-        y: "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
-        thes: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json" 
+        y:
+            "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
+        thes: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json"
 
     short-ntcir2:
         type: "ntcir"
@@ -42,7 +46,7 @@ data:
         field: "content"
         topic: "title"
         rels: 2
-            
+
     long-ntcir2:
         type: "ntcir"
         root_path: "../data/NTCIR2/"
@@ -56,4 +60,3 @@ data:
         field: "content"
         topic: "description"
         rels: 2
-            
