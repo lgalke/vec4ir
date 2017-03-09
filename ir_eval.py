@@ -422,7 +422,7 @@ def main():
         stats, mcf = collection_statistics(embedding=embedding,
                                            documents=documents,
                                            analyzer=matching_analyzer,
-                                           topn=25)
+                                           topn=50)
         header = ("Statistics: {a.dataset} x {a.embedding}"
                   " x {a.tokenizer} x lower: {a.lowercase}"
                   " x stop_words: {a.stop_words}")
