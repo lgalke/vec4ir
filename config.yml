@@ -1,7 +1,8 @@
 ---
 embeddings:
     glove:
-        path: "/data3/lgalke/glove.840B.300d.w2v_format.txt"
+        # path: "/data3/lgalke/glove.840B.300d.w2v_format.txt"
+        path: "/data3/lgalke/glove.gnsm"
         oov_token: "UNK"  # wild guess
         analyzer:
             lowercase: False
@@ -16,6 +17,9 @@ embeddings:
             lowercase: False
             tokenizer: "sword"
             stop_words: True
+
+    doc2vec:
+        path: "/data3/lgalke/1000_dim_wiki_doc2vec.model"
 
 data:
     econ62k:
@@ -32,6 +36,19 @@ data:
         y:
             "/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv"
         thes: "/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json"
+
+    reuters:    
+        type: "QuadflorLike"
+        X: "/data11/fmai/data/TREC-Reuters/rcv1_titles_100000.tsv"
+        y: "/data11/fmai/data/TREC-Reuters/rcv1_gold100000.tsv"
+        thes: "/data3/kd-mp/kd-mp/Resources/Ontologies/reuters_dict_fixed.json"
+    
+    reutersfull:    
+        type: "QuadflorLike"
+        X: "/data11/fmai/data/TREC-Reuters/rcv1_fulltext_100000"
+        y: "/data11/fmai/data/TREC-Reuters/rcv1_gold100000.tsv"
+        thes: "/data3/kd-mp/kd-mp/Resources/Ontologies/reuters_dict_fixed.json"
+
 
     short-ntcir2:
         type: "ntcir"

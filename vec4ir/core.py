@@ -95,7 +95,7 @@ class EmbeddedVectorizer(TfidfVectorizer):
         # list of words in the embedding
         vocabulary = embedding.index2word
         self.embedding = embedding
-        print("Embedding shape:", embedding.wv.syn0.shape)
+        print("Embedding shape:", embedding.syn0.shape)
         TfidfVectorizer.__init__(self, vocabulary=vocabulary, **kwargs)
 
     def fit(self, raw_docs, y=None):
@@ -104,7 +104,7 @@ class EmbeddedVectorizer(TfidfVectorizer):
 
     def transform(self, raw_documents, y=None):
         Xt = super().transform(raw_documents)
-        syn0 = self.embedding.wv.syn0
+        syn0 = self.embedding.syn0
         # Xt is sparse counts
         return (Xt @ syn0)
 
@@ -114,9 +114,11 @@ class EmbeddedVectorizer(TfidfVectorizer):
 
 def embed(X, E):
     """
-    X (n_samples, n_features)
-    E (n_features, n_dims)
-    X @ E (n_samples, n_dims)
+    This is effectively: X @ E, just slower... by foot
+    Arguments:
+        - X  -- (n_samples, n_features)
+        - E  -- (n_features, n_dims)
+        - X  -- @ E (n_samples, n_dims)
     """
     raise DeprecationWarning("This is slow, use X @ syn0 instead.")
     embedded = np.zeros((X.shape[0], E.shape[1]), dtype=E.dtype)

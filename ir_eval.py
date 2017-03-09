@@ -11,14 +11,14 @@ from vec4ir.base import Tfidf, Matching
 from vec4ir.word2vec import Word2VecRetrieval, WordCentroidRetrieval
 from vec4ir.word2vec import FastWordCentroidRetrieval, WordMoversRetrieval
 from vec4ir.word2vec import WmdSimilarityRetrieval
-from vec4ir.doc2vec import Doc2VecRetrieval
+from vec4ir.doc2vec import Doc2VecRetrieval, Doc2VecInference
 from vec4ir.query_expansion import CentroidExpansion
 from vec4ir.query_expansion import EmbeddedQueryExpansion
 from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
 from vec4ir.postprocessing import uptrain
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
-from gensim.models import KeyedVectors
+from gensim.models import Word2Vec, Doc2Vec
 from sklearn.feature_extraction.text import CountVectorizer
 from operator import itemgetter
 from textwrap import indent
@@ -37,7 +37,8 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
 QUERY_EXPANSION = ['ce', 'eqe1', 'eqe2']
-RETRIEVAL_MODEL = ['tfidf', 'wcd', 'wmd']
+RETRIEVAL_MODEL = ['tfidf', 'wcd', 'wmd', 'd2v']
+D2V_RETRIEVAL = ['d2v']
 MODEL_KEYS = ['tfidf', 'wcd', 'wmd', 'pvdm', 'eqlm', 'legacy-wcd',
               'legacy-wmd', 'cewcd', 'cetfidf', 'wmdnom', 'wcdnoidf',
               'gensim-wmd', 'eqe1tfidf', 'eqe1wcd']
@@ -102,7 +103,7 @@ def is_embedded(sentence, embedding, analyzer):
 
 
 def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
-            verbose=3, replacement=0):
+            verbose=3, replacement=0, n_jobs=1):
     """
     irmodel
     X : iterator of documents
@@ -119,8 +120,8 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
         print("Evaluating", irmodel.name, "...")
     if verbose > 1:
         print("-" * 79)
-    values = irmodel.evaluate(queries, rels, verbose=verbose - 1, k=k,
-                              replacement=replacement)
+    values = irmodel.evaluate(queries, rels, verbose=verbose, k=k,
+                              replacement=replacement, n_jobs=n_jobs)
     if verbose > 1:
         print("-" * 79)
     if verbose > 0:
@@ -130,19 +131,22 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
     return values
 
 
-def smart_load_word2vec(model_path):
+def smart_load_embedding(model_path, doc2vec=False):
     print("Smart loading", model_path)
     if model_path is None:
         return None
     _, ext = os.path.splitext(model_path)
-    if ext == ".gnsm":  # Native format
+    if doc2vec:
+        print("Loading Doc2Vec model:", model_path)
+        model = Doc2Vec.load(model_path)
+    elif ext == ".gnsm":  # Native format
         print("Loading embeddings in native gensim format: {}"
               .format(model_path))
-        model = KeyedVectors.load(model_path)
+        model = Word2Vec.load(model_path)
     else:  # either word2vec text or word2vec binary format
         binary = ".bin" in model_path
         print("Loading embeddings in word2vec format: {}".format(model_path))
-        model = KeyedVectors.load_word2vec_format(model_path, binary=binary)
+        model = Word2Vec.load_word2vec_format(model_path, binary=binary)
     return model
 
 
@@ -178,6 +182,14 @@ def _ir_eval_parser(config):
     emb_opt.add_argument("-a", "--all-but-the-top", dest='subtract', type=int,
                          default=None,
                          help='Apply all but the top embedding postprocessing')
+
+    ret_opt = parser.add_argument_group("Retrieval Options")
+    ret_opt.add_argument("-I", "--no-idf", action='store_false', dest='idf',
+                         default=True,
+                         help='Do not use IDF when aggregating word vectors')
+    ret_opt.add_argument("-w", "--wmd", type=float, dest='wmd', default=1.0,
+                         help="WMD Completeness factor, defaults to 1.0")
+
     # OPTIONS FOR OUTPUT
     output_options = parser.add_argument_group("Output options")
     output_options.add_argument("-o", "--outfile", default=sys.stdout,
@@ -297,11 +309,11 @@ def build_analyzer(tokenizer=None, stop_words=None, lowercase=True):
 
 
 def build_query_expansion(key, embedding, analyzer='word', m=10, verbose=0,
-                          n_jobs=1):
+                          n_jobs=1, use_idf=True):
     if key is None:
         return None
     QEs = {'ce': CentroidExpansion(embedding, analyzer=analyzer, m=m,
-                                   use_idf=True),
+                                   use_idf=use_idf),
            'eqe1': EmbeddedQueryExpansion(embedding, analyzer=analyzer, m=m,
                                           verbose=verbose, eqe=1,
                                           n_jobs=n_jobs, a=1, c=0),
@@ -311,13 +323,15 @@ def build_query_expansion(key, embedding, analyzer='word', m=10, verbose=0,
     return QEs[key]
 
 
-def build_retrieval_model(key, embedding, analyzer, use_idf=True):
+def build_retrieval_model(key, embedding, analyzer, use_idf=True,
+                          wmd_factor=1.0):
     """
     Arguments:
-    :key:
-    :embedding:
-    :analyzer:
-    :use_idf:
+    :key: the key which specifies the selected retrieval model
+    :embedding: word vectors (or document vectors for doc2vec)
+    :analyzer: analyzer function
+    :use_idf: Usage of inverse document frequency
+    :wmd_factor: Completeness factor for word movers distance
 
     """
     RMs = {
@@ -325,7 +339,9 @@ def build_retrieval_model(key, embedding, analyzer, use_idf=True):
         'wcd': WordCentroidDistance(embedding=embedding,
                                     analyzer=analyzer,
                                     use_idf=use_idf),
-        'wmd': WordMoversDistance(embedding, analyzer)
+        'wmd': WordMoversDistance(embedding, analyzer,
+                                  complete=wmd_factor),
+        'd2v': Doc2VecInference(embedding, analyzer)
     }
     return RMs[key]
 
@@ -374,15 +390,18 @@ def main():
         print('Found Embedding key in config file:', args.embedding)
         embedding_config = config['embeddings'][args.embedding]
         model_path = embedding_config['path']
-        embedding_oov_token = embedding_config["oov_token"]
+        if "oov_token" in embedding_config:
+            embedding_oov_token = embedding_config["oov_token"]
     else:
         print('Using', args.embedding, 'as model path')
         model_path = args.embedding
 
+    doc2vec = args.retrieval_model in D2V_RETRIEVAL
+
     # Now model path is either:
     # 1. filename from config
     # 2. raw string argument passed to script
-    # 3. None, so no pre-trained embedding will be used
+    # 3. None, so NO pre-trained embedding will be used
     if args.train is not None or model_path is None:
         sents = [analyzed(doc) for doc in documents]
         embedding = uptrain(sents, model_path=model_path,
@@ -400,7 +419,7 @@ def main():
                             size=300  # vector size
                             )
     else:
-        embedding = smart_load_word2vec(model_path)
+        embedding = smart_load_embedding(model_path, doc2vec=doc2vec)
 
     print("Top 10 frequent words:", embedding.index2word[:10])
 
@@ -446,17 +465,20 @@ def main():
                        rels,
                        verbose=args.verbose,
                        k=args.k,
-                       replacement=repl)
+                       replacement=repl,
+                       n_jobs=args.jobs)
 
     results = dict()
     if args.retrieval_model is not None:
         query_expansion = build_query_expansion(args.query_expansion,
                                                 embedding, analyzed, m=args.m,
                                                 verbose=args.verbose,
-                                                n_jobs=args.jobs)
+                                                n_jobs=args.jobs,
+                                                use_idf=args.idf)
         retrieval_model = build_retrieval_model(args.retrieval_model,
                                                 embedding, analyzed,
-                                                use_idf=True)
+                                                use_idf=args.idf,
+                                                wmd_factor=args.wmd)
         match_op = Matching(analyzer=matching_analyzer)
         rname = '+'.join(
             (args.embedding,
