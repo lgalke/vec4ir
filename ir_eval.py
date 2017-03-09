@@ -136,13 +136,13 @@ def smart_load_embedding(model_path, doc2vec=False):
     if model_path is None:
         return None
     _, ext = os.path.splitext(model_path)
-    if ext == ".gnsm":  # Native format
+    if doc2vec:
+        print("Loading Doc2Vec model:", model_path)
+        model = Doc2Vec.load(model_path)
+    elif ext == ".gnsm":  # Native format
         print("Loading embeddings in native gensim format: {}"
               .format(model_path))
-        if doc2vec:
-            model = Doc2Vec.load(model_path)
-        else:
-            model = Word2Vec.load(model_path)
+        model = Word2Vec.load(model_path)
     else:  # either word2vec text or word2vec binary format
         binary = ".bin" in model_path
         print("Loading embeddings in word2vec format: {}".format(model_path))
@@ -395,7 +395,6 @@ def main():
     else:
         print('Using', args.embedding, 'as model path')
         model_path = args.embedding
-
 
     doc2vec = args.retrieval_model in D2V_RETRIEVAL
 

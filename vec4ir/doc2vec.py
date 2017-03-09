@@ -45,7 +45,7 @@ class Doc2VecInference(BaseEstimator, RetriEvalMixin):
         analyzed_query = self.analyzer(query)
         qv = self.model.infer_vector(analyzed_query).reshape(1, -1)
 
-        dists = linear_kernel(qv, dvs)
+        dists = linear_kernel(qv, dvs)[0]
         print("dists.shape", dists.shape)
 
         ind = argtopk(dists)
