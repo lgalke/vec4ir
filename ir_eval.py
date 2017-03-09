@@ -18,7 +18,7 @@ from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
 from vec4ir.postprocessing import uptrain
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics
-from gensim.models import KeyedVectors
+from gensim.models import Word2Vec
 from sklearn.feature_extraction.text import CountVectorizer
 from operator import itemgetter
 from textwrap import indent
@@ -102,7 +102,7 @@ def is_embedded(sentence, embedding, analyzer):
 
 
 def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
-            verbose=3, replacement=0):
+            verbose=3, replacement=0, n_jobs=1):
     """
     irmodel
     X : iterator of documents
@@ -119,8 +119,8 @@ def ir_eval(irmodel, documents, labels, queries, rels, metrics=None, k=20,
         print("Evaluating", irmodel.name, "...")
     if verbose > 1:
         print("-" * 79)
-    values = irmodel.evaluate(queries, rels, verbose=verbose - 1, k=k,
-                              replacement=replacement)
+    values = irmodel.evaluate(queries, rels, verbose=verbose, k=k,
+                              replacement=replacement, n_jobs=n_jobs)
     if verbose > 1:
         print("-" * 79)
     if verbose > 0:
@@ -138,11 +138,11 @@ def smart_load_word2vec(model_path):
     if ext == ".gnsm":  # Native format
         print("Loading embeddings in native gensim format: {}"
               .format(model_path))
-        model = KeyedVectors.load(model_path)
+        model = Word2Vec.load(model_path)
     else:  # either word2vec text or word2vec binary format
         binary = ".bin" in model_path
         print("Loading embeddings in word2vec format: {}".format(model_path))
-        model = KeyedVectors.load_word2vec_format(model_path, binary=binary)
+        model = Word2Vec.load_word2vec_format(model_path, binary=binary)
     return model
 
 
@@ -446,7 +446,8 @@ def main():
                        rels,
                        verbose=args.verbose,
                        k=args.k,
-                       replacement=repl)
+                       replacement=repl,
+                       n_jobs=args.jobs)
 
     results = dict()
     if args.retrieval_model is not None:
