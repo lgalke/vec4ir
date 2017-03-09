@@ -412,8 +412,8 @@ class RetriEvalMixin():
         """
         # rs = []
 
-        if n_jobs > 1:
-            return process_and_evaluate(self, X, Y, k, n_jobs)
+        # if n_jobs > 1:
+        #     return process_and_evaluate(self, X, Y, k, n_jobs)
         values = defaultdict(list)
         for qid, query in X:
             # execute query
