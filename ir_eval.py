@@ -403,7 +403,9 @@ def main():
     # 1. filename from config
     # 2. raw string argument passed to script
     # 3. None, so NO pre-trained embedding will be used
-    if args.train is not None or model_path is None:
+    if args.retrieval_model in ['tfidf']:
+        embedding = None
+    elif args.train is not None or model_path is None:
         sents = [analyzed(doc) for doc in documents]
         embedding = uptrain(sents, model_path=model_path,
                             binary=('bin' in model_path),
@@ -422,7 +424,8 @@ def main():
     else:
         embedding = smart_load_embedding(model_path, doc2vec=doc2vec)
 
-    print("Top 10 frequent words:", embedding.index2word[:10])
+    if embedding:
+        print("Top 10 frequent words:", embedding.index2word[:10])
 
     if args.subtract:
         print('Subtracting first %d principal components' % args.subtract)
@@ -441,7 +444,7 @@ def main():
         stats, mcf = collection_statistics(embedding=embedding,
                                            documents=documents,
                                            analyzer=matching_analyzer,
-                                           topn=25)
+                                           topn=50)
         header = ("Statistics: {a.dataset} x {a.embedding}"
                   " x {a.tokenizer} x lower: {a.lowercase}"
                   " x stop_words: {a.stop_words}")
