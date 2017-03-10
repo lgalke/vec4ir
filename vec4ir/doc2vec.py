@@ -1,13 +1,56 @@
 from gensim.models import Doc2Vec
 try:
-    from .base import RetriEvalMixin, Matching
+    from .base import RetriEvalMixin, Matching, argtopk
 except SystemError:
-    from base import RetriEvalMixin, Matching
+    from base import RetriEvalMixin, Matching, argtopk
 # from .word2vec import filter_vocab
 from gensim.models.doc2vec import TaggedDocument
 from sklearn.base import BaseEstimator
 from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import normalize
+from sklearn.metrics.pairwise import linear_kernel
 import numpy as np
+
+
+class Doc2VecInference(BaseEstimator, RetriEvalMixin):
+    """ A generic tranformer """
+    def __init__(self, model, analyzer, alpha=0.1, min_alpha=0.0001, steps=5):
+        self.model = model
+        self.analyzer = analyzer
+        self.alpha = alpha
+        self.min_alpha = min_alpha
+        self.steps = steps
+
+    def fit(self, docs):
+        model, analyzed = self.model, self.analyzer
+        alpha = self.alpha
+        min_alpha = self.min_alpha
+        steps = self.steps
+
+        analyzed_docs = [analyzed(doc) for doc in docs]
+        dvs = np.array([model.infer_vector(sent, alpha=alpha,
+                                           min_alpha=min_alpha, steps=steps)
+                        for sent in analyzed_docs])
+        print("dvs.shape", dvs.shape)
+        dvs = normalize(dvs, copy=False)
+        self.inferred_docvecs = dvs
+        return self
+
+    def query(self, query, k=None, indices=None):
+        if indices is not None:
+            dvs = self.inferred_docvecs[indices]
+        else:
+            dvs = self.inferred_docvecs
+
+        analyzed_query = self.analyzer(query)
+        qv = self.model.infer_vector(analyzed_query).reshape(1, -1)
+
+        dists = linear_kernel(qv, dvs)[0]
+        print("dists.shape", dists.shape)
+
+        ind = argtopk(dists)
+
+        return ind
 
 
 class Doc2VecRetrieval(BaseEstimator, RetriEvalMixin):

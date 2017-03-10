@@ -24,8 +24,8 @@ def filter_vocab(model, words, oov=None):
 def argtopk(A, k=None, sort=True):
     """ Get the the top k elements (in sorted order)
     >>> A = np.asarray([5,4,3,6,7,8,9,0])
-    >>> argtopk(A, 3)
-    array([6, 5, 4])
+    >>> A[argtopk(A, 3)]
+    array([9, 8, 7])
     >>> argtopk(A, 1)
     array([6])
     >>> argtopk(A, 6)
@@ -46,7 +46,10 @@ def argtopk(A, k=None, sort=True):
     axis = -1
     if k is None or k >= A.size:
         # if list is too short or k is None, return all in sort order
-        return np.argsort(A, axis=axis)[::-1]
+        if sort:
+            return np.argsort(A, axis=axis)[::-1]
+        else:
+            return np.arange(A.shape[0])
 
     assert k > 0
     # now 0 < k < len(A)

@@ -22,7 +22,7 @@ try:
     # from .utils import argtopk
     from .utils import filter_vocab, argtopk
     from .combination import CombinatorMixin
-    from .core import EmbeddedVectorizer, all_but_the_top
+    from .core import EmbeddedVectorizer
 
 except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixin, Matching
@@ -281,22 +281,61 @@ class WordCentroidDistance(BaseEstimator):
         ret = argtopk(D[0], k=k)
         return ret
 
+
 class WordMoversDistance(BaseEstimator):
-    def __init__(self, embedding, analyze_fn=DEFAULT_ANALYZER):
+    def __init__(self, embedding, analyze_fn=DEFAULT_ANALYZER, complete=1.0,
+                 use_idf=True):
+        """
+        Retrieval model with respect to the Word Mover's distance.
+        Arguments:
+            embedding: word vectors (gensim keyedvectors)
+            analye_fn: the analyzer to use function str -> [str]
+            complete: if less than 1.0
+
+        """
+        assert complete >= 0.0 and complete <= 1.0
+        self.complete = complete
         self.embedding = embedding
         self.analyze_fn = analyze_fn
+        self.wcd = WordCentroidDistance(embedding, analyzer=analyze_fn,
+                                        use_idf=use_idf)
 
     def fit(self, raw_docs):
         self.docs = np.array([self.analyze_fn(doc) for doc in raw_docs])
+        self.wcd.fit(raw_docs)
 
     def query(self, query, k=None, indices=None):
         if indices is None:
             docs = self.docs
         else:
             docs = self.docs[indices]
+
+        incomplete = self.complete < 1.0
+
+        if incomplete:
+            # if complete is less then 1, we regard only top fraction returned
+            # by word centroid distance
+            n_matches = docs.shape[0]
+            k = min(n_matches, k)  # we cant return more than n_matches
+            # compute the desired fraction
+            # Ex: 40 matches, k=20, complete=0.5,
+            # => we want to look at 10 additional documents
+            n_req = int((n_matches - k) * self.complete) + k
+            print("Querying WCD for %d documents." % n_req)
+            wcd_ind = self.wcd.query(query, k=n_req, indices=indices)
+            # returned indices are relative to the already filtered set
+            docs = docs[wcd_ind]
+
         q = self.analyze_fn(query)
         dists = np.array([self.embedding.wmdistance(q, d) for d in docs])
         ind = np.argsort(dists)[:k]
+
+        if incomplete:
+            # our resulting indices are now relative to the docs with respect
+            # to word centroid distance, but we want them relative to the
+            # matching in the first place
+            ind = wcd_ind[ind]
+
         return ind
 
 
@@ -320,7 +359,6 @@ class WordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
         self._oov = oov
         self.verbose = verbose
         self.n_jobs = n_jobs
-
         self._neighbors = NearestNeighbors(**kwargs)
 
         self._analyzer = analyzer
@@ -438,6 +476,7 @@ class FastWordCentroidRetrieval(BaseEstimator, RetriEvalMixin):
 
     def query(self, query, k=None, indices=None):
         centroids = self.centroids
+
         if k is None:
             k = centroids.shape[0]
 

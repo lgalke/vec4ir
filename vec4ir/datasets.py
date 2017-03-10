@@ -22,25 +22,19 @@ DEFAULT_CACHEDIR = os.path.expanduser("~/.cache")
 
 
 class IRDataSetBase(ABC):
-    # def __subclasshook__(subclass):
-    #     if hasattr(subclass, "docs") and hasattr(subclass, "rels") and hasattr(subclass, "topics"):
-    #         return True
-    #     else:
-    #         return False
-
     @property
     @abstractmethod
-    def docs():
+    def docs(self):
         pass
 
     @property
     @abstractmethod
-    def rels():
+    def rels(self):
         pass
 
     @property
     @abstractmethod
-    def topics():
+    def topics(self):
         pass
 
     def load(self, verbose=False):
@@ -52,12 +46,14 @@ class IRDataSetBase(ABC):
         queries = self.topics
         if verbose:
             n_queries = len(queries)
-            print(len(queries), "queries.")
+            print(n_queries, "queries.")
 
         rels = self.rels
         if verbose:
-            n_rels = np.asarray([len([r for r in harvest(rels, qid) if r > 0]) for qid, __ in queries])
-            print("{:2f} ({:2f}) relevant documents per query.".format(n_rels.mean(), n_rels.std()))
+            n_rels = np.asarray([len([r for r in harvest(rels, qid) if r > 0])
+                                 for qid, __ in queries])
+            print("{:2f} ({:2f}) relevant documents per query."
+                  .format(n_rels.mean(), n_rels.std()))
 
         return docs, labels, queries, rels
 
@@ -114,11 +110,11 @@ def harvest_docs(path, verify_integrity):
 
 
 class QuadflorLike(IRDataSetBase):
-    """The famous econ62k dataset"""
+    """The famous quadflor-like dataset specification"""
     def __init__(self,
                  y=None,
                  thes=None,
-                 X=None,
+                 X=None,  # Path to dir of documents
                  verify_integrity=False):
         self.__docs = None
         self.__rels = None
@@ -356,7 +352,8 @@ class NTCIR(IRDataSetBase):
         verify_integrity = self.__verify_integrity
         number = self.__rels
         path = os.path.join(self.root_path, "rels")
-        path = os.path.join(path, "rel" + str(number) + "_ntc2-e2_0101-0149.nc")
+        fname = "rel" + str(number) + "_ntc2-e2_0101-0149.nc"
+        path = os.path.join(path, fname)
         rels_df = NTCIR._read_rels(path, verify_integrity=verify_integrity)
         return rels_df['relevance']
 
@@ -367,12 +364,15 @@ class NTCIR(IRDataSetBase):
         verify_integrity = self.__verify_integrity
         key = "e0101-0149"  # could be global
         path = os.path.join(self.root_path, "topics", "topic-" + key)
-        topics_df = NTCIR._read_topics(path, names, verify_integrity=verify_integrity)
+        topics_df = NTCIR._read_topics(path, names,
+                                       verify_integrity=verify_integrity)
         topics = topics_df[desired_topic_field]
         return list(zip(topics.index, topics))
 
+
 if __name__ == '__main__':
-    ntcir2 = NTCIR('/home/lpag/git/vec4ir/data/NTCIR2/', verify_integrity=True, rels=2)
+    ntcir2 = NTCIR('/home/lpag/git/vec4ir/data/NTCIR2/', verify_integrity=True,
+                   rels=2)
     docs = ntcir2.docs
     print(docs)
     print(docs.columns)

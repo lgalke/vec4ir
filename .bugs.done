@@ -2,6 +2,7 @@ no need to remove tokens before wmd | id:0744608c4de5845caa625ed4af735aacbdaa461
 where is pandas bug | id:09e97860fc655b23af33a747f025f67c406ce600
 pipeline query expansion | id:1434332aeab9ed507a5c54df11f6e91692f3ded8
 doc2vec: extract training params from doc2vec paper | id:15ccc85d498f3b6bd9f7c6ecb4df507503b5602c
+assert that metrics are correct | id:1ddf47b9fcdef900a03102b2f38797f78ce7f535
 fix rels amount | id:29fe92785bc2f4dd5b0216e27e88be2ca3c577eb
 uptraining? | id:398e763205e2f391a3ca65f6fbbad64bdc140945
 TEST CENTROID EXPANSION | id:57829169daeccd071815187d8f395d221414014d
