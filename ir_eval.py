@@ -340,7 +340,8 @@ def build_retrieval_model(key, embedding, analyzer, use_idf=True,
                                     analyzer=analyzer,
                                     use_idf=use_idf),
         'wmd': WordMoversDistance(embedding, analyzer,
-                                  complete=wmd_factor),
+                                  complete=wmd_factor,
+                                  use_idf=use_idf),
         'd2v': Doc2VecInference(embedding, analyzer)
     }
     return RMs[key]

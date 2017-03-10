@@ -22,7 +22,7 @@ try:
     # from .utils import argtopk
     from .utils import filter_vocab, argtopk
     from .combination import CombinatorMixin
-    from .core import EmbeddedVectorizer, all_but_the_top
+    from .core import EmbeddedVectorizer
 
 except (ValueError, SystemError):
     from base import RetrievalBase, RetriEvalMixin, Matching
@@ -320,9 +320,9 @@ class WordMoversDistance(BaseEstimator):
             # compute the desired fraction
             # Ex: 40 matches, k=20, complete=0.5,
             # => we want to look at 10 additional documents
-            n_additional = int((n_matches - k) * self.complete)
-            print("Querying WCD for %d additional documents." % n_additional)
-            wcd_ind = self.wcd.query(query, k=k+n_additional, indices=indices)
+            n_req = int((n_matches - k) * self.complete) + k
+            print("Querying WCD for %d documents." % n_req)
+            wcd_ind = self.wcd.query(query, k=n_req, indices=indices)
             # returned indices are relative to the already filtered set
             docs = docs[wcd_ind]
 
