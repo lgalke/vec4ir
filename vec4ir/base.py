@@ -450,7 +450,7 @@ class RetriEvalMixin():
             topk_indices = argtopk(gold, k)
             print(topk_indices, file=sys.stderr)
             gold_topk = gold[topk_indices]
-            print('Top k in gold standard:', gold_topk, file=sys.stderr)
+            # print('Top k in gold standard:', gold_topk, file=sys.stderr)
             R = np.count_nonzero(gold_topk)
             if verbose > 0:
                 print("Retrieved {} relevant out of {} possible."
