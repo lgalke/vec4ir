@@ -1,0 +1,56 @@
+% CONFIG
+% { 'data': { 'econ62k': { 'X': '/data3/kd-mp/kd-mp/Resources/Goldstandard/formatted_econbiz-annotation-62k-titles.csv',
+%                          'thes': '/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json',
+%                          'type': 'QuadflorLike',
+%                          'y': '/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv'},
+%             'econfull': { 'X': '/data3/kd-mp/data/ZBW62k/Text',
+%                           'thes': '/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json',
+%                           'type': 'QuadflorLike',
+%                           'y': '/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv'},
+%             'long-ntcir2': { 'field': 'title',
+%                              'rels': 2,
+%                              'root_path': '../data/NTCIR2/',
+%                              'topic': 'description',
+%                              'type': 'ntcir'},
+%             'long-ntcir2abstract': { 'field': 'content',
+%                                      'rels': 2,
+%                                      'root_path': '../data/NTCIR2/',
+%                                      'topic': 'description',
+%                                      'type': 'ntcir'},
+%             'short-ntcir2': { 'field': 'title',
+%                               'rels': 2,
+%                               'root_path': '../data/NTCIR2/',
+%                               'topic': 'title',
+%                               'type': 'ntcir'},
+%             'short-ntcir2abstract': { 'field': 'content',
+%                                       'rels': 2,
+%                                       'root_path': '../data/NTCIR2/',
+%                                       'topic': 'title',
+%                                       'type': 'ntcir'}},
+%   'embeddings': { 'glove': { 'analyzer': { 'lowercase': False,
+%                                            'stop_words': False,
+%                                            'tokenizer': 'nltk'},
+%                              'oov_token': 'UNK',
+%                              'path': '/data3/lgalke/glove.840B.300d.w2v_format.txt'},
+%                   'word2vec': { 'analyzer': { 'lowercase': False,
+%                                               'stop_words': True,
+%                                               'tokenizer': 'sword'},
+%                                 'oov_token': 'UNK',
+%                                 'path': '/data3/lgalke/GoogleNews-vectors-negative300.bin.gz'}}}
+% ARGS
+% Namespace(dataset='econ62k', doctest=False, embedding='word2vec', filter_queries=False, focus=None, jobs=8, k=20, lowercase=True, m=10, matching=True, normalize=False, outfile=<_io.TextIOWrapper name='econ62k-wcd-t50-nonorm.tex' mode='a' encoding='UTF-8'>, plot=None, query_expansion=None, repstrat='zero', retrieval_model='wcd', stats=False, stop_words=True, subtract=None, tokenizer='sklearn', train=50, verbose=2)
+\begin{tabular}{ll}
+\toprule
+{} &                       word2vec++wcd \\
+\midrule
+MAP            &     (0.360960019873, 0.36695113953) \\
+MRR            &     (0.417319051046, 0.43306318657) \\
+f1\_score       &    (0.213044377448, 0.266166289746) \\
+ndcg           &    (0.259374333117, 0.293414293583) \\
+precision      &    (0.219863136476, 0.292643074402) \\
+precision@10   &    (0.224214254095, 0.286725248269) \\
+precision@5    &    (0.266312527667, 0.328427635156) \\
+recall         &    (0.256382064561, 0.295571100977) \\
+time\_per\_query &  (0.0441054669945, 0.0180925186707) \\
+\bottomrule
+\end{tabular}
