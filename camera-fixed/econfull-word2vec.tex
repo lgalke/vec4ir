@@ -1,0 +1,56 @@
+% CONFIG
+% { 'data': { 'econ62k': { 'X': '/data3/kd-mp/kd-mp/Resources/Goldstandard/formatted_econbiz-annotation-62k-titles.csv',
+%                          'thes': '/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json',
+%                          'type': 'QuadflorLike',
+%                          'y': '/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv'},
+%             'econfull': { 'X': '/data3/kd-mp/data/ZBW62k/Text',
+%                           'thes': '/data3/kd-mp/kd-mp/Resources/Ontologies/stw.json',
+%                           'type': 'QuadflorLike',
+%                           'y': '/data3/kd-mp/kd-mp/Resources/Goldstandard/econbiz-stw9-formatted.csv'},
+%             'long-ntcir2': { 'field': 'title',
+%                              'rels': 2,
+%                              'root_path': '../data/NTCIR2/',
+%                              'topic': 'description',
+%                              'type': 'ntcir'},
+%             'long-ntcir2abstract': { 'field': 'content',
+%                                      'rels': 2,
+%                                      'root_path': '../data/NTCIR2/',
+%                                      'topic': 'description',
+%                                      'type': 'ntcir'},
+%             'short-ntcir2': { 'field': 'title',
+%                               'rels': 2,
+%                               'root_path': '../data/NTCIR2/',
+%                               'topic': 'title',
+%                               'type': 'ntcir'},
+%             'short-ntcir2abstract': { 'field': 'content',
+%                                       'rels': 2,
+%                                       'root_path': '../data/NTCIR2/',
+%                                       'topic': 'title',
+%                                       'type': 'ntcir'}},
+%   'embeddings': { 'glove': { 'analyzer': { 'lowercase': False,
+%                                            'stop_words': False,
+%                                            'tokenizer': 'nltk'},
+%                              'oov_token': 'UNK',
+%                              'path': '/data3/lgalke/glove.gnsm'},
+%                   'word2vec': { 'analyzer': { 'lowercase': False,
+%                                               'stop_words': True,
+%                                               'tokenizer': 'sword'},
+%                                 'oov_token': 'UNK',
+%                                 'path': '/data3/lgalke/GoogleNews-vectors-negative300.bin.gz'}}}
+% ARGS
+% Namespace(dataset='econfull', doctest=False, embedding='word2vec', filter_queries=False, focus=['tfidf', 'wcd', 'wcdnoidf'], jobs=8, k=20, lowercase=True, matching=True, normalize=True, outfile=<_io.TextIOWrapper name='camera-fixed/econfull-word2vec.tex' mode='a' encoding='UTF-8'>, plot=None, repstrat='zero', stats=False, stop_words=True, subtract=None, tokenizer='sklearn', train=False, verbose=2)
+\begin{tabular}{llll}
+\toprule
+{} &                             TFIDF &                               wcd &                         wcd-noidf \\
+\midrule
+MAP            &  (0.335340268359, 0.350397979472) &  (0.261860981204, 0.314207382293) &   (0.240260940424, 0.30107421031) \\
+MRR            &  (0.395507636299, 0.425745515715) &  (0.314646883116, 0.394949242348) &  (0.288205462053, 0.380925386949) \\
+f1\_score       &  (0.194372805957, 0.245381658563) &   (0.13568684932, 0.187618064902) &  (0.121464767472, 0.174276190109) \\
+ndcg           &  (0.260919955748, 0.300392909053) &  (0.186399967821, 0.242929295427) &  (0.162158346342, 0.219858817135) \\
+precision      &   (0.17912256571, 0.242693633471) &   (0.12426422131, 0.185044541693) &  (0.112068559513, 0.172304995444) \\
+precision@10   &  (0.213081009296, 0.277772120843) &  (0.150199203187, 0.219134894468) &  (0.135436033643, 0.205036566456) \\
+precision@5    &  (0.248295706065, 0.318967276175) &  (0.175475874281, 0.262214969674) &  (0.158123063302, 0.246083480033) \\
+recall         &  (0.275681004021, 0.317510998543) &  (0.199940920567, 0.263281793171) &  (0.175008598302, 0.243255963502) \\
+time\_per\_query &    (10.7314017762, 6.83062696819) &    (14.0883389102, 7.95592935515) &    (13.7488768784, 10.8111873722) \\
+\bottomrule
+\end{tabular}
