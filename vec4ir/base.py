@@ -523,7 +523,7 @@ class Tfidf(TfidfVectorizer):
             fit_X = self._fit_X[indices]
         else:
             fit_X = self._fit_X
-        # fit_X is l2 normalized, so we can
+        # both fit_X and q are l2-normalized
         D = linear_kernel(q, fit_X)
         ind = argtopk(D[0], k)
         return ind
