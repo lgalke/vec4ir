@@ -1,9 +1,9 @@
 from sklearn.base import BaseEstimator
 try:
-    from .core import EmbeddedVectorizer, embed
+    from .core import EmbeddedVectorizer
     from .utils import argtopk
 except SystemError:
-    from core import EmbeddedVectorizer, embed
+    from core import EmbeddedVectorizer
     from utils import argtopk
 from sklearn.metrics.pairwise import pairwise_distances, linear_kernel
 from sklearn.preprocessing import normalize
