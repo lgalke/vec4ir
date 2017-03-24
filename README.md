@@ -59,7 +59,7 @@ The key features of this information retrieval framework are:
 Dependencies
 ------------
 
-The package `vec4ir` depends on the following python packages.
+Besides `python3` itself, the package `vec4ir` depends on the following python packages.
 
 -   [numpy](http://www.numpy.org/)
 -   [scipy](http://www.scipy.org/)
@@ -86,6 +86,8 @@ In case anything went wrong with the installation of dependencies, try to instal
 ``` sh
 pip3 install -r requirements.txt
 ```
+
+We also provide a helper script to setup a new virtual environment. It can be invoked `setup.sh <venv-name>` to setup a new virtual environment. The newly created virtual environment has to be activated via `source <venv-name>` before performing the actual installation steps.
 
 The evaluation script
 ---------------------
