@@ -71,13 +71,11 @@ The package `vec4ir` depends on the following python packages.
 -   [sklearn](http://scikit-learn.org/stable/index.html)
 -   [pyyaml](http://pyyaml.org/wiki/PyYAMLDocumentation)
 -   [pyemd](https://github.com/wmayner/pyemd)
--   [matplotlib](http://matplotlib.org/)
--   [joblib](https://pythonhosted.org/joblib/parallel.html)
 
 Installation
 ------------
 
-As `vec4ir` is packaged as a python package, it can be installed by (if python `setuptools` are installed):
+As `vec4ir` is packaged as a python package, it can be installed by (if python `setuptools` are installed): We recommend, to install `numpy` and `scipy` in beforehand (either manually, or as binary system packages).
 
 ``` sh
 cd python-vec4ir; python3 setup.py install
@@ -96,15 +94,14 @@ The package includes a native command line script `ir_eval.py` for evaluation of
 
 ### Meta options
 
--   `-c, --config` Path to a configuration file, in which the file paths for the datasets and embedding models are be specified.
+-   `-c, --config` Path to a configuration file, in which the file paths for the datasets and embedding models are specified.
 
 ### General options
 
--   `-d, --dataset` The data set to operate on.
--   `-e, --embedding` The word embedding model to use.
--   `-r, --retrieval-model` The retrieval model for similarity scoring. One of `tfidf`, `wcd`, `wmd`, `d2v`.
--   `q, --query-expansion` The expansion technique to apply on the queries. One of `wcd`, `eqe1`, `eqe2`.
--   `-j, --jobs` The number of threads to use in multi-processing.
+-   `-d, --dataset` The data set to operate on. (mandatory)
+-   `-e, --embedding` The word embedding model to use. (mandatory)
+-   `-r, --retrieval-model` The retrieval model for similarity scoring. One of `tfidf` (default), `wcd`, `wmd`, `d2v`.
+-   `-q, --query-expansion` The expansion technique to apply on the queries. One of `wcd`, `eqe1`, `eqe2`.
 
 ### Embedding options
 
