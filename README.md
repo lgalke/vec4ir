@@ -77,7 +77,7 @@ The package `vec4ir` depends on the following python packages.
 Installation
 ------------
 
-As `vec4ir` is packaged as a python package, it can be installed by:
+As `vec4ir` is packaged as a python package, it can be installed by (if python `setuptools` are installed):
 
 ``` sh
 cd python-vec4ir; python3 setup.py install
@@ -89,8 +89,55 @@ In case anything went wrong with the installation of dependencies, try to instal
 pip3 install -r requirements.txt
 ```
 
-Basic Usage
------------
+The evaluation script
+---------------------
+
+The package includes a native command line script `ir_eval.py` for evaluation of an information retrieval pipeline. The pipeline of query expansion, matching and scoring is applied to a set of queries and the metrics MAP, MRR, NDCG, precision and recall are computed. Hence, the script may be used *as-is* for evaluation of your datasets or as a reference implementation for the usage of the framework. The behaviour of the evaluation script and the resulting information retrieval pipeline can be controlled by the following command-line arguments:
+
+### Meta options
+
+-   `-c, --config` Path to a configuration file, in which the file paths for the datasets and embedding models are be specified.
+
+### General options
+
+-   `-d, --dataset` The data set to operate on.
+-   `-e, --embedding` The word embedding model to use.
+-   `-r, --retrieval-model` The retrieval model for similarity scoring. One of `tfidf`, `wcd`, `wmd`, `d2v`.
+-   `q, --query-expansion` The expansion technique to apply on the queries. One of `wcd`, `eqe1`, `eqe2`.
+-   `-j, --jobs` The number of threads to use in multi-processing.
+
+### Embedding options
+
+-   `-n, --normalize` Normalize the embedding model's word vectors.
+-   `-a, --all-but-the-top` All-but-the-top embedding post-processing \[@mu2017all\]
+-   `-t, --train` Number of epochs used for up-training out-of-vocabulary words .
+
+### Retrieval options
+
+-   `-I, --no-idf` Do *not* use IDF re-weighted word frequencies for aggregation of word vectors.
+-   `-w, --wmd` Fraction of *additional* documents to take into account for `wmd` retrieval model.
+
+### Output options
+
+-   `-o, --output` File path for writing the output.
+-   `-v, --verbose` Verbosity level.
+-   `-s, --stats` Compute out of vocabulary statistics and exit.
+
+### Evaluation options
+
+-   `-k` Number of documents to retrieve. Also relevant for the evaluation metrics.
+-   `-Q, --filter-queries` Drop queries, which contain out-of-vocabulary words.
+-   `-R, --replacement` Treatment for missing relevance information in the gold standard. Chose `drop` to disregard them (default) or `zero` to treat them as non-relevant.
+
+### Analysis (and therefore matching) options
+
+-   `-M, --no-matching` Do *not* conduct a matching operation.
+-   `-T, --tokenizer` The tokeniser for the matching operation. One of `sklearn`, `sword`, `nltk`.
+-   `-S, --dont-stop` Do *not* remove English stop-words.
+-   `-C, --cased` Conduct a case *sensitive* analysis.
+
+Basic framework usage
+---------------------
 
 We provide a minimal example including the matching operation and the [TF-IDF retrieval model](http://kak.tx0.org/IR/TFxIDF). As an example, assume we have two documents `"fox valley"` and `"dog nest"` and two queries `fox` and `dog`. First, we create an instance of the `Matching` class, whose optional arguments are passed directly to `sklearn`'s `CountVectorizer`.
 
@@ -220,7 +267,7 @@ The inheritance from `RetriEvalMixin` provides the `evaluation` method described
 Matching, scoring, and query expansion
 --------------------------------------
 
-We provide a `Retrieval` class that implements the desired retrieval process of Figure . The `Retrieval` class consists of up to 3 components. It combines the retrieval model (of the last section) as mandatory object and two optional objects: a matching operation and a query expansion object. Upon invocation of `fit(X)` the `Retrieval` class delegates the documents `X` to all prevalent components, i.e. it calls `fit(X)` on the matching object, the query expansion object, and the retrieval model object. A query expansion class is expected to provide a `fit` method which is called with the documents, along with a `transform` method which is called on the query. We provide more details on this generic process in the [Developer's Guide]().
+We provide a `Retrieval` class that implements the desired retrieval process of Figure . The `Retrieval` class consists of up to 3 components. It combines the retrieval model (of the last section) as mandatory object and two optional objects: a matching operation and a query expansion object. Upon invocation of `fit(X)` the `Retrieval` class delegates the documents `X` to all prevalent components, i.e. it calls `fit(X)` on the matching object, the query expansion object, and the retrieval model object. A query expansion class is expected to provide a `fit` method which is called with the documents, along with a `transform` method which is called on the query. We provide more details on the implementation of a full information retrieval pipeline in the [Developer's Guide](#devguide).
 
 Combining multiple fields and models
 ------------------------------------
