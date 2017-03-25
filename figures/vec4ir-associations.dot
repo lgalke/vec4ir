@@ -1,0 +1,72 @@
+digraph G {
+  labeljust=l;
+  labelloc=t;
+  rankdir=TB;
+  node [shape=rect, style=filled, fillcolor=lightblue];
+  subgraph cluster_matching {
+    margin=20;
+    rankdir=same;
+    disj [label="Disjunctive term matching"];
+    style=dashed;
+    label="      Matching";
+  }
+
+  subgraph cluster_analysis {
+    margin=20;
+    style=dashed;
+    label="Analysis";
+    sklearn [label="Two or more character words"];
+    nltk [label="Punctuation-aware tokenisation"];
+    sword [label="Single or more character words"];
+  }
+
+  subgraph cluster_scoring {
+    margin=20;
+    style=dashed;
+    label="Retrieval\nmodel";
+    tfidf [label="TF-IDF"];
+    wcd [label="Word centroid distance"];
+    wmd [label="Word Mover's distance"];
+    d2v [label="Doc2Vec inference"];
+  }
+  
+  // subgraph cluster_expansion {
+  //   label="Query expansion";
+  //   CE [label="Centroid expansion"];
+  //   EQE [label="Embedding-based query language models"];
+  //   style=dashed;
+  // }
+  
+  // Query -> CE, EQE -> Query;
+  
+  subgraph cluster_embedding {
+    margin=20;
+    Word2Vec [label="Word2Vec" shape=folder, fillcolor=grey] ;
+    GloVe [label="GloVe"       shape=folder, fillcolor=grey] ;
+    Doc2Vec [label="Doc2Vec"   shape=folder, fillcolor=grey] ;
+    label="Word embedding";
+    style=dashed;
+  }
+
+  Query [shape=Mdiamond, style=filled, fillcolor=orange];
+  // QE [label="Query expansion", style=filled, fillcolor=turquoise];
+  // QE -> Query -> QE;
+  Result [shape=Msquare, style=filled, fillcolor=orange];
+
+  Query -> nltk, sword;
+  Query -> sklearn [color=blue, penwidth=3];
+  // sklearn, nltk, sword -> CE, EQE -> disj;
+  nltk, sword -> disj;
+  sklearn -> disj [color=blue, penwidth=3];
+  disj -> wmd, d2v, tfidf;
+
+  disj -> wcd [color=blue, penwidth=3];
+
+  GloVe -> wcd, wmd;
+  Word2Vec -> wmd;
+  Word2Vec -> wcd [color=blue, penwidth=3];
+  Doc2Vec -> d2v;
+
+  wmd, d2v, tfidf -> Result;
+  wcd -> Result [color=blue, penwidth=3];
+}
