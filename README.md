@@ -1,7 +1,7 @@
 User's Guide
 ============
 
-<embed src="figures/ir-TB.pdf" id="basics-ir" style="width:75.0%" />
+<img src="figures/vec4ir-associations.png" alt="Detailed information retrieval pipeline as considered in the framework (excepting query expansion). With the query node as starting point, each out-going edge is a configurable option of the native evaluation script. Rectangles resemble algorithms, and folder-like shapes resemble data stored on disk. One example configuration is highlighted by bold edges." id="basics-ir" style="width:100.0%" />
 
 Philosophy
 ----------
@@ -92,7 +92,7 @@ We also provide a helper script to setup a new virtual environment. It can be in
 The evaluation script
 ---------------------
 
-The package includes a native command line script `ir_eval.py` for evaluation of an information retrieval pipeline. The pipeline of query expansion, matching and scoring is applied to a set of queries and the metrics MAP, MRR, NDCG, precision and recall are computed. Hence, the script may be used *as-is* for evaluation of your datasets or as a reference implementation for the usage of the framework. The behaviour of the evaluation script and the resulting information retrieval pipeline can be controlled by the following command-line arguments:
+The package includes a native command line script `ir_eval.py` for evaluation of an information retrieval pipeline (See Figure ). The pipeline of query expansion, matching and scoring is applied to a set of queries and the metrics MAP, MRR, NDCG, precision and recall are computed. Hence, the script may be used *as-is* for evaluation of your datasets or as a reference implementation for the usage of the framework. The behaviour of the evaluation script and the resulting information retrieval pipeline can be controlled by the following command-line arguments:
 
 ### Meta options
 
