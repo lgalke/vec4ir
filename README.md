@@ -119,7 +119,7 @@ data:
         rels: 2
 ```
 
-The options below the respective keys specify the responsible constructor (`type`) and its arguments (`root_path`, `field`, …). More details on the natively supported dataset formats can be found in the [developer’s guide](#devguide). The alternatives for the retrieval model (`--retrieval-model`) are described in more detail in Section .
+The options below the respective keys specify the responsible constructor (`type`) and its arguments (`root_path`, `field`, …). More details on the natively supported dataset formats can be found in the [developer’s guide](devguide.md). The alternatives for the retrieval model (`--retrieval-model`) are described in more detail in Section .
 
 #### Embedding options
 
@@ -314,7 +314,7 @@ We provide a `Retrieval` class that implements the desired retrieval process of 
 -   `transform(q)`  
     This method is invoked with the query string `q` and should return the expanded query string.
 
-We provide more details on the implementation of a full information retrieval pipeline in the [Developer’s Guide](#devguide) (See Chapter ).
+We provide more details on the implementation of a full information retrieval pipeline in the [Developer’s Guide](devguide.md).
 
 Combining multiple fields and models
 ------------------------------------
