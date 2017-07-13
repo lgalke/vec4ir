@@ -17,7 +17,7 @@ In the following, We recapture the most important definitions that are relevant 
 
 The information retrieval task can be defined as follows:
 
-*Given a corpus of documents *D* and a query *q*, return {*d*∈*D*∣*d* relevant to *q*} in rank order.*
+Given a corpus of documents *D* and a query *q*, return {*d* ∈ *D* ∣ *d* relevant to *q*} in rank order.
 
 A practical information retrieval system typically consists of at least the two components: [matching](#def:matching), [similarity scoring](#def:scoring). Several other components can also be considered, such as query expansion, pseudo-relevance feedback, query parsing and the analysis process itself.
 
