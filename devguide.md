@@ -208,11 +208,11 @@ Retrieval models
 
 The `Tfidf` class implements the popular retrieval model based on TF-IDF re-weighting introduced by Salton and Buckley (1988). The term frequencies of a document are scaled by the inverse document frequency of the specific terms in the corpus *D* (F. Pedregosa et al. 2011):
 
-*t**f**i**d**f*(*t*, *d*, *D*)=*t**f*(*t*, *d*)⋅*i**d**f*(*t*, *D*)
+tfidf(*t*, *d*, *D*)=tf(*t*, *d*)⋅idf(*t*, *D*)
 
 The *t**f*(*t*, *d*) is the number of occurrences of the word *t* in the document *d*:
 
-*t**f*(*t*, *d*)=freq(*t*, *d*)
+tf(*t*, *d*)=freq(*t*, *d*)
 
 The inverse document frequency is a measure for the fraction of documents that contain some term *t*:
 
