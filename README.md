@@ -31,7 +31,7 @@ The scoring step refers to the process of assigning scores. The scores resemble 
 
 ### Word embeddings and Word2Vec
 
-A word embedding is a distributed (dense) vector representation for each word of a vocabulary. It is capable of capturing semantic and syntactic properties of the input texts . Interestingly, even arithmetic operations on the word vectors are meaningful: e.g. $\`King\` - \`Queen\` = \`Man\` - \`Woman\`$. The two most popular approaches to learn a word embedding from raw text are:
+A word embedding is a distributed (dense) vector representation for each word of a vocabulary. It is capable of capturing semantic and syntactic properties of the input texts . Interestingly, even arithmetic operations on the word vectors are meaningful: e.g. *King* - *Queen* = *Man* - *Woman*. The two most popular approaches to learn a word embedding from raw text are:
 
 -   Skip-Gram Negative Sampling by Mikolov et al. (2013) (Word2Vec)
 -   Global Word Vectors by Pennington, Socher, and Manning (2014) (GloVe)
