@@ -328,10 +328,10 @@ RM = RM_title & RM_content  # fuzzy and: x+y - x*y
 R = Retrieval(retrieval_model=RM)
 ```
 
+On invocation of the `query` method on the combined retrieval model `RM`, both the model for the title and the model for the content get consulted and their respective scores are merged according to the operator. Operator overloading is provided for addition, multiplication and binary `AND` operator which implements `FUZZY-AND` *x*&*y* = *x* + *y* − *x* ⋅ *y*. For these `Combined` retrieval models, the consulted operand retrieval models are expected to return (`doc_id`, `score`) pairs in their result set. However, in this case the result set does not have to be sorted. Thus, the query method of the operand retrieval models is invoked with `sorted=False`. Still, the combined retrieval model `RM` keeps track of its nesting, such that the outer-most `Combined` instance will return a sorted list of results.
+
 References
 ----------
-
-On invocation of the `query` method on the combined retrieval model `RM`, both the model for the title and the model for the content get consulted and their respective scores are merged according to the operator. Operator overloading is provided for addition, multiplication and binary `AND` operator which implements `FUZZY-AND` *x*&*y* = *x* + *y* − *x* ⋅ *y*. For these `Combined` retrieval models, the consulted operand retrieval models are expected to return (`doc_id`, `score`) pairs in their result set. However, in this case the result set does not have to be sorted. Thus, the query method of the operand retrieval models is invoked with `sorted=False`. Still, the combined retrieval model `RM` keeps track of its nesting, such that the outer-most `Combined` instance will return a sorted list of results.
 
 Bird, Steven. 2006. “NLTK: The Natural Language Toolkit.” In *ACL 2006, 21st International Conference on Computational Linguistics and 44th Annual Meeting of the Association for Computational Linguistics, Proceedings of the Conference, Sydney, Australia, 17-21 July 2006*, edited by Nicoletta Calzolari, Claire Cardie, and Pierre Isabelle. The Association for Computer Linguistics. <http://aclweb.org/anthology/P06-4018>.
 
