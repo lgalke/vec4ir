@@ -174,7 +174,7 @@ We provide a minimal example including the matching operation and the [TF-IDF re
 >>> match_op = Matching()
 ```
 
-In its default form, the matching is a non-fuzzy boolean `OR` matching. The `Matching` instance can be used after fitting a set of documents via `match_op.fit(documents)` via its `match_op.predict(query_string)` method to return the indices of the matching documents. However, the preferred way to apply the matching operation is inside of a `Retrieval` instance. The `Retrieval` instance expects a retrieval model as mandatory argument, besides an optional `Matching` instance (and an optional query expansion instance). For now, we create an instance of the `Tfidf` class and pass it to the `Retrieval` constructor.
+In its default form, the matching is a non-fuzzy boolean `OR` matching. The `Matching` instance can be used after fitting a set of documents via `match_op.fit(documents)` using its `match_op.predict(query_string)` method to return the indices of the matching documents. However, the preferred way to apply the matching operation is inside of a `Retrieval` instance. The `Retrieval` instance expects a retrieval model as mandatory argument, besides an optional `Matching` instance (and an optional query expansion instance). For now, we create an instance of the `Tfidf` class and pass it to the `Retrieval` constructor.
 
 ``` python
 >>> tfidf = Tfidf()
@@ -327,6 +327,9 @@ RM_content = Tfidf().fit(documents['full-text'])
 RM = RM_title & RM_content  # fuzzy and: x+y - x*y
 R = Retrieval(retrieval_model=RM)
 ```
+
+References
+----------
 
 On invocation of the `query` method on the combined retrieval model `RM`, both the model for the title and the model for the content get consulted and their respective scores are merged according to the operator. Operator overloading is provided for addition, multiplication and binary `AND` operator which implements `FUZZY-AND` *x*&*y* = *x* + *y* − *x* ⋅ *y*. For these `Combined` retrieval models, the consulted operand retrieval models are expected to return (`doc_id`, `score`) pairs in their result set. However, in this case the result set does not have to be sorted. Thus, the query method of the operand retrieval models is invoked with `sorted=False`. Still, the combined retrieval model `RM` keeps track of its nesting, such that the outer-most `Combined` instance will return a sorted list of results.
 
