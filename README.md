@@ -89,7 +89,7 @@ In addition, we provide a helper script to setup a new virtual environment. It c
 The evaluation script
 ---------------------
 
-The package includes a native command line script `ir_eval.py` for evaluation of an information retrieval pipeline (See Figure ). The pipeline of query expansion, matching and scoring is applied to a set of queries and the metrics mean average precision (MAP), mean reciprocal rank (MRR), normalised discounted cumulative gain (NDCG), precision and recall are computed. Hence, the script may be used *as-is* for evaluation of your datasets or as a reference implementation for the usage of the framework. The behaviour of the evaluation script and the resulting information retrieval pipeline can be controlled by the following command-line arguments:
+The package includes a native command line script `ir_eval.py` for evaluation of an information retrieval pipeline. The pipeline of query expansion, matching and scoring is applied to a set of queries and the metrics mean average precision (MAP), mean reciprocal rank (MRR), normalised discounted cumulative gain (NDCG), precision and recall are computed. Hence, the script may be used *as-is* for evaluation of your datasets or as a reference implementation for the usage of the framework. The behaviour of the evaluation script and the resulting information retrieval pipeline can be controlled by the following command-line arguments:
 
 #### Meta options
 
