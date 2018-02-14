@@ -1,3 +1,9 @@
+
+
+[![DOI](https://zenodo.org/badge/85768267.svg)](https://zenodo.org/badge/latestdoi/85768267)
+
+
+
 User’s guide
 ============
 
