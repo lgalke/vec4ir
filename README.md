@@ -338,7 +338,7 @@ On invocation of the `query` method on the combined retrieval model `RM`, both
 the model for the title and the model for the content get consulted and their
 respective scores are merged according to the operator. Operator overloading is
 provided for addition, multiplication (Fuzzy AND) and binary `OR` operator which
-implements [Fuzzy AND](https://en.wikipedia.org/wiki/Fuzzy_logic#Fuzzy_logic_operators) `x | y = (x+y)-x*y`.
+implements [Fuzzy OR](https://en.wikipedia.org/wiki/Fuzzy_logic#Fuzzy_logic_operators) `x | y = (x+y)-x*y`.
 For these `Combined` retrieval models, the consulted operand retrieval models are
 expected to return (`doc_id`, `score`) pairs in their result set. However, in
 this case the result set does not have to be sorted. Thus, the query method of
