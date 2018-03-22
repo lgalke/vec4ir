@@ -330,11 +330,21 @@ The `vec4ir` package also provides an experimental operator overloading API for 
 ``` python
 RM_title = WordCentroidDistance().fit(documents['title'])
 RM_content = Tfidf().fit(documents['full-text'])
-RM = RM_title & RM_content  # fuzzy and: x+y - x*y
+RM = RM_title | RM_content  # fuzzy or: x+y - x*y
 R = Retrieval(retrieval_model=RM)
 ```
 
-On invocation of the `query` method on the combined retrieval model `RM`, both the model for the title and the model for the content get consulted and their respective scores are merged according to the operator. Operator overloading is provided for addition, multiplication and binary `AND` operator which implements `FUZZY-AND` *x*&*y* = *x* + *y* − *x* ⋅ *y*. For these `Combined` retrieval models, the consulted operand retrieval models are expected to return (`doc_id`, `score`) pairs in their result set. However, in this case the result set does not have to be sorted. Thus, the query method of the operand retrieval models is invoked with `sorted=False`. Still, the combined retrieval model `RM` keeps track of its nesting, such that the outer-most `Combined` instance will return a sorted list of results.
+On invocation of the `query` method on the combined retrieval model `RM`, both
+the model for the title and the model for the content get consulted and their
+respective scores are merged according to the operator. Operator overloading is
+provided for addition, multiplication (Fuzzy AND) and binary `OR` operator which
+implements [Fuzzy AND](https://en.wikipedia.org/wiki/Fuzzy_logic#Fuzzy_logic_operators) `x | y = (x+y)-x*y`.
+For these `Combined` retrieval models, the consulted operand retrieval models are
+expected to return (`doc_id`, `score`) pairs in their result set. However, in
+this case the result set does not have to be sorted. Thus, the query method of
+the operand retrieval models is invoked with `sorted=False`. Still, the
+combined retrieval model `RM` keeps track of its nesting, such that the
+outer-most `Combined` instance will return a sorted list of results.
 
 References
 ----------
