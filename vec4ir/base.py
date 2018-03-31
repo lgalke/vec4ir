@@ -515,7 +515,7 @@ class Tfidf(TfidfVectorizer):
         self._fit_X = Xt
         return self
 
-    def query(self, query, k=None, indices=None):
+    def query(self, query, k=None, indices=None, return_scores=False):
         if self._fit_X is None:
             raise NotFittedError
         q = super().transform([query])
@@ -526,8 +526,10 @@ class Tfidf(TfidfVectorizer):
         # both fit_X and q are l2-normalized
         D = linear_kernel(q, fit_X)
         ind = argtopk(D[0], k)
-        return ind
-
+        if return_scores:
+            return ind, D[0,ind]
+        else:
+            return ind
 
 class TfidfRetrieval(RetrievalBase, CombinatorMixin, RetriEvalMixin):
     """

@@ -1,3 +1,4 @@
+README.md
 setup.py
 vec4ir.egg-info/PKG-INFO
 vec4ir.egg-info/SOURCES.txt

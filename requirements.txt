@@ -21,3 +21,4 @@ scipy
 six
 sklearn
 smart-open
+joblib

@@ -265,7 +265,7 @@ class WordCentroidDistance(BaseEstimator):
         Xt = normalize(Xt, copy=False)  # We need this because of linear kernel
         self.centroids = Xt
 
-    def query(self, query, k=None, indices=None):
+    def query(self, query, k=None, indices=None, return_scores=False):
         centroids = self.centroids
         if centroids is None:
             raise NotFittedError
@@ -279,7 +279,10 @@ class WordCentroidDistance(BaseEstimator):
         #     ind = ind[:k]
         # print(ind)
         ret = argtopk(D[0], k=k)
-        return ret
+        if return_scores:
+            return ret, D[ret]
+        else:
+            return ret
 
 
 class WordMoversDistance(BaseEstimator):

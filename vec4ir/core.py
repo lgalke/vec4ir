@@ -54,7 +54,7 @@ class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
 
         retrieval_model.fit(X)
 
-    def query(self, q, k=None):
+    def query(self, q, k=None, return_scores=False):
         labels = self.labels_
         if labels is None:
             raise NotFittedError
@@ -69,7 +69,10 @@ class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
             ind = matching.predict(q)
             print('{} documents matched.'.format(len(ind)))
             if len(ind) == 0:
-                return []
+                if return_scores:
+                    return [], []
+                else:
+                    return []
             labels = labels[ind]  # Reduce our own view
         else:
             ind = None
@@ -78,12 +81,25 @@ class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
         # The retrieval model is assumed to reduce its representation of X
         # to the given indices and the returned indices are relative to the
         # reduction
-        retrieved_indices = retrieval_model.query(q, k=k, indices=ind)
-        if k is not None:
-            # Just assert that it did not cheat
-            retrieved_indices = retrieved_indices[:k]
 
-        return labels[retrieved_indices]  # Unfold retrieved indices
+        if return_scores:
+            try:
+                ind, scores = retrieval_model.query(q, k=k, indices=ind,
+                                                    return_scores=return_scores)
+            except TypeError:
+                raise NotImplementedError("Underlying retrieval model does not support `return_scores`")
+            if k is not None:
+                ind = ind[:k]
+                scores = scores[:k]
+
+            return labels[ind], scores
+        else:
+            retrieved_indices = retrieval_model.query(q, k=k, indices=ind)
+            if k is not None:
+                # Just assert that it did not cheat
+                retrieved_indices = retrieved_indices[:k]
+
+            return labels[retrieved_indices]  # Unfold retrieved indices
 
 
 class EmbeddedVectorizer(TfidfVectorizer):
