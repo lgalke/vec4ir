@@ -280,7 +280,7 @@ class WordCentroidDistance(BaseEstimator):
         # print(ind)
         ret = argtopk(D[0], k=k)
         if return_scores:
-            return ret, D[ret]
+            return ret, D[0,ret]
         else:
             return ret
 
