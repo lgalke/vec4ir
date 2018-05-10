@@ -437,13 +437,14 @@ All other options for the data set (such as the path to its root directory and c
 For convenience we adopt the data set format and specification from [Quadflor](https://github.com/quadflor/Quadflor). Quadflor is a framework for multi-label classification. A Quadflor-like data set consists of
 
 -   `X`  
-    The documents, either a directory of files with the base filename resembles the idea
+    The documents, either a path to a directory containing `<id>.txt` documents or a tsv file with columns `id` and `content`.
 
 -   `y`  
-    The gold standard: label annotations for the documents. CSV file with document id in the first column, and subsequent columns resemble label identifier.
+    The gold standard: label annotations for the documents. A tsv file with document id in the first column, and subsequent columns resemble label identifier.
 
 -   `thes`  
-    A thesaurus consisting of a hierarchy of concepts.
+    A thesaurus consisting of a hierarchy of concepts which are used as query. A minimal format would be `{'<query_id>' :  { prefLabel: [ "Here is the query" ] }, '<query_id>:' { 'prefLabel': [ "Yet another query string."] } }`
+    The query ids should match the ones in `y`.
 
 In our prior work on Quadflor, the gold standard `y` was used as target labels in a multi-label classification task. We employ the data set in a different manner. We extract the preferred labels of each concept from the thesaurus `thes` and use them as queries. When the label annotations (`y`) for some document contain the specific concept identifier, we consider the document as relevant to the query.
 
