@@ -83,6 +83,42 @@ def collection_statistics(embedding, documents, analyzer=None, topn=None):
     return d
 
 
+def build_analyzer(tokenizer=None, stop_words=None, lowercase=True):
+    """
+    A wrapper around sklearns CountVectorizers build_analyzer, providing an
+    additional keyword for nltk tokenization.
+
+    :tokenizer:
+        None or 'sklearn' for default sklearn word tokenization,
+        'sword' is similar to sklearn but also considers single character words
+        'nltk' for nltk's word_tokenize function,
+        or callable.
+    :stop_words:
+         False, None for no stopword removal, or list of words, 'english'/True
+    :lowercase:
+        Lowercase or case-sensitive analysis.
+    """
+    # some default options for tokenization
+    if not callable(tokenizer):
+        tokenizer, token_pattern = {
+            'sklearn': (None, r"(?u)\b\w\w+\b"),  # mimics default
+            'sword': (None, r"(?u)\b\w+\b"),   # specifically for GoogleNews
+            'nltk': (word_tokenize, None)  # uses punctuation for GloVe models
+        }[tokenizer]
+
+    # allow binary decision for stopwords
+    sw_rules = {True: 'english', False: None}
+    if stop_words in sw_rules:
+        stop_words = sw_rules[stop_words]
+
+    # employ the cv to actually build the analyzer from the components
+    analyzer = CountVectorizer(analyzer='word',
+                               tokenizer=tokenizer,
+                               token_pattern=token_pattern,
+                               lowercase=lowercase,
+                               stop_words=stop_words).build_analyzer()
+    return analyzer
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
