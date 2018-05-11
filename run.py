@@ -1,8 +1,14 @@
-from argparse import ArgumentParser, FileType
-from vec4ir.utils import build_analyzer
-from gensim.models import KeyedVectors, Doc2Vec
 import os
 import fileinput
+from argparse import ArgumentParser, FileType
+
+from gensim.models import KeyedVectors, Doc2Vec
+
+from vec4ir.base import Matching, Tfidf
+from vec4ir.core import Retrieval
+from vec4ir.doc2vec import Doc2VecInference
+from vec4ir.utils import build_analyzer
+from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
 
 VALID_RETRIEVAL_MODELS = ('tfidf', 'wcd', 'wmd', 'd2v')
 SEPARATOR = '\t'
@@ -59,6 +65,7 @@ def run(args, inputs):
         embedding = KeyedVectors.load_word2vec_format(args.embedding)
 
     retrieval_model = {
+        # TODO FIXME crashes when no embedding is given
         'tfidf': Tfidf(analyzer=analyzer, use_idf=args.idf),
         'wcd': WordCentroidDistance(embedding=embedding,
                                     analyzer=analyzer,
@@ -90,7 +97,6 @@ def main():
     parser.add_argument("-r", "--retrieval-model", type=str, default='tfidf',
                         choices=VALID_RETRIEVAL_MODELS)
     parser.add_argument("-e", "--embedding", type=str, default=None,
-                        choices=valid_embedding_keys,
                         help="Specify path to word embedding.")
     matching_options = parser.add_argument_group('Matching options')
     matching_options.add_argument("-C",
@@ -133,8 +139,11 @@ def main():
     args, inputs = parser.parse_known_args()
 
     if args.retrieval_model is not 'tfidf' and args.embedding is None:
-        print("Please specify an embedding when retrieval model is not tfidf")
+        print(parser.usage)
+        print("Please specify an embedding (-e) when retrieval model is not tfidf")
         exit(1)
+
+    run(args, inputs)
 
 
 
