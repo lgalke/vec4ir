@@ -67,7 +67,7 @@ class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
 
         if matching:
             ind = matching.predict(q)
-            print('{} documents matched.'.format(len(ind)))
+            # print('{} documents matched.'.format(len(ind)))
             if len(ind) == 0:
                 if return_scores:
                     return [], []

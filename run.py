@@ -11,11 +11,10 @@ from vec4ir.utils import build_analyzer
 from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
 
 VALID_RETRIEVAL_MODELS = ('tfidf', 'wcd', 'wmd', 'd2v')
-SEPARATOR = '\t'
 
-def load_documents(path, with_identifiers=True):
+def load_documents(path, with_identifiers=True, sep='\t'):
     documents = []
-    if os.isdir(path):
+    if os.path.isdir(path):
         # Read all files of directory
         root, dirs, files = next(os.walk(path))
         for fname in files:
@@ -26,13 +25,13 @@ def load_documents(path, with_identifiers=True):
                 documents.append((fname, fcontent))
             else:
                 documents.append(fcontent)
-    elif os.isfile(path):
+    elif os.path.isfile(path):
         with open(path, 'r') as fhandle:
             for line in fhandle:
                 line = line.strip()
                 if with_identifiers:
                     # use first column as identifier
-                    identifier, content = line.split(SEPARATOR)
+                    identifier, content = line.split(sep)
                     documents.append((identifier, content))
                 else:
                     # just use full line as content
@@ -42,7 +41,7 @@ def load_documents(path, with_identifiers=True):
         print(path, "seems to be neither directory nor file")
 
     if with_identifiers:
-        docs, ids = tuple(zip(*documents))
+        ids, docs = tuple(zip(*documents))
         return docs, ids
     else:
         return documents
@@ -57,25 +56,24 @@ def run(args, inputs):
     if args.retrieval_model == 'tfidf':
         # we do not need an embedding for tf-idf
         embedding = None
-    elif args.retrieval_model == 'd2v':
-        # doc2vec requires special loading
-        embedding = Doc2Vec.load(args.embedding)
+        retrieval_model = Tfidf(analyzer=analyzer, use_idf=args.idf)
     else:
         # could try-except to guess binary
-        embedding = KeyedVectors.load_word2vec_format(args.embedding)
+        embedding = Doc2Vec.load(args.embedding) if args.retrieval_model == 'd2v' else KeyedVectors.load_word2vec_format(args.embedding)
 
-    retrieval_model = {
-        # TODO FIXME crashes when no embedding is given
-        'tfidf': Tfidf(analyzer=analyzer, use_idf=args.idf),
-        'wcd': WordCentroidDistance(embedding=embedding,
-                                    analyzer=analyzer,
-                                    use_idf=args.idf),
-        'wmd': WordMoversDistance(embedding, analyzer,
-                                  complete=args.wmd,
-                                  use_idf=args.idf),
-        'd2v': Doc2VecInference(embedding, analyzer)
-    }[args.retrieval_model]
+        retrieval_model = {
+            'wcd': WordCentroidDistance(embedding=embedding,
+                                        analyzer=analyzer,
+                                        use_idf=args.idf),
+            'wmd': WordMoversDistance(embedding, analyzer,
+                                      complete=args.wmd,
+                                      use_idf=args.idf),
+            'd2v': Doc2VecInference(embedding, analyzer)
+        }[args.retrieval_model]
 
+
+
+    # retrieval model defined
     retrieval = Retrieval(retrieval_model, name=args.retrieval_model,
                           matching=match_op)
 
