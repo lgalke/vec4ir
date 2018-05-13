@@ -1,8 +1,9 @@
 language: python
-
-before-install:
-    sh ./setup.sh
-    source venv/bin/activate
+python:
+    - 3.6
 
 install:
     python3 setup.py
+
+script:
+    python3 run.py -h
