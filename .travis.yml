@@ -6,4 +6,5 @@ install:
     python3 setup.py install
 
 script:
+    python3 ir_eval.py -h
     python3 run.py -h

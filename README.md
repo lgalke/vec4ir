@@ -1,7 +1,9 @@
+# Vec4IR
 
+Word embeddings for information retrieval.
 
 [![DOI](https://zenodo.org/badge/85768267.svg)](https://zenodo.org/badge/latestdoi/85768267)
-
+[![Build Status](https://travis-ci.org/lgalke/vec4ir.svg?branch=master)](https://travis-ci.org/lgalke/vec4ir)
 
 
 User’s guide
