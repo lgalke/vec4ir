@@ -38,7 +38,7 @@ def load_documents(path, with_identifiers=True, sep='\t'):
                     documents.append(line)
 
     else:
-        print(path, "seems to be neither directory nor file")
+        raise ValueError("{} seems to be neither directory nor file".format(path))
 
     if with_identifiers:
         ids, docs = tuple(zip(*documents))
@@ -55,7 +55,6 @@ def run(args, inputs):
 
     if args.retrieval_model == 'tfidf':
         # we do not need an embedding for tf-idf
-        embedding = None
         retrieval_model = Tfidf(analyzer=analyzer, use_idf=args.idf)
     else:
         # could try-except to guess binary
@@ -137,9 +136,7 @@ def main():
     args, inputs = parser.parse_known_args()
 
     if args.retrieval_model is not 'tfidf' and args.embedding is None:
-        print(parser.usage)
-        print("Please specify an embedding (-e) when retrieval model is not tfidf")
-        exit(1)
+        raise ValueError("An embedding (-e) is mandatory when retrieval model is not tfidf")
 
     run(args, inputs)
 
