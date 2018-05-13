@@ -22,3 +22,4 @@ six
 sklearn
 smart-open
 joblib
+pytest
