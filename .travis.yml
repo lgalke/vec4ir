@@ -3,12 +3,12 @@ python:
     - 3.6
 
 before_install:
-    sudo apt-get -qq update
-    sudo apt-get install -y python3-dev
+    - sudo apt-get -qq update
+    - sudo apt-get install -y python3-dev
 
 install:
-    pip install -e .
-    pip install pyemd
+    - pip install -e .
+    - pip install pyemd
 
 script:
     pytest
