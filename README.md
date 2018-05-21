@@ -75,7 +75,6 @@ Besides `python3` itself, the package `vec4ir` depends on the following python p
 -   [nltk](http://www.nltk.org/)
 -   [sklearn](http://scikit-learn.org/stable/index.html)
 -   [pyyaml](http://pyyaml.org/wiki/PyYAMLDocumentation)
--   [pyemd](https://github.com/wmayner/pyemd)
 
 Installation
 ------------
