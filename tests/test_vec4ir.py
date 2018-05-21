@@ -4,7 +4,7 @@ from gensim.models import Word2Vec, Doc2Vec
 from gensim.models.doc2vec import TaggedDocument
 from gensim.utils import simple_preprocess
 
-from vec4ir import Doc2VecInference, Retrieval, Matching, Tfidf, WordCentroidDistance, build_analyzer
+from vec4ir import Doc2VecInference, Retrieval, Matching, Tfidf, WordCentroidDistance, build_analyzer, WordMoversDistance
 
 documents = ["The quick brown fox jumps over the lazy dog",
              "Computer scientists are lazy lazy lazy"]
@@ -47,6 +47,16 @@ def test_word2vec():
     match_op = Matching()
     wcd = WordCentroidDistance(model.wv)
     retrieval = Retrieval(wcd, matching=match_op)
+    retrieval.fit(documents)
+    result = retrieval.query('dog')
+    assert result[0] == 0
+
+# PYEMD is required
+def test_wordmovers():
+    model = Word2Vec([doc.split() for doc in documents], iter=1, min_count=1)
+    match_op = Matching()
+    wmd = WordMoversDistance(model.wv)
+    retrieval = Retrieval(wmd, matching=match_op)
     retrieval.fit(documents)
     result = retrieval.query('dog')
     assert result[0] == 0

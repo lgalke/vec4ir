@@ -97,6 +97,14 @@ current working directory. The newly created virtual environment has to be
 activated via `source <venv-name>` before performing the actual installation
 steps as described above.
 
+
+## WordMoversDistance and wmd
+
+To compute the Word Mover's distance, the `pyemd` package is required.
+It can be installed via `pip install pyemd`. However, the python3 developer
+system package (such as `python3-devel` on Solus) may be required for the
+installation of `pyemd` to succeed.
+
 The evaluation script
 ---------------------
 

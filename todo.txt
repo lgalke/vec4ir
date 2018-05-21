@@ -1,1 +1,3 @@
-(A) Write test for WordMoversDistance @testing
+x 2018-05-22 Write test for WordMoversDistance @testing
+(B) Properly bind executables to commands @packaging
+
