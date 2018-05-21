@@ -75,13 +75,3 @@ def test_doc2vec_inference_saveload():
     result = retrieval.query("scientists")
     assert result[0] == 1
 
-def test_tests():
-    wtf = 1 == 2
-    assert wtf == False
-
-
-
-def test_doc2vec():
-    pass
-
-
