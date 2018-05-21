@@ -80,10 +80,10 @@ Besides `python3` itself, the package `vec4ir` depends on the following python p
 Installation
 ------------
 
-As `vec4ir` is packaged as a python package, it can be installed by via `python` `setuptools`:
+As `vec4ir` is packaged as a python package, it can be installed by via `pip`:
 
 ``` sh
-cd python-vec4ir; python3 setup.py install
+cd python-vec4ir; pip install -e .
 ```
 
 In case anything went wrong with the installation of dependencies, try to install them manually: We also recommend to install `numpy` and `scipy` in beforehand (either manually, or as binary system packages).
@@ -92,7 +92,11 @@ In case anything went wrong with the installation of dependencies, try to instal
 pip3 install -r requirements.txt
 ```
 
-In addition, we provide a helper script to setup a new virtual environment. It can be invoked `setup.sh <venv-name>` to setup a new virtual environment in the current working directory. The newly created virtual environment has to be activated via `source <venv-name>` before performing the actual installation steps as described above.
+In addition, we provide a helper script to setup a new virtual environment. It
+can be invoked `setup.sh <venv-name>` to setup a new virtual environment in the
+current working directory. The newly created virtual environment has to be
+activated via `source <venv-name>` before performing the actual installation
+steps as described above.
 
 The evaluation script
 ---------------------
