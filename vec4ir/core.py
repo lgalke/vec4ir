@@ -53,6 +53,7 @@ class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
             matching.fit(X)
 
         retrieval_model.fit(X)
+        return self
 
     def query(self, q, k=None, return_scores=False):
         labels = self.labels_

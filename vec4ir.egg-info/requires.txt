@@ -9,7 +9,6 @@ networkx
 nltk
 numpy
 pandas
-pyemd
 pyparsing
 python-dateutil
 pytz
@@ -21,3 +20,5 @@ scipy
 six
 sklearn
 smart-open
+joblib
+pytest

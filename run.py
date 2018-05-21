@@ -58,7 +58,10 @@ def run(args, inputs):
         retrieval_model = Tfidf(analyzer=analyzer, use_idf=args.idf)
     else:
         # could try-except to guess binary
-        embedding = Doc2Vec.load(args.embedding) if args.retrieval_model == 'd2v' else KeyedVectors.load_word2vec_format(args.embedding)
+        if args.retrieval_model == 'd2v':
+            embedding = Doc2Vec.load(args.embedding)
+        else:
+            embedding = KeyedVectors.load_word2vec_format(args.embedding)
 
         retrieval_model = {
             'wcd': WordCentroidDistance(embedding=embedding,

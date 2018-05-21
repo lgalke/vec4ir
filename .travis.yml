@@ -6,4 +6,4 @@ install:
     python3 setup.py install
 
 script:
-    echo "fox" | python3 run.py -d example/
+    pytest

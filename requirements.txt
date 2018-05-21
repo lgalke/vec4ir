@@ -9,7 +9,6 @@ networkx
 nltk
 numpy
 pandas
-pyemd
 pyparsing
 python-dateutil
 pytz
