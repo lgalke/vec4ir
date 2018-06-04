@@ -1,7 +1,9 @@
+# Vec4IR
 
+Word embeddings for information retrieval.
 
 [![DOI](https://zenodo.org/badge/85768267.svg)](https://zenodo.org/badge/latestdoi/85768267)
-
+[![Build Status](https://travis-ci.org/lgalke/vec4ir.svg?branch=master)](https://travis-ci.org/lgalke/vec4ir)
 
 
 User’s guide
@@ -73,15 +75,14 @@ Besides `python3` itself, the package `vec4ir` depends on the following python p
 -   [nltk](http://www.nltk.org/)
 -   [sklearn](http://scikit-learn.org/stable/index.html)
 -   [pyyaml](http://pyyaml.org/wiki/PyYAMLDocumentation)
--   [pyemd](https://github.com/wmayner/pyemd)
 
 Installation
 ------------
 
-As `vec4ir` is packaged as a python package, it can be installed by via `python` `setuptools`:
+As `vec4ir` is packaged as a python package, it can be installed by via `pip`:
 
 ``` sh
-cd python-vec4ir; python3 setup.py install
+cd python-vec4ir; pip install -e .
 ```
 
 In case anything went wrong with the installation of dependencies, try to install them manually: We also recommend to install `numpy` and `scipy` in beforehand (either manually, or as binary system packages).
@@ -90,7 +91,19 @@ In case anything went wrong with the installation of dependencies, try to instal
 pip3 install -r requirements.txt
 ```
 
-In addition, we provide a helper script to setup a new virtual environment. It can be invoked `setup.sh <venv-name>` to setup a new virtual environment in the current working directory. The newly created virtual environment has to be activated via `source <venv-name>` before performing the actual installation steps as described above.
+In addition, we provide a helper script to setup a new virtual environment. It
+can be invoked `setup.sh <venv-name>` to setup a new virtual environment in the
+current working directory. The newly created virtual environment has to be
+activated via `source <venv-name>` before performing the actual installation
+steps as described above.
+
+
+## WordMoversDistance and wmd
+
+To compute the Word Mover's distance, the `pyemd` package is required.
+It can be installed via `pip install pyemd`. However, the python3 developer
+system package (such as `python3-devel` on Solus) may be required for the
+installation of `pyemd` to succeed.
 
 The evaluation script
 ---------------------

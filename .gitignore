@@ -1,2 +1,5 @@
 __pycache__
 .*~
+*~
+tags
+.pytest_cache

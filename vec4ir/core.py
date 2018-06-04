@@ -53,6 +53,7 @@ class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
             matching.fit(X)
 
         retrieval_model.fit(X)
+        return self
 
     def query(self, q, k=None, return_scores=False):
         labels = self.labels_
@@ -67,7 +68,7 @@ class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
 
         if matching:
             ind = matching.predict(q)
-            print('{} documents matched.'.format(len(ind)))
+            # print('{} documents matched.'.format(len(ind)))
             if len(ind) == 0:
                 if return_scores:
                     return [], []

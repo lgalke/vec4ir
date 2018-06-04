@@ -31,7 +31,6 @@ class Doc2VecInference(BaseEstimator, RetriEvalMixin):
         dvs = np.array([model.infer_vector(sent, alpha=alpha,
                                            min_alpha=min_alpha, steps=steps)
                         for sent in analyzed_docs])
-        print("dvs.shape", dvs.shape)
         dvs = normalize(dvs, copy=False)
         self.inferred_docvecs = dvs
         return self
