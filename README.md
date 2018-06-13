@@ -6,6 +6,12 @@ Word embeddings for information retrieval.
 [![Build Status](https://travis-ci.org/lgalke/vec4ir.svg?branch=master)](https://travis-ci.org/lgalke/vec4ir)
 
 
+## Quick start
+
+Visit the test file [./tests/test_vec4ir.py] for a rough but quick introduction to the framework.
+For a comparison between the methods available in vec4ir, we refer to our  paper [Word Embeddings for Practical Information Retrieval](https://dl.gi.de/handle/20.500.12116/3987) ([PDF](http://lpag.de/p/word_embeddings_for_IR.pdf)).
+
+
 User’s guide
 ============
 
