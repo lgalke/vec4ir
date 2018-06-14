@@ -390,7 +390,7 @@ We provide more details on the implementation of a full information retrieval pi
 Combining multiple fields and models
 ------------------------------------
 
-** Highly experimental, some techniques do not support it yet **
+**Highly experimental, some techniques do not support it yet**
 
 The `vec4ir` package also provides an experimental operator overloading API for combining multiple retrieval models.
 
