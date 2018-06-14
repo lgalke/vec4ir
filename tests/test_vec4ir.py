@@ -27,6 +27,7 @@ def test_matching():
 
 
 def test_tfidf():
+    # Test tfidf retrieval with auto-generated ids 
     tfidf = Tfidf()
     tfidf.fit(documents)
     result = tfidf.query('lazy')
@@ -34,6 +35,7 @@ def test_tfidf():
     assert result[1] == 0
 
 def test_retrieval():
+    # Test retrieval with given ids
     tfidf = Tfidf()
     retrieval = Retrieval(tfidf)
     ids = ['fox_example', 'lazy_example']
@@ -50,6 +52,21 @@ def test_word2vec():
     retrieval.fit(documents)
     result = retrieval.query('dog')
     assert result[0] == 0
+
+
+def test_combined():
+    model = Word2Vec([doc.split() for doc in documents], iter=1, min_count=1)
+    wcd = WordCentroidDistance(model.wv)
+    tfidf = Tfidf()
+
+    wcd.fit(documents)
+    # they can operate on different feilds
+    tfidf.fit(['fox', 'scientists'])
+    match_op = Matching()
+
+    combined = wcd | tfidf
+
+    retrieval = Retrieval(combined, matching=match_op)
 
 # PYEMD is required
 # def test_wordmovers():

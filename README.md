@@ -33,28 +33,74 @@ The information retrieval task can be defined as follows:
 
 Given a corpus of documents *D* and a query *q*, return {*d* ∈ *D* ∣ *d* relevant to *q*} in rank order.
 
-A practical information retrieval system typically consists of at least the two components: [matching](#def:matching), [similarity scoring](#def:scoring). Several other components can also be considered, such as query expansion, pseudo-relevance feedback, query parsing and the analysis process itself.
+A practical information retrieval system typically consists of at least the two
+components: [matching](#def:matching), [similarity scoring](#def:scoring).
+Several other components can also be considered, such as query expansion,
+pseudo-relevance feedback, query parsing and the analysis process itself.
 
 ### Matching
 
-The matching operation refers to the initial filtering process of documents. In its easiest way the output of the matching operation contains all the document which contain *at least one* of the query terms. Other variants of the matching operation may also allow fuzzy matching (up to a certain threshold in Levenshtein distance) or query expansion.
+The matching operation refers to the initial filtering process of documents.
+For instance, the output of the matching operation contains all the document
+which contain *at least one* of the query terms. Other variants of the matching
+operation may also allow fuzzy matching (up to a certain threshold in
+Levenshtein distance) or enforce exact match of a phrase.
 
 ### Similarity scoring
 
-The scoring step refers to the process of assigning scores. The scores resemble the relevance of a specific document to the query. They are used to create a ranked ordering of the matched documents. This sorting happens either ascending, when considering distance scores, or descending in case of similarity scores.
+The scoring step refers to the process of assigning scores. The scores resemble
+the relevance of a specific document to the query. They are used to create a
+ranked ordering of the matched documents. This sorting happens either
+ascending, when considering distance scores, or descending in case of
+similarity scores.
 
 ### Word embeddings and Word2Vec
 
-A word embedding is a distributed (dense) vector representation for each word of a vocabulary. It is capable of capturing semantic and syntactic properties of the input texts . Interestingly, even arithmetic operations on the word vectors are meaningful: e.g. *King* - *Queen* = *Man* - *Woman*. The two most popular approaches to learn a word embedding from raw text are:
+A word embedding is a distributed (dense) vector representation for each word
+of a vocabulary. It is capable of capturing semantic and syntactic properties
+of the input texts . Interestingly, even arithmetic operations on the word
+vectors are meaningful: e.g. *King* - *Queen* = *Man* - *Woman*. The two most
+popular approaches to learn a word embedding from raw text are:
 
 -   Skip-Gram Negative Sampling by Mikolov et al. (2013) (Word2Vec)
 -   Global Word Vectors by Pennington, Socher, and Manning (2014) (GloVe)
 
-Skip-gram negative sampling (or Word2Vec) is an algorithm based on a shallow neural network which aims to learn a word embedding. It is highly efficient, as it avoids dense matrix multiplication and does not require the full term co-occurrence matrix. Given some target word *w*<sub>*t*</sub>, the intermediate goal is to train the neural network to predict the words in the *c*-neighbourhood of *w*<sub>*t*</sub>: *w*<sub>*t* − *c*</sub>, …, *w*<sub>*t* − 1</sub>, *w*<sub>*t* + 1</sub>, …, *w*<sub>*t* + *c*</sub>. First, the word is directly associated to its respective vector, which as used as input for a (multinomial) logistic regression to predict the words in the *c*-neighbourhood. Then, the weights for the logistic regression are adjusted, as well as the vector itself (by back-propagation). The Word2Vec algorithm employs negative sampling: additional *k* noise words which do not appear in the *c*-neighbourhood are introduced as possible outputs, for which the desired output is known to be `false`. Thus, the model does not reduce the weights to all other vocabulary words but only to those sampled *k* noise words. When these noise words appear in a similar context as *w*<sub>*t*</sub>, the model gets more and more fine-grained over the training epochs. In contrast to [Word2Vec](#word2vec), the GloVe (Pennington, Socher, and Manning 2014) algorithm computes the whole term co-occurrence matrix for a given corpus. To obtain word vectors, the term co-occurrence matrix is factorised. The training objective is that the euclidean dot product of each two word vectors match the log-probability of their words’ co-occurrence.
+Skip-gram negative sampling (or Word2Vec) is an algorithm based on a shallow
+neural network which aims to learn a word embedding. It is highly efficient, as
+it avoids dense matrix multiplication and does not require the full term
+co-occurrence matrix. Given some target word *w*<sub>*t*</sub>, the
+intermediate goal is to train the neural network to predict the words in the
+*c*-neighbourhood of *w*<sub>*t*</sub>:
+*w*<sub>*t* − *c*</sub>, …, *w*<sub>*t* − 1</sub>, *w*<sub>*t* + 1</sub>, …, *w*<sub>*t* + *c*</sub>.
+First, the word is directly associated to its respective vector, which as used
+as input for a (multinomial) logistic regression to predict the words in the
+*c*-neighbourhood. Then, the weights for the logistic regression are adjusted,
+as well as the vector itself (by back-propagation). The Word2Vec algorithm
+employs negative sampling: additional *k* noise words which do not appear in
+the *c*-neighbourhood are introduced as possible outputs, for which the desired
+output is known to be `false`. Thus, the model does not reduce the weights to
+all other vocabulary words but only to those sampled *k* noise words. When
+these noise words appear in a similar context as *w*<sub>*t*</sub>, the model
+gets more and more fine-grained over the training epochs. In contrast to
+Word2Vec, the GloVe (Pennington, Socher, and Manning 2014) algorithm computes
+the whole term co-occurrence matrix for a given corpus. To obtain word vectors,
+the term co-occurrence matrix is factorised. The training objective is that the
+euclidean dot product of each two word vectors match the log-probability of
+their words’ co-occurrence.
 
 ### Word centroid similarity (WCS)
 
-An intuitive approach to employ word embeddings in information retrieval is the word centroid similarity (WCS). The representation for each document is the centroid of its respective word vectors. Since word vectors carry semantic information of the words, it is assumed that the centroid carries a notion of similarity. At query time, the centroid of the query’s word vectors is computed and the cosine similarity to the centroids of the (matching) documents is used as a measure of relevance. When the initial word frequencies of the queries and documents are first re-weighted according to inverse-document frequency (i.e. frequent words in the corpus are discounted), the technique is labelled IDF re-weighted word centroid similarity (IWCS).
+An intuitive approach to use word embeddings in information retrieval is the
+word centroid similarity (WCS). The representation for each document is the
+centroid of its respective word vectors. Since word vectors carry semantic
+information of the words, one could assume that the centroid of the word
+vectors within a document encodes its meaning to some extent.
+At query time, the centroid of the query’s word vectors is computed.
+The cosine similarity to the centroids of the (matching) documents is used
+as a measure of relevance. When the initial word frequencies of the queries and
+documents are first re-weighted according to inverse-document frequency
+(i.e. frequent words in the corpus are discounted), the technique is labeled
+IDF re-weighted word centroid similarity (IWCS).
 
 Features
 --------
@@ -343,6 +389,8 @@ We provide more details on the implementation of a full information retrieval pi
 
 Combining multiple fields and models
 ------------------------------------
+
+** Highly experimental, some techniques do not support it yet **
 
 The `vec4ir` package also provides an experimental operator overloading API for combining multiple retrieval models.
 
