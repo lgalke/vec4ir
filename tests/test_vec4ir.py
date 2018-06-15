@@ -54,19 +54,20 @@ def test_word2vec():
     assert result[0] == 0
 
 
-def test_combined():
-    model = Word2Vec([doc.split() for doc in documents], iter=1, min_count=1)
-    wcd = WordCentroidDistance(model.wv)
-    tfidf = Tfidf()
+# TODO method support via CombinatorMixin
+# def test_combined():
+#     model = Word2Vec([doc.split() for doc in documents], iter=1, min_count=1)
+#     wcd = WordCentroidDistance(model.wv)
+#     tfidf = Tfidf()
 
-    wcd.fit(documents)
-    # they can operate on different feilds
-    tfidf.fit(['fox', 'scientists'])
-    match_op = Matching()
+#     wcd.fit(documents)
+#     # they can operate on different feilds
+#     tfidf.fit(['fox', 'scientists'])
+#     match_op = Matching()
 
-    combined = wcd | tfidf
+#     combined = wcd | tfidf
 
-    retrieval = Retrieval(combined, matching=match_op)
+#     retrieval = Retrieval(combined, matching=match_op)
 
 # PYEMD is required
 # def test_wordmovers():
