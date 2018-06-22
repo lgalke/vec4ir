@@ -5,7 +5,7 @@ with open(reqfile, 'r') as f:
       requirements = [line.strip() for line in f.readlines()]
 
 setup(name='vec4ir',
-      version=0.1,
+      version=0.2,
       description='Neural Word Embeddings for Information Retrieval',
       author="Lukas Galke",
       author_email="lga@informatik.uni-kiel.de",
