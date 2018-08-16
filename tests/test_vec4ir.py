@@ -62,12 +62,15 @@ def test_combined():
     wcd.fit(documents)
     # # they can operate on different feilds
     tfidf.fit(['fox', 'scientists'])
-    match_op = Matching()
+    match_op = Matching().fit(documents)
 
-    combined = wcd | tfidf
+    combined = wcd + tfidf ** 2
 
-    retrieval = Retrieval(combined, matching=match_op)
+    retrieval = Retrieval(combined, matching=match_op, labels=[7,42])
     result = retrieval.query('fox')
+    assert result[0] == 7 
+    result = retrieval.query('scientists')
+    assert result[0] == 42
 
 
 # # PYEMD is required

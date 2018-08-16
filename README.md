@@ -397,21 +397,22 @@ The `vec4ir` package also provides an experimental operator overloading API for 
 ``` python
 RM_title = WordCentroidDistance().fit(documents['title'])
 RM_content = Tfidf().fit(documents['full-text'])
-RM = RM_title | RM_content  # fuzzy or: x+y - x*y
-R = Retrieval(retrieval_model=RM)
+RM = RM_title ** 2 + RM_content  # Sum up scores, weight title field twice
+R = Retrieval(retrieval_model=RM, labels=documents['id'])
 ```
 
 On invocation of the `query` method on the combined retrieval model `RM`, both
 the model for the title and the model for the content get consulted and their
 respective scores are merged according to the operator. Operator overloading is
-provided for addition, multiplication (Fuzzy AND) and binary `OR` operator which
-implements [Fuzzy OR](https://en.wikipedia.org/wiki/Fuzzy_logic#Fuzzy_logic_operators) `x | y = (x+y)-x*y`.
+provided for addition, multiplication, as well as the power operator `**`, which
+effectivly weights all returned scores of the retrieval model.
+
 For these `Combined` retrieval models, the consulted operand retrieval models are
 expected to return (`doc_id`, `score`) pairs in their result set. However, in
 this case the result set does not have to be sorted. Thus, the query method of
-the operand retrieval models is invoked with `sorted=False`. Still, the
-combined retrieval model `RM` keeps track of its nesting, such that the
-outer-most `Combined` instance will return a sorted list of results.
+the operand retrieval models is invoked with `sort=False`. Still, the
+retrieval instance `R` will invoke the outer-most, combined retrieval model with `sort=True`,
+such that the final results can be sorted.
 
 References
 ----------

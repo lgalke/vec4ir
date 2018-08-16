@@ -5,7 +5,13 @@ from collections import defaultdict, OrderedDict
 from sklearn.preprocessing import maxabs_scale
 from functools import reduce
 from operator import itemgetter
-from numpy import product
+
+import numpy as np
+
+try:
+    from .utils import argtopk
+except (SystemError, ValueError):
+    from utils import argtopk
 
 
 def aggregate_dicts(dicts, agg_fn=sum):
@@ -18,6 +24,7 @@ def aggregate_dicts(dicts, agg_fn=sum):
     >>> OrderedDict(sorted(agg.items(), key=itemgetter(1), reverse=True))
     OrderedDict([('a', 1.5), ('d', 0.7), ('b', 0.4), ('c', 0.3)])
     """
+    print("Warning: 'aggregated_dicts' is deprecated. Aggregation should be numpy operation")
     acc = defaultdict(list)
     for d in dicts:
         for k in d:
@@ -65,25 +72,21 @@ class CombinatorMixin(object):
 
     # This is evil since it can exceed [0,1], rescaling at the end would be not
     # that beautiful
-    # def __add__(self, other):
-    #     weights = self.__get_weights(other)
-    #     return Combined([self, other], weights=weights, agg_fn=sum)
-
-    def __and__(self, other):
+    def __add__(self, other):
         weights = self.__get_weights(other)
-        return Combined([self, other], weights=weights, aggregation_fn=product)
+        return Combined([self, other], weights=weights, aggregation_fn='sum')
 
-    def __or__(self, other):
+    def __mul__(self, other):
         weights = self.__get_weights(other)
-        return Combined([self, other], weights=weights, aggregation_fn=fuzzy_or)
+        return Combined([self, other], weights=weights, aggregation_fn='product')
 
-    def __mul__(self, scalar):
+    def __pow__(self, scalar):
         self.__weight = scalar
         return self
 
 
 class Combined(BaseEstimator, CombinatorMixin):
-    def __init__(self, retrieval_models, weights=None, aggregation_fn=sum):
+    def __init__(self, retrieval_models, weights=None, aggregation_fn='sum'):
         self.retrieval_models = retrieval_models
         self.aggregation_fn = aggregation_fn
         if weights is not None:
@@ -92,23 +95,33 @@ class Combined(BaseEstimator, CombinatorMixin):
             self.weights = [1.0] * len(retrieval_models)
         assert len(self.retrieval_models) == len(self.weights)
 
-    def query(self, query, k=1, indices=None, sort=True, return_scores=True):
+    def fit(self, *args, **kwargs):
+        for model in self.retrieval_models:
+            model.fit(*args, **kwargs)
+        return self
+
+    def query(self, query, k=None, indices=None, sort=True, return_scores=False):
         models = self.retrieval_models
         weights = maxabs_scale(self.weights)  # max 1 does not crash [0,1]
         agg_fn = self.aggregation_fn
-        # we only need to sort in the final run
-        combined = [m.query(query, k=k, indices=indices, sort=False, return_scores=True) for m in models]
+        # It's important that all retrieval model return the same number of documents.
+        all_scores = [m.query(query, k=k, indices=indices, sort=False, return_scores=True)[1] for m in models]
 
         if weights is not None:
-            combined = [{k: v * w for k, v in r.items()} for r, w in
-                        zip(combined, weights)]
+            all_scores = [weight * scores for weight, scores in zip(all_scores, weights)]
 
-        combined = aggregate_dicts(combined, agg_fn=agg_fn, sort=True)
+        scores = np.vstack(all_scores)
+        if callable(agg_fn):
+            aggregated_scores = agg_fn(scores)
+        else:
+            numpy_fn = getattr(np, agg_fn)
+            aggregated_scores = numpy_fn(scores, axis=0)
 
-        if sort:
-            # only cut-off at k if this is the final (sorted) output
-            combined = OrderedDict(sorted(combined.items(), key=itemgetter(1),
-                                          reverse=True)[:k])
-        result = list(zip(*combined.items())) if return_scores else list(combined)
+        # combined = aggregate_dicts(combined, agg_fn=agg_fn, sort=True)
 
-        return result
+        # only cut-off at k if this is the final (sorted) output
+        ind = argtopk(aggregated_scores, k) if sort else np.arange(aggregated_scores.shape[0])
+        if return_scores:
+            return ind, aggregated_scores[ind]
+        else:
+            return ind

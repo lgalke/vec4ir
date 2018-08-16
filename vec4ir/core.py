@@ -17,13 +17,15 @@ class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
     """Meta estimator for an end to end information retrieval process"""
 
     def __init__(self, retrieval_model, matching=None,
-                 query_expansion=None, name='RM'):
+                 query_expansion=None, name='RM',
+                 labels=None):
         """TODO: to be defined1.
 
-        :retrieval_model: TODO
-        :vectorizer: TODO
-        :matching: TODO
-        :query_expansion: TODO
+        :retrieval_model: A retrieval model satisfying fit and query.
+        :vectorizer: A vectorizer satisfying fit and transform (and fit_transform).
+        :matching: A matching operation satisfying fit and predict.
+        :query_expansion: A query operation satisfying fit and transform
+        :labels: Pre-defined mapping of indices to identifiers, will be inferred during fit, if not given.
 
         """
         BaseEstimator.__init__(self)
@@ -32,7 +34,7 @@ class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
         self._matching = matching
         self._query_expansion = query_expansion
         self.name = name
-        self.labels_ = None
+        self.labels_ = np.asarray(labels) if labels is not None else None
 
     def fit(self, X, y=None):
         """ Fit vectorizer to raw_docs, transform them and fit the
@@ -41,7 +43,9 @@ class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
 
         """
         assert y is None or len(X) == len(y)
-        self.labels_ = np.asarray(y) if y is not None else np.arange(len(X))
+        if self.labels_ is None:
+            # If labels were not specified, infer them from y
+            self.labels_ = np.asarray(y) if y is not None else np.arange(len(X))
         matching = self._matching
         query_expansion = self._query_expansion
         retrieval_model = self._retrieval_model

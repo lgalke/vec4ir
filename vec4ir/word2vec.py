@@ -277,14 +277,11 @@ class WordCentroidDistance(BaseEstimator, CombinatorMixin):
         # if k is not None:  # we could use our argtopk in the first place
         #     ind = ind[:k]
         # print(ind)
-        if sort:
-            ind = argtopk(D[0], k=k)
-            if return_scores:
-                return ind, D[0, ind]
-            else:
-                return ind
+        ind = argtopk(D[0], k) if sort else np.arange(D.shape[1])
+        if return_scores:
+            return ind, D[0, ind]
         else:
-            return np.arange(D.shape[1]), D[0, :]
+            return ind
 
 
 

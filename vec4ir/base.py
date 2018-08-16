@@ -525,14 +525,11 @@ class Tfidf(TfidfVectorizer, CombinatorMixin):
             fit_X = self._fit_X
         # both fit_X and q are l2-normalized
         D = linear_kernel(q, fit_X)
-        if sort:
-            ind = argtopk(D[0], k)
-            if return_scores:
-                return ind, D[0,ind]
-            else:
-                return ind
+        ind = argtopk(D[0], k) if sort else np.arange(D.shape[1])
+        if return_scores:
+            return ind, D[0,ind]
         else:
-            return np.arange(D.shape[1]), D[0, :]
+            return ind
 
 class TfidfRetrieval(RetrievalBase, CombinatorMixin, RetriEvalMixin):
     """
