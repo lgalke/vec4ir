@@ -48,7 +48,7 @@ class CombinatorMixin(object):
     """ Creates a computational tree with retrieval models as leafs
     """
     def __get_weights(self, other):
-        if not isinstance(other, CombinatorMixIn):
+        if not isinstance(other, CombinatorMixin):
             raise ValueError("other is not Combinable")
 
         if hasattr(self, '__weight'):
@@ -71,11 +71,11 @@ class CombinatorMixin(object):
 
     def __and__(self, other):
         weights = self.__get_weights(other)
-        return Combined([self, other], weights=weights, agg_fn=product)
+        return Combined([self, other], weights=weights, aggregation_fn=product)
 
     def __or__(self, other):
         weights = self.__get_weights(other)
-        return Combined([self, other], weights=weights, agg_fn=fuzzy_or)
+        return Combined([self, other], weights=weights, aggregation_fn=fuzzy_or)
 
     def __mul__(self, scalar):
         self.__weight = scalar
@@ -90,13 +90,14 @@ class Combined(BaseEstimator, CombinatorMixin):
             self.weights = weights
         else:
             self.weights = [1.0] * len(retrieval_models)
+        assert len(self.retrieval_models) == len(self.weights)
 
-    def query(self, query, k=1, sort=True):
+    def query(self, query, k=1, indices=None, sort=True, return_scores=True):
         models = self.retrieval_models
         weights = maxabs_scale(self.weights)  # max 1 does not crash [0,1]
         agg_fn = self.aggregation_fn
         # we only need to sort in the final run
-        combined = [m.query(query, k=k, sort=False) for m in models]
+        combined = [m.query(query, k=k, indices=indices, sort=False, return_scores=True) for m in models]
 
         if weights is not None:
             combined = [{k: v * w for k, v in r.items()} for r, w in
@@ -108,4 +109,6 @@ class Combined(BaseEstimator, CombinatorMixin):
             # only cut-off at k if this is the final (sorted) output
             combined = OrderedDict(sorted(combined.items(), key=itemgetter(1),
                                           reverse=True)[:k])
-        return combined
+        result = list(zip(*combined.items())) if return_scores else list(combined)
+
+        return result

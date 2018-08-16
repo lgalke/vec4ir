@@ -19,7 +19,6 @@ import numpy as np
 
 try:
     from .base import RetrievalBase, RetriEvalMixin, Matching
-    # from .utils import argtopk
     from .utils import filter_vocab, argtopk
     from .combination import CombinatorMixin
     from .core import EmbeddedVectorizer
@@ -248,7 +247,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
         return result
 
 
-class WordCentroidDistance(BaseEstimator):
+class WordCentroidDistance(BaseEstimator, CombinatorMixin):
     """
     This class should only be used inside a Retrieval, so that Retrieval
     cares about the matching and the indices the indices
@@ -265,7 +264,7 @@ class WordCentroidDistance(BaseEstimator):
         Xt = normalize(Xt, copy=False)  # We need this because of linear kernel
         self.centroids = Xt
 
-    def query(self, query, k=None, indices=None, return_scores=False):
+    def query(self, query, k=None, indices=None, return_scores=False, sort=True):
         centroids = self.centroids
         if centroids is None:
             raise NotFittedError
@@ -278,11 +277,15 @@ class WordCentroidDistance(BaseEstimator):
         # if k is not None:  # we could use our argtopk in the first place
         #     ind = ind[:k]
         # print(ind)
-        ret = argtopk(D[0], k=k)
-        if return_scores:
-            return ret, D[0,ret]
+        if sort:
+            ind = argtopk(D[0], k=k)
+            if return_scores:
+                return ind, D[0, ind]
+            else:
+                return ind
         else:
-            return ret
+            return np.arange(D.shape[1]), D[0, :]
+
 
 
 class WordMoversDistance(BaseEstimator):

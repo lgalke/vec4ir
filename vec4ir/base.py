@@ -504,7 +504,7 @@ class RetriEvalMixin():
         return values
 
 
-class Tfidf(TfidfVectorizer):
+class Tfidf(TfidfVectorizer, CombinatorMixin):
     def __init__(self, analyzer='word', use_idf=True):
         TfidfVectorizer.__init__(self, analyzer=analyzer, use_idf=use_idf,
                                  norm='l2')
@@ -515,7 +515,7 @@ class Tfidf(TfidfVectorizer):
         self._fit_X = Xt
         return self
 
-    def query(self, query, k=None, indices=None, return_scores=False):
+    def query(self, query, k=None, indices=None, return_scores=False, sort=True):
         if self._fit_X is None:
             raise NotFittedError
         q = super().transform([query])
@@ -525,11 +525,14 @@ class Tfidf(TfidfVectorizer):
             fit_X = self._fit_X
         # both fit_X and q are l2-normalized
         D = linear_kernel(q, fit_X)
-        ind = argtopk(D[0], k)
-        if return_scores:
-            return ind, D[0,ind]
+        if sort:
+            ind = argtopk(D[0], k)
+            if return_scores:
+                return ind, D[0,ind]
+            else:
+                return ind
         else:
-            return ind
+            return np.arange(D.shape[1]), D[0, :]
 
 class TfidfRetrieval(RetrievalBase, CombinatorMixin, RetriEvalMixin):
     """
@@ -555,6 +558,7 @@ class TfidfRetrieval(RetrievalBase, CombinatorMixin, RetriEvalMixin):
 
     def __init__(self, norm='l2', use_idf=True, smooth_idf=True,
                  sublinear_tf=False, **kwargs):
+        print("Deprecation Warning: use Retrieval(Tfidf()) instead")
         self.tfidf = TfidfTransformer(norm=norm, use_idf=use_idf,
                                       smooth_idf=smooth_idf,
                                       sublinear_tf=sublinear_tf)
