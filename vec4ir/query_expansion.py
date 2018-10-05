@@ -38,6 +38,15 @@ class EmbeddedQueryExpansion(BaseEstimator):
     >>> eqlm = EmbeddedQueryExpansion(wv, analyzer=ls, m=1, eqe=2, verbose=1)
     >>> _ = eqlm.fit(sents)
     >>> eqlm.transform('obama press')
+    qnorm.shape (2,)
+    nom.shape (11, 2)
+    denom.shape (2,)
+    frac.shape (11, 2)
+    normfrac.shape (11, 2)
+    posterior.shape (2,)
+    topm.shape (1,)
+    Expanding: to
+    'obama press to'
     """
 
     def __init__(self, embedding, m=10, analyzer=None, eqe=1, verbose=0, a=1,
@@ -61,18 +70,18 @@ class EmbeddedQueryExpansion(BaseEstimator):
 
     def fit(self, raw_docs, y=None):
         """ Learn vocabulary to index and distance matrix of words"""
-        word_vec = self._embedding
-        E = word_vec.wv.syn0
+        wv = self._embedding.wv
+        E = wv.syn0
         a, c = self._a, self._c
         D = delta(E, E, n_jobs=self.n_jobs, a=a, c=c)
         self.vocabulary = {word: index for index, word in
-                           enumerate(word_vec.wv.index2word)}
+                           enumerate(wv.index2word)}
         self._D = D
 
     def transform(self, query, y=None):
         """ Transorms a query into an expanded version of the query.
         """
-        word_vec, D, = self._embedding, self._D
+        wv, D, = self._embedding.wv, self._D
         analyze, eqe = self._analyzer, self._eqe
         vocabulary, m = self.vocabulary, self.m
         q = [vocabulary[w] for w in analyze(query)]  # [n_terms]
@@ -86,7 +95,7 @@ class EmbeddedQueryExpansion(BaseEstimator):
             print("posterior.shape", posterior.shape)
             topm = np.argpartition(posterior, -m)[-m:]
             print("topm.shape", topm.shape)
-            expansion = [word_vec.wv.index2word[i] for i in topm]
+            expansion = [wv.index2word[i] for i in topm]
         elif eqe == 2:
             qnorm = np.asarray([(c[i] / len(q)) for i in q])
             print("qnorm.shape", qnorm.shape)
@@ -102,7 +111,7 @@ class EmbeddedQueryExpansion(BaseEstimator):
             print("posterior.shape", posterior.shape)
             topm = np.argpartition(posterior, -m)[-m:]
             print("topm.shape", topm.shape)
-            expansion = [word_vec.wv.index2word[i] for i in topm]
+            expansion = [wv.index2word[i] for i in topm]
         print("Expanding:", *expansion)
         return ' '.join([query, *expansion])
 
@@ -131,7 +140,7 @@ class CentroidExpansion(BaseEstimator):
 
     def transform(self, query, y=None):
         """ Expands query by nearest tokens from collection """
-        wv, vect = self.embedding, self.vect
+        wv, vect = self.embedding.wv, self.vect
 
         v = vect.transform([query])[0]
 
