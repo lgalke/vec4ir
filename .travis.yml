@@ -1,10 +1,12 @@
 language: python
+
 python:
-    - 3.6
+  - 3.5
+  - 3.6
 
 
 install:
-    pip install -e .
+  - pip install -e .
 
 script:
-    pytest
+  - python -m pytest
