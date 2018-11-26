@@ -2,7 +2,7 @@ boto
 bz2file
 cycler
 decorator
-gensim==3.4.0
+gensim
 isodate
 matplotlib
 networkx
