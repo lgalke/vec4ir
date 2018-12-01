@@ -20,7 +20,7 @@ User’s guide
 Philosophy
 ----------
 
-The information retrieval framework `vec4ir` is not designed for production usage. Rather, the target is to *simulate* a practical information retrieval setting. In order to encourage research in this field, the focus lies on extensibility. Adding a new retrieval model for evaluation should be as easy as possible. The target audience are researchers evaluating their own retrieval models and curious data scientists, who want to evaluate which retrieval model fits their data best.
+The information retrieval framework `vec4ir` has the goal is *simulate* a practical information retrieval setting. In order to encourage research in this field, the focus lies on extensibility. Adding a new retrieval model for evaluation should be as easy as possible. The target audience are researchers evaluating their own retrieval models and curious data scientists, who want to evaluate which retrieval model fits their data best.
 
 Terminology
 -----------
