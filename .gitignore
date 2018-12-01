@@ -3,4 +3,5 @@ __pycache__
 *~
 tags
 env
+venv
 .pytest_cache

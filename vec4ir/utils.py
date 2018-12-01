@@ -42,6 +42,11 @@ def argtopk(A, k=None, sort=True):
     >>> argtopk(X, 10)
     array([19, 18, 17, 16, 15, 14, 13, 12, 11, 10])
     """
+    assert k != 0, "That does not make sense"
+    if k is not None and k < 0:
+        # Just invert A element-wise
+        k = -k
+        A = -A
     A = np.asarray(A)
     if len(A.shape) > 1:
         raise ValueError('argtopk only defined for 1-d slices')
@@ -53,7 +58,7 @@ def argtopk(A, k=None, sort=True):
         else:
             return np.arange(A.shape[0])
 
-    assert k > 0
+    # assert k > 0
     # now 0 < k < len(A)
     ind = np.argpartition(A, -k, axis=axis)[-k:]
     if sort:

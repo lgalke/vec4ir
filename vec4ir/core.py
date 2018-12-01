@@ -116,7 +116,7 @@ class EmbeddedVectorizer(TfidfVectorizer):
         # list of words in the embedding
         vocabulary = embedding.index2word
         self.embedding = embedding
-        print("Embedding shape:", embedding.syn0.shape)
+        print("Embedding shape:", embedding.wv.vectors.shape)
         TfidfVectorizer.__init__(self, vocabulary=vocabulary, **kwargs)
 
     def fit(self, raw_docs, y=None):
@@ -125,28 +125,12 @@ class EmbeddedVectorizer(TfidfVectorizer):
 
     def transform(self, raw_documents, y=None):
         Xt = super().transform(raw_documents)
-        syn0 = self.embedding.syn0
+        syn0 = self.embedding.wv.vectors
         # Xt is sparse counts
         return (Xt @ syn0)
 
     def fit_transform(self, X, y=None):
         return self.fit(X, y).transform(X, y)
-
-
-def embed(X, E):
-    """
-    This is effectively: X @ E, just slower... by foot
-    Arguments:
-        - X  -- (n_samples, n_features)
-        - E  -- (n_features, n_dims)
-        - X  -- @ E (n_samples, n_dims)
-    """
-    raise DeprecationWarning("This is slow, use X @ syn0 instead.")
-    embedded = np.zeros((X.shape[0], E.shape[1]), dtype=E.dtype)
-    for (row, col, val) in zip(*sp.find(X)):
-        update = val * E[col, :]
-        embedded[row, :] += update
-    return embedded
 
 
 def all_but_the_top(v, D):

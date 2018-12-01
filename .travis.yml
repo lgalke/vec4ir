@@ -11,4 +11,4 @@ install:
   - pip install -e .
 
 script:
-  - python -m pytest
+  - cd tests; python -m pytest
