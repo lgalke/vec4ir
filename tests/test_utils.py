@@ -11,6 +11,8 @@ def test_argtopk():
     assert (argtopk(A, 10) == array([6, 5, 4, 3, 0, 1, 2, 7])).all()
     assert (argtopk(A, 28) == array([6, 5, 4, 3, 0, 1, 2, 7])).all()
     assert (argtopk(A, None) == array([6, 5, 4, 3, 0, 1, 2, 7])).all()
+    # Inverted A should reverse result
+    assert (argtopk(-A, None) == array([6, 5, 4, 3, 0, 1, 2, 7])[::-1]).all()
 
     X = np.arange(20)
     assert (argtopk(X, 10) == array([19, 18, 17, 16, 15, 14, 13, 12, 11, 10])).all()

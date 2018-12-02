@@ -137,32 +137,40 @@ def pad(r, k, padding=0):
     return r
 
 
-def TermMatch(X, q):
+def match_bool_or(X, q):
     """
+    Arguments
+    ---------
     X : ndarray of shape (documents, terms)
     q : ndarray of shape (1, terms)
+
+    Returns
+    -------
+    An indicator array with matching indices
+
     >>> X = np.array([[0,0,1], [0,1,0], [0,1,1], [1,0,0], [1,0,1], [1,1,0]])
-    >>> TermMatch(X, np.array([[0,0,0]]))
+    >>> match_bool_or(X, np.array([[0,0,0]]))
     array([], dtype=int64)
-    >>> TermMatch(X, np.array([[0,0,1]]))
+    >>> match_bool_or(X, np.array([[0,0,1]]))
     array([0, 2, 4])
-    >>> TermMatch(X, np.array([[0,1,0]]))
+    >>> match_bool_or(X, np.array([[0,1,0]]))
     array([1, 2, 5])
-    >>> TermMatch(X, np.array([[0,1,1]]))
+    >>> match_bool_or(X, np.array([[0,1,1]]))
     array([0, 1, 2, 4, 5])
-    >>> TermMatch(X, np.array([[1,0,0]]))
+    >>> match_bool_or(X, np.array([[1,0,0]]))
     array([3, 4, 5])
-    >>> TermMatch(X, np.array([[1,0,1]]))
+    >>> match_bool_or(X, np.array([[1,0,1]]))
     array([0, 2, 3, 4, 5])
-    >>> TermMatch(X, np.array([[1,1,0]]))
+    >>> match_bool_or(X, np.array([[1,1,0]]))
     array([1, 2, 3, 4, 5])
-    >>> TermMatch(X, np.array([[1,1,1]]))
+    >>> match_bool_or(X, np.array([[1,1,1]]))
     array([0, 1, 2, 3, 4, 5])
     """
     # indices = np.unique(X.transpose()[q.nonzero()[1], :].nonzero()[1])
     # print("matching X", X, file=sys.stderr)
     # print("matching q", q, file=sys.stderr)
-    inverted_index = X.transpose()
+    # inverted_index = X.transpose()
+    inverted_index = X.T
     # print("matching inverted_index", inverted_index, file=sys.stderr)
     query_terms = q.nonzero()[1]
     # print("matching query_terms", query_terms, file=sys.stderr)
@@ -183,7 +191,7 @@ class Matching(BaseEstimator):
 
     """Typical Matching Operation of Retrieval Systems"""
 
-    def __init__(self, match_fn=TermMatch, binary=True, dtype=np.bool_,
+    def __init__(self, match_fn=match_bool_or, binary=True, dtype=np.bool_,
                  **cv_params):
         """initializes a Matching object
 
@@ -258,7 +266,7 @@ class RetrievalBase(BaseEstimator):
                      dtype=np.bool_,
                      **kwargs):
         # reasonable defaults for indexing use case
-        self._match_fn = TermMatch if match_fn == 'term' else match_fn
+        self._match_fn = match_bool_or if match_fn == 'term' else match_fn
         self._cv = CountVectorizer(binary=binary, dtype=dtype, **kwargs)
         self.name = name
 
