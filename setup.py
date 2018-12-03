@@ -1,8 +1,28 @@
 from setuptools import setup
-import os
-reqfile = os.path.join(os.path.dirname(__file__), 'requirements.txt')
-with open(reqfile, 'r') as f:
-      requirements = [line.strip() for line in f.readlines()]
+
+requirements = [
+      'boto',
+      'bz2file',
+      'cycler',
+      'decorator',
+      'gensim',
+      'isodate',
+      'matplotlib',
+      'networkx',
+      'nltk',
+      'numpy',
+      'pandas',
+      'PyYAML',
+      'rdflib',
+      'requests',
+      'scikit-learn',
+      'scipy',
+      'six',
+      'sklearn',
+      'smart-open',
+      'joblib'
+
+]
 
 setup(name='vec4ir',
       version=0.2,

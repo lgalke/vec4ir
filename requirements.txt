@@ -1,24 +1,12 @@
-boto
-bz2file
-cycler
-decorator
-gensim
-isodate
-matplotlib
-networkx
-nltk
-numpy
-pandas
-pyparsing
-python-dateutil
-pytz
-PyYAML
-rdflib
-requests
-scikit-learn
-scipy
-six
-sklearn
-smart-open
-joblib
+--index-url https://pypi.python.org/simple/
+
+# Requirements specified in setup.py
+
+-e .
+
+# Development requirements
+
 pytest
+pylint
+jedi
+
