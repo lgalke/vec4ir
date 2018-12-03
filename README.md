@@ -203,7 +203,7 @@ The options below the respective keys specify the responsible constructor
 natively supported dataset formats can be found in the [developer’s
 guide](devguide.md). The alternatives for the retrieval model
 (`--retrieval-model`) are described in more detail
-[below](#employing-word-embeddings} .
+[below](#employing-word-embeddings).
 
 #### Embedding options
 
