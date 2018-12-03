@@ -198,7 +198,12 @@ data:
         rels: 2
 ```
 
-The options below the respective keys specify the responsible constructor (`type`) and its arguments (`root_path`, `field`, …). More details on the natively supported dataset formats can be found in the [developer’s guide](devguide.md). The alternatives for the retrieval model (`--retrieval-model`) are described in more detail in Section .
+The options below the respective keys specify the responsible constructor
+(`type`) and its arguments (`root_path`, `field`, …). More details on the
+natively supported dataset formats can be found in the [developer’s
+guide](devguide.md). The alternatives for the retrieval model
+(`--retrieval-model`) are described in more detail
+[below](#employing-word-embeddings} .
 
 #### Embedding options
 
