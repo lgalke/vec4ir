@@ -1,7 +1,0 @@
-README.md
-setup.py
-vec4ir.egg-info/PKG-INFO
-vec4ir.egg-info/SOURCES.txt
-vec4ir.egg-info/dependency_links.txt
-vec4ir.egg-info/requires.txt
-vec4ir.egg-info/top_level.txt

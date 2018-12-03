@@ -29,5 +29,7 @@ setup(name='vec4ir',
       description='Neural Word Embeddings for Information Retrieval',
       author="Lukas Galke",
       author_email="lga@informatik.uni-kiel.de",
-      install_requires=requirements
+      install_requires=requirements,
+      scripts=['bin/vec4ir-evaluate',
+               'bin/vec4ir-run']
       )
