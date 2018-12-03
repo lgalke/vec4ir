@@ -1,4 +1,5 @@
 import os
+import pytest
 
 from gensim.models import Word2Vec, Doc2Vec
 from gensim.models.doc2vec import TaggedDocument
@@ -47,6 +48,9 @@ def test_retrieval():
 def test_word2vec():
     model = Word2Vec([doc.split() for doc in documents], iter=1, min_count=1)
     match_op = Matching()
+    with pytest.raises(ValueError):
+        wcd = WordCentroidDistance(model)
+
     wcd = WordCentroidDistance(model.wv)
     retrieval = Retrieval(wcd, matching=match_op)
     retrieval.fit(documents)

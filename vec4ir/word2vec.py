@@ -250,7 +250,7 @@ class Word2VecRetrieval(RetrievalBase, RetriEvalMixin, CombinatorMixin):
 class WordCentroidDistance(BaseEstimator, CombinatorMixin):
     """
     This class should only be used inside a Retrieval, so that Retrieval
-    cares about the matching and the indices the indices
+    cares about the matching and the resulting indices.
     """
 
     def __init__(self, embedding, analyzer='word', use_idf=True):

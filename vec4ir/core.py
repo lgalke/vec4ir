@@ -114,6 +114,12 @@ class EmbeddedVectorizer(TfidfVectorizer):
     def __init__(self, embedding, **kwargs):
         """TODO: to be defined1. """
         # list of words in the embedding
+        if not hasattr(embedding, 'index2word'):
+            raise ValueError("No `index2word` attribute found."
+                             " Supply the word vectors (`.wv`) instead.")
+        if not hasattr(embedding, 'vectors'):
+            raise ValueError("No `vectors` attribute found."
+                             " Supply the word vectors (`.wv`) instead.")
         vocabulary = embedding.index2word
         self.embedding = embedding
         print("Embedding shape:", embedding.vectors.shape)
