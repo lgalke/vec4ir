@@ -5,5 +5,5 @@ if [ ! -e $VENV_PATH ]; then
     virtualenv -p python3 $VENV_PATH
 fi
 echo $VENV_PATH
-source $VENV_PATH/bin/activate && pip install -e .
+source $VENV_PATH/bin/activate && pip install -r requirements.txt
 deactivate 2>/dev/null

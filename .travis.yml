@@ -6,9 +6,11 @@ python:
 
 before_install:
   - export BOTO_CONFIG=/dev/null
+  - virtualenv venv
+  - source venv/bin/activate
 
 install:
-  - pip install -e .
+  - pip install -r requirements.txt
 
 script:
   - cd tests; python -m pytest
