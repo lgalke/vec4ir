@@ -144,8 +144,8 @@ pip3 install -r requirements.txt
 ```
 
 In addition, we provide a helper script to setup a new virtual environment. It
-can be invoked `setup.sh <venv-name>` to setup a new virtual environment in the
-current working directory. The newly created virtual environment has to be
+can be invoked `requirements.sh` to setup a new virtual environment `venv` in
+the current working directory. The newly created virtual environment has to be
 activated via `source <venv-name>` before performing the actual installation
 steps as described above.
 
@@ -160,7 +160,15 @@ installation of `pyemd` to succeed.
 The evaluation script
 ---------------------
 
-The package includes a native command line script `ir_eval.py` for evaluation of an information retrieval pipeline. The pipeline of query expansion, matching and scoring is applied to a set of queries and the metrics mean average precision (MAP), mean reciprocal rank (MRR), normalised discounted cumulative gain (NDCG), precision and recall are computed. Hence, the script may be used *as-is* for evaluation of your datasets or as a reference implementation for the usage of the framework. The behaviour of the evaluation script and the resulting information retrieval pipeline can be controlled by the following command-line arguments:
+The package includes a native command line script `vec4ir-evaluate` for
+evaluation of an information retrieval pipeline. The pipeline of query
+expansion, matching and scoring is applied to a set of queries and the metrics
+mean average precision (MAP), mean reciprocal rank (MRR), normalised discounted
+cumulative gain (NDCG), precision and recall are computed. Hence, the script
+may be used *as-is* for evaluation of your datasets or as a reference
+implementation for the usage of the framework. The behaviour of the evaluation
+script and the resulting information retrieval pipeline can be controlled by
+the following command-line arguments:
 
 #### Meta options
 
@@ -205,7 +213,7 @@ In the special case of `--train 0` the behaviour of the script is *not* equivale
 -   `-I, --no-idf` Do *not* use IDF re-weighted word frequencies for aggregation of word vectors.
 -   `-w, --wmd` Fraction of *additional* documents to take into account for `wmd` retrieval model.
 
-By default, `ir_eval.py` uses IDF re-weighted word centroid similarity if `-r wcd` is provided. If IDF re-weighting is not desired, it is necessary to provide the `--no-idf` argument. The `--wmd` argument refers to the fraction of additional documents to consider, when the Word Mover’s distance (`-r wmd`) was chosen as retrieval model. For example, consider `--wmd 0.1` and 120 matching documents for a specific query. When 20 documents should be retrieved, the word centroid similarity is consulted to retrieve the top 20 + 0.1 ⋅ (120 − 20)=30 documents. These 30 most relevant (with respect to word centroid similarity) documents are then be re-ranked according to the Word Mover’s distance. A `--wmd` value of zero corresponds to re-ranking the top *k* documents by Word Mover’s distance, while the highest possible value of `1.0` corresponds to computing the full Word Mover’s distance without taking the WCS into account.
+By default, `vec4ir-evaluate` uses IDF re-weighted word centroid similarity if `-r wcd` is provided. If IDF re-weighting is not desired, it is necessary to provide the `--no-idf` argument. The `--wmd` argument refers to the fraction of additional documents to consider, when the Word Mover’s distance (`-r wmd`) was chosen as retrieval model. For example, consider `--wmd 0.1` and 120 matching documents for a specific query. When 20 documents should be retrieved, the word centroid similarity is consulted to retrieve the top 20 + 0.1 ⋅ (120 − 20)=30 documents. These 30 most relevant (with respect to word centroid similarity) documents are then be re-ranked according to the Word Mover’s distance. A `--wmd` value of zero corresponds to re-ranking the top *k* documents by Word Mover’s distance, while the highest possible value of `1.0` corresponds to computing the full Word Mover’s distance without taking the WCS into account.
 
 #### Output options
 
