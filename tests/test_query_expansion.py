@@ -42,7 +42,7 @@ def test_expansion_inside_retrieval():
                           query_expansion=expansion_op)
     ids = ['fox_ex', 'surf_ex']
     retrieval.fit(DOCUMENTS, ids)
-    result = retrieval.query('surf_ex')
+    result = retrieval.query('surf')
     assert result[0] == 'surf_ex'
     assert result[1] == 'fox_ex'
 
