@@ -40,14 +40,14 @@ class EmbeddedQueryExpansion(BaseEstimator):
     >>> eqlm.transform('obama press')
     """
 
-    def __init__(self, embedding, m=10, analyzer=None, eqe=1, verbose=0, a=1,
+    def __init__(self, wv, m=10, analyzer=str.split, eqe=1, verbose=0, a=1,
                  c=0, n_jobs=1):
         """
         Initializes the embedding based query language model query expansion
         technique
         """
         BaseEstimator.__init__(self)
-        self._embedding = embedding
+        self._wv = wv
         self._analyzer = analyzer
         if eqe not in [1, 2]:
             raise ValueError
@@ -61,21 +61,22 @@ class EmbeddedQueryExpansion(BaseEstimator):
 
     def fit(self, raw_docs, y=None):
         """ Learn vocabulary to index and distance matrix of words"""
-        wv = self._embedding
-        E = wv._embedding.wv.syn0
+        wv = self._wv
+        E = wv.vectors
         a, c = self._a, self._c
         D = delta(E, E, n_jobs=self.n_jobs, a=a, c=c)
         self.vocabulary = {word: index for index, word in
                            enumerate(wv.index2word)}
         self._D = D
+        return self
 
     def transform(self, query, y=None):
         """ Transorms a query into an expanded version of the query.
         """
-        wv, D, = self._embedding, self._D
+        wv, D, = self._wv, self._D
         analyze, eqe = self._analyzer, self._eqe
         vocabulary, m = self.vocabulary, self.m
-        q = [vocabulary[w] for w in analyze(query)]  # [n_terms]
+        q = [vocabulary[w] for w in analyze(query) if w in vocabulary]  # [n_terms]
         c = Counter(q)
         if eqe == 1:
             prior = np.sum(D, axis=1)  # [n_words, 1] could be precomputed
@@ -144,7 +145,6 @@ class CentroidExpansion(BaseEstimator):
         # exp_words = self.common[ind.ravel()]
 
         expanded_query = query + ' ' + ' '.join(words)
-        print("Expanded query:", expanded_query)
 
         return expanded_query
 
