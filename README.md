@@ -146,7 +146,7 @@ pip3 install -r requirements.txt
 In addition, we provide a helper script to setup a new virtual environment. It
 can be invoked `requirements.sh` to setup a new virtual environment `venv` in
 the current working directory. The newly created virtual environment has to be
-activated via `source <venv-name>` before performing the actual installation
+activated via `source <venv-name>/bin/activate` before performing the actual installation
 steps as described above.
 
 
