@@ -101,12 +101,15 @@ def build_analyzer(tokenizer=None, stop_words=None, lowercase=True):
         Lowercase or case-sensitive analysis.
     """
     # some default options for tokenization
-    if not callable(tokenizer):
+    if tokenizer:
         tokenizer, token_pattern = {
             'sklearn': (None, r"(?u)\b\w\w+\b"),  # mimics default
             'sword': (None, r"(?u)\b\w+\b"),   # specifically for GoogleNews
             'nltk': (word_tokenize, None)  # uses punctuation for GloVe models
         }[tokenizer]
+    else:
+        tokenizer, token_pattern = (None, r"(?u)\b\w\w+\b")
+        
 
     # allow binary decision for stopwords
     sw_rules = {True: 'english', False: None}
