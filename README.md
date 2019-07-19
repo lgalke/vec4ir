@@ -134,11 +134,12 @@ Installation
 
 As `vec4ir` is packaged as a python package, it can be installed by via `pip`:
 
-We provide a helper script to setup a new virtual environment. It
-can be invoked via `bash requirements.sh` to setup a new virtual environment `venv` in
-the current working directory. The newly created virtual environment has to be
-activated via `source venv/bin/activate` before performing the actual installation
-steps as described below.
+We provide a helper script to setup a new virtual environment and install all
+dependencies. It can be invoked via `bash requirements.sh`.
+For using the installed package later, you have to activate the virtual
+created environment via `source venv/bin/activate`.
+
+If a new virtual environment is not needed, you can install `vec4ir` manually:
 
 ``` sh
 pip install -e .
@@ -147,9 +148,8 @@ pip install -e .
 In case anything went wrong with the installation of dependencies, try to install them manually: We also recommend to install `numpy` and `scipy` in beforehand (either manually, or as binary system packages).
 
 ``` sh
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
-
 
 ## WordMoversDistance and pyemd
 
