@@ -134,6 +134,12 @@ Installation
 
 As `vec4ir` is packaged as a python package, it can be installed by via `pip`:
 
+We provide a helper script to setup a new virtual environment. It
+can be invoked via `bash requirements.sh` to setup a new virtual environment `venv` in
+the current working directory. The newly created virtual environment has to be
+activated via `source venv/bin/activate` before performing the actual installation
+steps as described below.
+
 ``` sh
 cd python-vec4ir; pip install -e .
 ```
@@ -144,19 +150,14 @@ In case anything went wrong with the installation of dependencies, try to instal
 pip3 install -r requirements.txt
 ```
 
-In addition, we provide a helper script to setup a new virtual environment. It
-can be invoked `requirements.sh` to setup a new virtual environment `venv` in
-the current working directory. The newly created virtual environment has to be
-activated via `source <venv-name>/bin/activate` before performing the actual installation
-steps as described above.
 
-
-## WordMoversDistance and wmd
+## WordMoversDistance and pyemd
 
 To compute the Word Mover's distance, the `pyemd` package is required.
 It can be installed via `pip install pyemd`. However, the python3 developer
 system package (such as `python3-devel` on Solus) may be required for the
 installation of `pyemd` to succeed.
+This step is only necessary if you want to use the Word Mover's distance.
 
 The evaluation script
 ---------------------
