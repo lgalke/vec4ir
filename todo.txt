@@ -1,5 +1,0 @@
-(A) 2018-12-03 Migrate markdown docs to rst + sphinx
-x 2018-05-22 Write test for WordMoversDistance @testing
-x 2018-12-03 Properly bind executables to commands @packaging
-
-

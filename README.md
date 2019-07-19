@@ -108,7 +108,7 @@ Features
 The key features of this information retrieval framework are:
 
 -   Simulation of a practical IR setting
--   Native word embedding support in conjunction with `gensim` (Řehuřek and Sojka 2010))
+-   Native word embedding support in conjunction with `gensim` (Řehuřek and Sojka 2010)
 -   Built-in evaluation
 -   API design inspired by `sklearn` (Buitinck et al. 2013) .
 -   Extendable by new retrieval models
