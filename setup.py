@@ -21,7 +21,6 @@ requirements = [
       'sklearn',
       'smart-open',
       'joblib'
-
 ]
 
 setup(name='vec4ir',

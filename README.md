@@ -141,7 +141,7 @@ activated via `source venv/bin/activate` before performing the actual installati
 steps as described below.
 
 ``` sh
-cd python-vec4ir; pip install -e .
+pip install -e .
 ```
 
 In case anything went wrong with the installation of dependencies, try to install them manually: We also recommend to install `numpy` and `scipy` in beforehand (either manually, or as binary system packages).
