@@ -9,8 +9,6 @@ try:
     from .base import RetriEvalMixin
 except SystemError:
     from base import RetriEvalMixin
-from sklearn.decomposition import PCA
-
 
 class Retrieval(BaseEstimator, MetaEstimatorMixin, RetriEvalMixin):
 
@@ -138,32 +136,3 @@ class EmbeddedVectorizer(TfidfVectorizer):
     def fit_transform(self, X, y=None):
         return self.fit(X, y).transform(X, y)
 
-
-def all_but_the_top(v, D):
-    """
-    All-but-the-Top: Simple and Effective Postprocessing for Word
-    Representations
-    https://arxiv.org/abs/1702.01417
-
-    Arguments:
-        :v: word vectors of shape (n_words, n_dimensions)
-        :D: number of principal components to subtract
-
-    """
-    print("All but the top")
-    # 1. Compute the mean for v
-    mu = np.mean(v, axis=0)
-    v_tilde = v - mu  # broadcast hopefully works
-
-    # 2. Compute the PCA components
-
-    pca = PCA(n_components=D)
-    u = pca.fit_transform(v.T)
-
-    # 3. Postprocess the representations
-    for w in range(v_tilde.shape[0]):
-        v_tilde[w, :] -= np.sum([(u[:, i] * v[w]) * u[:, i].T for i in
-                                 range(D)],
-                                axis=0)
-
-    return v_tilde

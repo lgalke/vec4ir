@@ -4,7 +4,7 @@ from timeit import default_timer as timer
 from datetime import timedelta
 from vec4ir.datasets import NTCIR, QuadflorLike
 from argparse import ArgumentParser, FileType
-from vec4ir.core import Retrieval, all_but_the_top
+from vec4ir.core import Retrieval
 from vec4ir.base import TfidfRetrieval
 from vec4ir.base import Tfidf, Matching
 # from vec4ir.base import Matching
@@ -15,7 +15,7 @@ from vec4ir.doc2vec import Doc2VecRetrieval, Doc2VecInference
 from vec4ir.query_expansion import CentroidExpansion
 from vec4ir.query_expansion import EmbeddedQueryExpansion
 from vec4ir.word2vec import WordCentroidDistance, WordMoversDistance
-from vec4ir.postprocessing import uptrain
+from vec4ir.postprocessing import uptrain, all_but_the_top
 from vec4ir.eqlm import EQLM
 from vec4ir.utils import collection_statistics, build_analyzer
 from gensim.models import Word2Vec, Doc2Vec
@@ -33,6 +33,7 @@ import matplotlib
 import logging
 matplotlib.use('Agg')  # compat on non-gui uis, must be set before pyplot
 import matplotlib.pyplot as plt
+
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
