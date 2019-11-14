@@ -38,7 +38,7 @@ def all_but_the_top(v, D):
       v_tilde = v - np.mean(v, axis=0)
       # 2. Compute the first `D` principal components
       #    on centered embedding vectors
-      u = PCA(n_components=D).fit(v_tilde).components_  # [1, emb_size]
+      u = PCA(n_components=D).fit(v_tilde).components_  # [D, emb_size]
       # Subtract first `D` principal components
-      # [vocab_size, emb_size] @ [emb_size, 1] @ [1, emb_size] -> [vocab_size, emb_size]
+      # [vocab_size, emb_size] @ [emb_size, D] @ [D, emb_size] -> [vocab_size, emb_size]
       return v - (v_tilde @ u.T @ u)  
