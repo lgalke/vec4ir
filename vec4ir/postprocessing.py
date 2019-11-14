@@ -27,30 +27,18 @@ def uptrain(corpus,
 
 
 def all_but_the_top(v, D):
-    """
-    All-but-the-Top: Simple and Effective Postprocessing for Word
-    Representations
-    https://arxiv.org/abs/1702.01417
-
-    Arguments:
-        :v: word vectors of shape (n_words, n_dimensions)
-        :D: number of principal components to subtract
-
-    """
-    print("All but the top")
-    # 1. Compute the mean for v
-    mu = np.mean(v, axis=0)
-    v_tilde = v - mu  # broadcast hopefully works
-
-    # 2. Compute the PCA components
-
-    pca = PCA(n_components=D)
-    u = pca.fit_transform(v.T)
-
-    # 3. Postprocess the representations
-    for w in range(v_tilde.shape[0]):
-        v_tilde[w, :] -= np.sum([(u[:, i] * v[w]) * u[:, i].T for i in
-                                 range(D)],
-                                axis=0)
-
-    return v_tilde
+      """
+      All-but-the-Top: Simple and Effective Postprocessing for Word Representations
+      https://arxiv.org/abs/1702.01417
+      Arguments:
+          :v: word vectors of shape (n_words, n_dimensions)
+          :D: number of principal components to subtract
+      """
+      # 1. Subtract mean vector
+      v_tilde = v - np.mean(v, axis=0)
+      # 2. Compute the first `D` principal components
+      #    on centered embedding vectors
+      u = PCA(n_components=D).fit(v_tilde).components_  # [1, emb_size]
+      # Subtract first `D` principal components
+      # [vocab_size, emb_size] @ [emb_size, 1] @ [1, emb_size] -> [vocab_size, emb_size]
+      return v - (v_tilde @ u.T @ u)  
