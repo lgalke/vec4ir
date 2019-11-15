@@ -41,4 +41,4 @@ def all_but_the_top(v, D):
       u = PCA(n_components=D).fit(v_tilde).components_  # [D, emb_size]
       # Subtract first `D` principal components
       # [vocab_size, emb_size] @ [emb_size, D] @ [D, emb_size] -> [vocab_size, emb_size]
-      return v - (v_tilde @ u.T @ u)  
+      return v_tilde - (v @ u.T @ u)  
