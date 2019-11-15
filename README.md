@@ -169,7 +169,7 @@ pip install -r requirements.txt
 
 To compute the Word Mover's distance, the `pyemd` package is required.
 It can be installed via `pip install pyemd`. However, the python3 developer
-system package (such as `python3-devel` on Solus) may be required for the
+system package (such as `python3-dev` or `python3-devel`) may be required for the
 installation of `pyemd` to succeed.
 This step is only necessary if you want to use the Word Mover's distance.
 
