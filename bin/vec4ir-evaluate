@@ -331,7 +331,7 @@ def main():
                              default='config.yml',
                              help="Specify configuration file")
     meta_args, remaining_args = meta_parser.parse_known_args()
-    config = yaml.load(meta_args.config)  # we need meta parser
+    config = yaml.full_load(meta_args.config)  # we need meta parser
     parser = _ir_eval_parser(config)
     args = parser.parse_args(remaining_args)
     print(args)
