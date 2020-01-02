@@ -157,7 +157,7 @@ def _ir_eval_parser(config):
     parser = ArgumentParser()
     parser.add_argument("--doctest", action='store_true',
                         help="Perform doctest on this module")
-    parser.add_argument("-d", "--dataset", type=str, default="ntcir2",
+    parser.add_argument("-d", "--dataset", type=str, required=True,
                         choices=valid_data_keys,
                         help="Specify dataset to use (as in config file)")
     parser.add_argument("-e", "--embedding", type=str, default=None,
