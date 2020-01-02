@@ -11,7 +11,7 @@ Word embeddings for information retrieval.
 Visit the [test file](./tests/test_vec4ir.py) for a rough but quick introduction to the framework.
 
 For a comparison between the methods available in vec4ir, we refer to our paper [Word Embeddings for Practical Information Retrieval](https://dl.gi.de/handle/20.500.12116/3987) ([Author Copy](http://www.lpag.de/assets/pdf/2017-INFORMATIK-vec4ir.pdf)).
-When you are reusing this code for your research, please consider citing the associated paper via:
+When you are reusing this code for your research, please consider citing the paper:
 
 ```
 @inproceedings{mci/Galke2017,
