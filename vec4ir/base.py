@@ -13,10 +13,9 @@ from timeit import default_timer as timer
 from abc import abstractmethod
 from collections import defaultdict
 from sklearn.base import BaseEstimator
-from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
-from sklearn.neighbors import NearestNeighbors
 from sklearn.exceptions import NotFittedError
 from joblib import Parallel, delayed
 import scipy.sparse as sp
@@ -85,17 +84,10 @@ def harvest(source, query_id, doc_id=None, default=0):
         else:
             # source is ndarray or list
             scores = source[query_id]
-
-#         try:
-#             # scores is numpy array-like?
-#             scores = np.sort(scores)[::-1]
-#         except ValueError:
-#             # probably scores is a dict itself...
         if isinstance(scores, dict):
             scores = np.asarray(list(scores.values()))
         else:
             scores = np.asarray(scores)
-#             scores = np.sort(scores)[::-1]
         return scores
     else:
         # Return relevance score for the respective (query, document) pair
@@ -202,8 +194,6 @@ class Matching(BaseEstimator):
         :cv_params: Parameter for the count vectorizer such as lowercase=True
 
         """
-        # RetrievalBase.__init__(self)
-
         self._match_fn = match_fn
         self._vect = CountVectorizer(binary=binary, dtype=dtype,
                                      **cv_params)
@@ -325,7 +315,7 @@ def process_and_evaluate(model, X, Y, k, n_jobs=1):
     """
     print("Starting query time with %d jobs" % n_jobs)
 
-    # TODO can we unzip Y and only pass the fucking chunk of y which 
+    # TODO can we unzip Y and only pass the fucking chunk of y which
     # it needs to harvest??
     qids_rs = Parallel(n_jobs=n_jobs)(delayed(process_query)(model, x, Y, k)
                                       for x in X)
@@ -538,88 +528,6 @@ class Tfidf(TfidfVectorizer, CombinatorMixin):
             return ind, D[0,ind]
         else:
             return ind
-
-class TfidfRetrieval(RetrievalBase, CombinatorMixin, RetriEvalMixin):
-    """
-    Class for tfidf based retrieval
-    >>> tfidf = TfidfRetrieval(input='content')
-    >>> docs = ["The quick", "brown fox", "jumps over", "the lazy dog"]
-    >>> _ = tfidf.fit(docs)
-    >>> tfidf._y.shape
-    (4,)
-    >>> gold = [{0:0,1:1,2:0,3:0}, {0:0,1:0,2:0,3:1}]
-    >>> values = tfidf.evaluate(zip([0,1],["fox","dog"]), gold, k=20)
-    >>> import pprint
-    >>> pprint.pprint(values["MAP"])
-    [1.0, 1.0]
-    >>> _ = tfidf.partial_fit(["new fox doc"])
-    >>> list(tfidf.query("new fox doc"))
-    [4, 1]
-    >>> gold = np.asarray([[0,2,0,0,0]])
-    >>> values = tfidf.evaluate([(0,"new fox doc")], gold, k=3)
-    >>> pprint.pprint(values["MAP"])
-    [0.5]
-    """
-
-    def __init__(self, norm='l2', use_idf=True, smooth_idf=True,
-                 sublinear_tf=False, **kwargs):
-        print("Deprecation Warning: use Retrieval(Tfidf()) instead")
-        self.tfidf = TfidfTransformer(norm=norm, use_idf=use_idf,
-                                      smooth_idf=smooth_idf,
-                                      sublinear_tf=sublinear_tf)
-
-        # override defaults since we need the counts here
-        self.verbose = kwargs.get('verbose', 0)
-
-        binary = kwargs.pop('binary', False)
-        dtype = kwargs.pop('dtype', np.int64)
-
-        # pass remaining args to countvectorizer
-        self._init_params(name="TFIDF", binary=binary, dtype=dtype, **kwargs)
-
-    def fit(self, X, y=None):
-        self._fit(X, y)  # set _inv_X for matching
-        self.tfidf.fit(self._inv_X)  # fit idf on _inv_X (counts are stored)
-        self._X = self.tfidf.transform(self._inv_X)  # transform X
-        return self
-
-    def partial_fit(self, X, y=None):
-        self._partial_fit(X, y)
-        Xt = self.tfidf.transform(self._cv.transform(X))
-        self._X = sp.vstack([self._X, Xt])
-        return self
-
-    def query(self, query, k=None, matched_indices=None):
-        # matching step
-        matching_ind = self._matching(query)
-        # print(matching_ind, file=sys.stderr)
-        Xm, matched_doc_ids = self._X[matching_ind], self._y[matching_ind]
-        # matching_docs, matching_doc_ids = self._matching(query)
-        # calculate elements to retrieve
-        n_ret = len(matching_ind)
-        if n_ret == 0:
-            return []
-        if self.verbose > 0:
-            print("Found {} matches:".format(n_ret))
-        # n_ret = min(n_ret, k) if k > 0 else n_ret
-        # model dependent transformation
-        xq = self._cv.transform([query])
-        q = self.tfidf.transform(xq)
-        # Xm = self.vectorizer.transform(matching_docs)
-        # model dependent nearest neighbor search or scoring or whatever
-        nn = NearestNeighbors(metric='cosine', algorithm='brute').fit(Xm)
-        # abuse kneighbors in this case
-        # AS q only contains one element, we only need its results.
-        if k is not None and k < n_ret:
-            n_ret = k
-
-        ind = nn.kneighbors(q,  # q contains a single element
-                            n_neighbors=n_ret,  # limit to k neighbors
-                            return_distance=False)[0]  # so we only need 1 res
-        # dont forget to convert the indices to document ids of matching
-        labels = matched_doc_ids[ind]
-        return labels
-
 
 if __name__ == '__main__':
     import doctest
