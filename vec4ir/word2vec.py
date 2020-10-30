@@ -263,6 +263,7 @@ class WordCentroidDistance(BaseEstimator, CombinatorMixin):
         Xt = self.vect.fit_transform(X)
         Xt = normalize(Xt, copy=False)  # We need this because of linear kernel
         self.centroids = Xt
+        return self
 
     def query(self, query, k=None, indices=None, return_scores=False, sort=True):
         centroids = self.centroids
