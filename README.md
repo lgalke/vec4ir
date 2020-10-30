@@ -424,8 +424,10 @@ Combining multiple fields and models
 The `vec4ir` package also provides an experimental operator overloading API for combining multiple retrieval models.
 
 ``` python
-RM_title = WordCentroidDistance().fit(documents['title'])
-RM_content = Tfidf().fit(documents['full-text'])
+RM_title = WordCentroidDistance()
+RM_title.fit(documents['title'])
+RM_content = Tfidf()
+RM_content.fit(documents['full-text'])
 RM = RM_title ** 2 + RM_content  # Sum up scores, weight title field twice
 R = Retrieval(retrieval_model=RM, labels=documents['id'])
 ```
