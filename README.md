@@ -6,7 +6,7 @@ Word embeddings for information retrieval.
 [![Build Status](https://travis-ci.org/lgalke/vec4ir.svg?branch=master)](https://travis-ci.org/lgalke/vec4ir)
 
 
-## Quick start
+# Quick start
 
 Visit the [test file](./tests/test_vec4ir.py) for a rough but quick introduction to the framework.
 
