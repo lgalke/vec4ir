@@ -296,9 +296,10 @@ Several supplied retrieval models make use of a word embedding. However those re
 ``` python
 from gensim.models import Word2Vec
 model = Word2Vec(documents['full-text'], min_count=1)
-wcd = WordCentroidDistance(model)
+wcd = WordCentroidDistance(model.wv)
 RM = Retrieval(wcd, matching=match_op).fit(documents['full-text'])
 ```
+Please note that you need to use only the word vectors `.wv` of the `Word2Vec` model.
 
 Several embedding-based retrieval models are provided natively:
 
