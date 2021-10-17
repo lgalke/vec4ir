@@ -27,9 +27,8 @@ address = {}
 }
 ```
 
-:::info
-Any suggestions for extending the framework are welcome! Feel free to raise issues for feature requests.
-:::
+
+**Any suggestions for extending the framework are welcome! Feel free to raise issues for feature requests.**
 
 User’s guide
 ============
