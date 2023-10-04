@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the accompanying journal article."
+preferred-citation:
+  type: conference-paper
+  authors:
+  - family-names: "Galke"
+    given-names: "Lukas"
+    orcid: "https://orcid.org/0000-0001-6124-1092"
+  - family-names: "Saleh"
+    given-names: "Ahmed"
+  - family-names: "Scherp"
+    given-names: "Ansgar"
+  title: "Word Embeddings for Practical Information Retrieval"
+  doi: 10.18420/in2017_215
+  year: 2017
+  conference: "INFORMATIK 2017"
+  publisher: "Gesellschaft für Informatik, Bonn"
