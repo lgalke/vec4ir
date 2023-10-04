@@ -13,5 +13,5 @@ preferred-citation:
   title: "Word Embeddings for Practical Information Retrieval"
   doi: 10.18420/in2017_215
   year: 2017
-  conference: "INFORMATIK 2017"
+  booktitle: "INFORMATIK 2017"
   publisher: "Gesellschaft für Informatik, Bonn"
